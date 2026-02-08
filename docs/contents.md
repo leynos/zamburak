@@ -1,0 +1,34 @@
+# [Contents index](contents.md) - Central index for all documentation files in
+
+`docs/`.
+
+- [Code complexity guide](complexity-antipatterns-and-refactoring-strategies.md)
+  - Practical guidance for identifying complexity anti-patterns and applying
+  safe refactoring strategies.
+- [Documentation style guide](documentation-style-guide.md) - Authoring,
+  formatting, grammar, and structure conventions for project documentation.
+- [Design-document farewell ExecPlan](execplans/design-document-logisphere-farewell.md)
+  - Execution plan and completion record for finalising the Zamburak
+  design-doc set.
+- [Reliable testing with dependency injection](reliable-testing-in-rust-via-dependency-injection.md)
+  - Patterns for deterministic and parallel-safe Rust tests by isolating
+  external dependencies.
+- [Repository layout](repository-layout.md) - Proposed repository structure,
+  file ownership, and module responsibility mapping.
+- [Roadmap](roadmap.md) - Phase, step, and task breakdown for implementing the
+  Zamburak system design.
+- [Rust doctest DRY guide](rust-doctest-dry-guide.md) - Techniques for writing
+  maintainable, non-repetitive Rust doctests and documentation examples.
+- [Rust `rstest` fixtures guide](rust-testing-with-rstest-fixtures.md) -
+  Fixture patterns, parameterisation strategies, and test ergonomics using
+  `rstest`.
+- [Scripting standards](scripting-standards.md) - Standards for script clarity,
+  reproducibility, dependency management, and maintainability.
+- [Technology baseline](tech-baseline.md) - Canonical toolchain and
+  quality-gate baseline with rationale and drift controls.
+- [Verification targets](verification-targets.md) - Verification matrix,
+  evidence expectations, and phase-gate acceptance criteria.
+- [System design](zamburak-design-document.md) - Authoritative design covering
+  semantics, invariants, trust boundaries, and policy contracts.
+- [Engineering standards](zamburak-engineering-standards.md) - Project-specific
+  implementation and review standards for security-critical changes.
