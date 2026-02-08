@@ -2,19 +2,29 @@
 
 This document is the authoritative system design for Zamburak.
 
+This document defines semantics, invariants, trust boundaries, interfaces, and
+verification expectations. It is intended to be detailed enough that an
+implementer can build the system without making security-critical design
+choices ad hoc.
+
 Implementation sequencing belongs in `docs/roadmap.md`.
 
-Engineering process and quality rules belong in
+Engineering process and quality gates belong in
 `docs/zamburak-engineering-standards.md` and `AGENTS.md`.
 
 ## Goals and non-goals
 
-### Goals
+### Product goal
 
 Zamburak is a capability-governed execution environment for agent-authored
-Monty programs. It is designed to reduce prompt injection impact by combining
-information flow control (IFC), policy checks at every effect boundary, and
-explicit user confirmation for high-risk actions.
+Monty programs. It reduces prompt injection impact by combining:
+
+- dynamic information flow control (IFC),
+- policy checks at every side-effect boundary,
+- deterministic verification and endorsement controls, and
+- explicit confirmation for high-risk actions.
+
+### Security property goal
 
 The primary security goal is policy compliance under tracked dependencies:
 
@@ -23,14 +33,27 @@ The primary security goal is policy compliance under tracked dependencies:
   control-context summaries, and
 - uncertain analysis outcomes fail closed.
 
-### Non-goals
+### Explicit non-goals
 
-Zamburak does not claim full non-interference across all side channels and does
-not claim global control-flow integrity in the classic systems-security sense.
+Zamburak does not claim:
 
-Zamburak does not protect against a compromised host operating system, local
-malware with process memory access, or theft of secrets outside the Zamburak
-runtime boundary.
+- full non-interference across all observable channels,
+- global control-flow integrity in the classic systems-security sense,
+- protection against a compromised host OS or local malware,
+- protection against exfiltration outside the runtime boundary.
+
+## Security property taxonomy
+
+This document uses these terms precisely:
+
+- control-flow integrity (CFI): untrusted input cannot influence branching.
+- non-interference: secrets do not influence attacker-observable behaviour.
+- policy compliance: side effects are mediated by policy under conservative
+  dependency tracking.
+
+Zamburak targets policy compliance. Strict mode narrows side-channel exposure
+by propagating control context into effect checks. It does not attempt to
+enforce absolute CFI by default.
 
 ## Threat model and trust boundaries
 
@@ -38,225 +61,403 @@ runtime boundary.
 
 The attacker can:
 
-- control tool outputs, including email content, fetched web content,
-  documents, and MCP response payloads,
-- embed indirect instructions in untrusted text,
-- attempt data exfiltration via any externally observable side effect,
-  including whether a tool call occurs, and
-- exploit overly broad tool metadata when tool descriptions are mutable at
-  runtime.
+- control tool outputs, including email content, fetched pages, and document
+  payloads,
+- embed indirect instructions in untrusted content,
+- exploit call occurrence and call count as side channels,
+- exploit mutable or remote tool documentation if accepted at runtime,
+- attempt taint laundering through concatenation, slicing, serialisation,
+  templating, or container mutation.
 
 ### Protected assets
 
 Protected assets include:
 
-- private user data handled by tools,
-- authentication material and authorisation secrets,
-- audit logs and policy explanations,
+- personal user content,
+- authentication and authorisation secrets,
+- financial and account metadata,
+- audit records,
 - host-minted authority tokens.
 
 ### Trust boundaries
 
-Zamburak treats the following boundaries as explicit:
+Zamburak defines these explicit boundaries:
 
-- boundary between Monty execution and host external tools,
-- boundary between Zamburak and LLM providers,
-- boundary between trusted local MCP services and remote third-party MCP
-  services,
-- boundary between raw values and verified or endorsed values.
+- Monty runtime boundary: VM values versus host side effects.
+- tool boundary: Zamburak core versus tool adapters and MCP servers.
+- LLM boundary: local process versus upstream LLM provider.
+- verification boundary: raw values versus verified and endorsed values.
+- audit boundary: runtime state versus persisted, inspectable logs.
 
 ## Trusted computing base
 
-Security claims rely on correctness of the following trusted computing base
-(TCB) elements:
+Security claims rely on correctness of these trusted components:
 
-- Monty fork and runtime hooks used by Zamburak,
-- IFC propagation logic and value/version tracking,
-- policy engine and policy configuration loader,
-- sanitizer and verifier implementations,
+- Monty fork plus VM hooks used by Zamburak,
+- IFC propagation and dependency summarisation logic,
+- policy engine and policy loader,
+- deterministic verifier and sanitizer implementations,
 - authority token minting and validation,
-- tool adapter layer and MCP catalogue enforcement,
-- confirmation interface and commit workflow,
-- audit logging and redaction implementation.
+- tool adapters, catalogue enforcement, and MCP trust classification,
+- confirmation workflow for commit actions,
+- redaction and audit persistence code.
 
-Any TCB bypass invalidates policy-compliance claims.
+Any bypass in these components invalidates policy-compliance claims.
 
-## Language subset and runtime semantics
+## Architecture overview
 
-### Supported execution subset
+Zamburak uses a layered VM architecture: Monty executes program semantics,
+while Zamburak overlays IFC and policy enforcement at all effect boundaries.
 
-Zamburak mode supports Monty language features that have complete IFC coverage.
-Coverage is defined per opcode and per built-in function. Unsupported
-operations must return structured errors, not partial execution without labels.
+For screen readers: The following diagram shows trusted query flow entering the
+planner, code running in Monty with IFC, and all side effects traversing policy
+checks before tool execution and audit logging.
+
+```mermaid
+flowchart TD
+    UQ[Trusted user query]
+    PLLM[P-LLM planner]
+    VM[Monty VM with IFC]
+    PE[Policy engine]
+    TA[Tool adapters]
+    MCP[MCP servers]
+    EXT[External systems]
+    QLLM[Q-LLM or deterministic parser]
+    AUD[Audit pipeline]
+
+    UQ --> PLLM
+    PLLM -->|Monty plan code| VM
+    VM -->|effectful call request| PE
+    PE -->|allow, deny, confirm, draft| TA
+    TA --> MCP
+    MCP --> EXT
+    EXT -->|untrusted outputs| QLLM
+    QLLM -->|labelled values| VM
+    PE --> AUD
+```
+
+_Figure 1: Zamburak execution and effect mediation architecture._
+
+### Component responsibilities
+
+| Component           | Responsibility                                 | Security-critical invariants                          |
+| ------------------- | ---------------------------------------------- | ----------------------------------------------------- |
+| Monty VM hook layer | Executes code and emits value operations       | No bypass path around IFC hooks for supported opcodes |
+| IFC core            | Tracks provenance, labels, and control context | Monotonic propagation and complete edge coverage      |
+| Summary engine      | Produces bounded decision summaries            | Budget overflow produces unknown-top summary          |
+| Policy engine       | Decides effect outcomes                        | Unknown state fails closed by default                 |
+| Verifier framework  | Mints verified integrity labels                | Verification is deterministic and non-forgeable       |
+| Tool adapter layer  | Executes external effects                      | Every effect requires policy decision                 |
+| Catalogue manager   | Pins tool metadata and schemas                 | Runtime rejects mutable unpinned docs                 |
+| Audit pipeline      | Produces reviewable records                    | Redacted summaries only by default                    |
+
+## Runtime semantics
+
+### Supported language subset
+
+Zamburak mode supports only Monty opcodes and built-ins with complete IFC
+coverage. Unsupported operations must fail explicitly with structured errors.
+
+An opcode coverage matrix is required and maintained as part of verification. A
+missing propagation rule is treated as a security defect.
 
 ### Propagation modes
 
-Zamburak defines two propagation modes:
+- `Normal`: propagate direct data dependencies.
+- `Strict`: propagate direct data dependencies plus active control-context
+  dependencies.
 
-- `Normal`: track direct data dependencies for computed values.
-- `Strict`: include active control-context dependencies in all value writes and
-  all effect checks.
+### Strict-mode effect semantics
 
-### Strict-mode semantics
+Strict mode does not globally forbid branching on untrusted inputs. Instead,
+strict mode requires every effectful call to include control-context summary in
+policy evaluation.
 
-Strict mode does not globally forbid branching on untrusted values. Instead,
-strict mode tracks control context and makes control dependencies visible to
-policy checks for every external side effect.
+In strict mode, all effect checks are evaluated over:
 
-Security statement:
+- argument summaries,
+- control-context summary,
+- effect history counters.
 
-- in strict mode, any effectful tool call inherits the current control-context
-  label and dependency summary, enabling conservative blocking of conditional
-  exfiltration even when call arguments are constant.
+This closes classic leaks where constant arguments are used inside untrusted
+conditionals.
 
 ### Container and mutation semantics
 
-Mutable containers are modelled as versioned states.
+Mutable containers use versioned state semantics:
 
-- write operations produce new container versions,
-- each new version depends on the previous version and the written value,
-- reads depend on the container version observed by that read, and
-- aliasing is represented by shared container identity with evolving versions.
+- each mutating operation creates a new container version,
+- new container version depends on previous version and mutation input,
+- reads depend on the observed container version,
+- aliases share container identity while version increments over time.
 
-This approach preserves acyclicity and avoids mutating provenance in place.
+This preserves DAG acyclicity while supporting mutation-heavy programs.
 
-### Exceptions and redaction
+### Exception semantics and redaction
 
-Exception content crossing trust boundaries is redacted using label-aware
-rules. Raw untrusted payloads are not forwarded to planner repair loops or
-audit logs.
+Exception text crossing trust boundaries is label-aware redacted:
+
+- untrusted payload snippets are replaced with safe placeholders,
+- sensitive values are replaced with tokenized references,
+- repair-loop feedback to planner never includes raw hostile strings.
+
+### Snapshot and resume semantics
+
+Snapshots preserve:
+
+- value identities,
+- container version graph,
+- label summaries,
+- control-context state,
+- policy-relevant counters needed for rate- and history-based checks.
+
+Restored execution must be semantically equivalent to uninterrupted execution
+for policy evaluation outcomes.
 
 ## Information flow model
 
-### Separation of concerns
+### Three-axis label and authority model
 
-Zamburak separates three axes that were previously conflated:
+Zamburak separates concepts that were previously conflated.
 
-- integrity and provenance: how trustworthy a value is,
-- confidentiality and sensitivity: how harmful leakage would be,
-- authority: what side effects code is permitted to perform.
+#### Integrity and provenance labels
 
-### Integrity and provenance labels
-
-Integrity labels classify trust in data origin and transformation:
+Integrity expresses trust in value origin and transformation:
 
 - `Integrity::Untrusted`,
 - `Integrity::Trusted`,
 - `Integrity::Verified(VerificationKind)`.
 
-Only host-registered deterministic verifiers may mint
+Only host-registered deterministic verifiers can mint
 `Integrity::Verified(VerificationKind)`.
 
-### Confidentiality labels
+#### Confidentiality labels
 
-Confidentiality labels are an independent set, for example:
+Confidentiality labels describe leakage impact. Example labels:
 
 - `PII`,
 - `AUTH_SECRET`,
 - `PRIVATE_EMAIL_BODY`,
-- `FINANCIAL_ACCOUNT_DATA`.
+- `PAYMENT_INSTRUMENT`,
+- `INTERNAL_POLICY_NOTE`.
 
-Confidentiality labels accumulate through propagation unless explicit
-policy-governed declassification occurs.
+Confidentiality labels are independent of integrity labels.
 
-### Authority tokens
+#### Authority tokens
 
-Authority is represented by unforgeable host-minted capability tokens, for
-example:
+Authority is represented as host-minted capability tokens. Example tokens:
 
 - `EmailSendCap`,
 - `CalendarWriteCap`,
-- `PaymentInitiateCap`.
+- `PaymentInitiateCap`,
+- `LlMRemotePromptCap`.
 
-Agent-authored Monty code cannot mint authority tokens.
+Monty code cannot forge authority tokens.
 
-### Verification and declassification semantics
+### Verification, endorsement, and declassification
 
-Verification and declassification are distinct.
+Verification, endorsement, and declassification are separate:
 
-Verification establishes properties about a value shape or membership, such as:
+- verification proves deterministic predicates,
+- endorsement asserts trusted subsystem approval,
+- declassification changes confidentiality visibility.
 
-- `VerificationKind::AllowlistedEmailRecipient`,
-- `VerificationKind::AllowlistedUrl`,
-- `VerificationKind::BoundedAmountGbp(max)`.
+Verification does not remove confidentiality labels. Declassification requires
+explicit policy and usually confirmation.
 
-Verification may upgrade integrity for the validated value. Verification does
-not remove confidentiality labels.
+### Dependency representation
 
-Declassification or endorsement is a separate, explicit policy action, usually
-paired with confirmation requirements.
+Zamburak uses two provenance tiers:
 
-### Provenance summaries and graph budgets
+- fast path: O(1) label summary used in effect decisions,
+- explain path: bounded witness graph used in explanations.
 
-Zamburak uses two provenance representations:
+Budgets constrain graph growth and traversal. Budget exhaustion yields
+unknown-top summary and conservative decisions.
 
-- fast-path summary for O(1) policy checks,
-- bounded witness provenance for explainability.
+## Data structures and interfaces
 
-When provenance analysis exceeds configured budgets, summary state escalates to
-an unknown-top state and policy evaluation fails closed.
+### Core runtime structures
 
-Required budgets include:
+The following structures define the minimum runtime model.
 
-- maximum value instances per execution,
-- maximum parent edges recorded per value before summary fallback,
-- maximum closure traversal steps per policy check,
-- maximum witness graph depth for explain responses.
+```rust
+pub struct TaggedValue {
+    pub id: ValueId,
+    pub data: MontyValue,
+    pub integrity: IntegrityLabel,
+    pub confidentiality: DataLabels,
+    pub authority: AuthoritySet,
+    pub deps: SmallVec<[ValueId; 4]>,
+}
 
-## Policy model
+pub struct ExecutionContextSummary {
+    pub pc_integrity: IntegrityLabel,
+    pub pc_confidentiality: DataLabels,
+    pub control_dependencies: SmallVec<[ValueId; 8]>,
+    pub effect_counters: EffectCounters,
+}
 
-### Policy input contract
+pub struct DependencySummary {
+    pub integrity_join: IntegrityLabel,
+    pub confidentiality_join: DataLabels,
+    pub authority_join: AuthoritySet,
+    pub origin_count: u32,
+    pub truncated: bool,
+}
+```
 
-Every effectful external call is checked with:
+The field names above are normative at the semantic level. Concrete Rust type
+names may differ if invariants are preserved.
+
+### Core trait contracts
+
+```rust
+pub trait PolicyEngine {
+    fn check(
+        &self,
+        tool: &ToolSignature,
+        args: &[DependencySummary],
+        ctx: &ExecutionContextSummary,
+    ) -> PolicyDecision;
+}
+
+pub trait Verifier {
+    fn verify(
+        &self,
+        input: &TaggedValue,
+    ) -> Result<VerificationResult, VerificationError>;
+}
+
+pub trait ExternalFunction {
+    fn signature(&self) -> &ToolSignature;
+    fn call(&self, request: ToolRequest) -> Result<ToolResponse, ToolError>;
+}
+```
+
+### Policy decision model
+
+```rust
+pub enum PolicyDecision {
+    Allow(AuditRecord),
+    Deny(DenyReason),
+    RequireConfirmation(ConfirmationRequest),
+    RequireDraft(DraftRequest),
+}
+```
+
+Every non-allow decision must include machine-parseable reason codes and a
+redacted explanation surface.
+
+### Tool signature schema
+
+Tool signatures are policy-governed contracts. A tool is effectful unless
+declared pure and verified by adapter constraints.
+
+```yaml
+tool: send_email
+version: 1
+side_effect_class: ExternalWrite
+required_authority: [EmailSendCap]
+args:
+  - name: to
+    requires_integrity: Verified(AllowlistedEmailRecipient)
+    allows_confidentiality: []
+  - name: body
+    forbids_confidentiality: [AUTH_SECRET]
+    max_payload_bytes: 32768
+context_requirements:
+  forbid_pc_integrity: [Untrusted]
+default_decision: RequireConfirmation
+```
+
+### Policy definition example
+
+```yaml
+policy_name: personal_assistant_default
+default_action: Deny
+strict_mode: true
+budgets:
+  max_values: 100000
+  max_parents_per_value: 64
+  max_closure_steps: 10000
+  max_witness_depth: 32
+tools:
+  - tool: get_last_email
+    side_effect_class: ExternalRead
+    output_labels:
+      integrity: Untrusted
+      confidentiality: [PRIVATE_EMAIL_BODY]
+    default_decision: Allow
+  - tool: send_email
+    side_effect_class: ExternalWrite
+    required_authority: [EmailSendCap]
+    arg_rules:
+      - arg: to
+        requires_integrity: Verified(AllowlistedEmailRecipient)
+      - arg: body
+        forbids_confidentiality: [AUTH_SECRET]
+    context_rules:
+      deny_if_pc_integrity_contains: [Untrusted]
+    default_decision: RequireConfirmation
+```
+
+## Policy evaluation semantics
+
+### Inputs
+
+Policy checks consume:
 
 - tool signature,
-- argument label summaries,
-- execution context summary.
+- argument dependency summaries,
+- execution-context summary,
+- applicable global and per-tool budget state.
 
-`ExecutionContextSummary` includes at least:
+### Decision order
 
-- active control-context label summary,
-- active control-context dependency identifiers,
-- coarse effect counters for rate and occurrence checks.
+Policy rules evaluate in this order:
 
-### Decision model
+1. hard deny constraints,
+2. authority token requirements,
+3. verification requirements,
+4. context constraints,
+5. confirmation and draft requirements,
+6. default action.
 
-Policy decisions are explicit and structured:
+### Fail-closed rules
 
-- `Allow`,
-- `Deny`,
-- `RequireConfirmation`,
-- `RequireDraft`.
+The engine must return `Deny` or `RequireConfirmation` when:
 
-Policy defaults are deny-oriented for unknown tools, unknown labels, and
-unknown summary states.
+- tool signature is missing or unpinned,
+- summary computation exceeds configured budgets,
+- required label or authority information is unavailable,
+- verifier result is absent for required verification kinds.
 
-### Invariants
+### Explanation contract
 
-The policy engine must uphold these invariants:
+Every deny or confirmation decision includes:
 
-- every external side effect is policy-gated,
-- effect checks include control context and argument context,
-- uncertain or incomplete provenance produces conservative outcomes,
-- explanations reference label and dependency identifiers without exposing raw
-  sensitive or untrusted content.
+- violated rule identifier,
+- redacted dependency witness,
+- concise remediation steps.
 
-## Tool model and MCP trust model
+Explanation payloads must not contain raw untrusted text or raw secrets.
 
-### Tool catalogue
+## Tool model and MCP integration
 
-Zamburak resolves tools only through a local pinned catalogue.
+### Tool catalogue and pinning
 
-Each catalogue entry contains:
+Tools are loaded from a local catalogue with immutable entries:
 
-- stable tool identifier,
-- version,
+- tool identifier,
+- schema version,
 - schema hash,
-- static documentation hash,
-- policy signature,
-- trust class of provider.
+- documentation hash,
+- trust classification,
+- policy signature reference.
 
-Runtime acceptance of mutable remote tool documentation is not permitted.
+Runtime tool docs from remote sources are ignored unless hash-matching a pinned
+entry.
 
 ### MCP server trust classes
 
@@ -265,124 +466,174 @@ MCP servers are classified as:
 - `TrustedLocal`,
 - `RemoteThirdParty`.
 
-Per-server capability budgets restrict which tools may be bound and which
-authority tokens may be presented.
+Each class has explicit capability budgets and allowed side-effect classes.
+Remote third-party servers default to stricter controls and reduced authority.
 
-### Draft and commit pattern
+### Draft and commit action model
 
-High-risk actions must use a draft and commit workflow:
+Irreversible operations use a two-phase model:
 
-- draft creation is reversible and reviewable,
-- commit is separately policy-gated and optionally confirmation-gated,
-- commit requests must include lineage to the reviewed draft.
+- draft phase prepares reviewable intent,
+- commit phase executes side effect with additional policy evaluation.
+
+Commit requests must reference the approved draft identifier and lineage.
 
 ## LLM interaction model
 
-### LLM calls as sinks
+### Planner and quarantined processing
 
-P-LLM and Q-LLM calls are treated as external communication sinks.
+Zamburak supports a dual-path design:
 
-Each call has a policy signature defining:
+- P-LLM planner: trusted query decomposition and plan synthesis,
+- Q-LLM or deterministic parser: transformation of untrusted tool outputs.
 
-- allowed confidentiality labels,
-- forbidden labels,
-- required redaction or minimization transforms,
-- maximum payload size and context class.
+Q-path outputs are untrusted unless deterministically verified.
+
+### LLM calls as exfiltration sinks
+
+All LLM calls are treated as effectful sink calls with tool-like policy
+signatures. Policy enforces:
+
+- confidentiality budget per call,
+- required minimization/redaction transforms,
+- payload size and context limits,
+- provider-specific approval requirements where configured.
 
 ### Privacy boundary statement
 
-Zamburak can prevent hostile content from steering tool use while still leaking
-private data to an LLM provider if sink policy permits that flow.
+Prompt injection resistance does not imply provider secrecy. If policy permits
+sensitive labels into remote LLM prompts, disclosure risk remains.
 
-Protection against provider disclosure requires explicit sink gating,
-minimization, and deployment choices.
+## Audit and observability model
 
-### Local-only mode roadmap
+### Audit record schema
 
-Local-only LLM execution is a near-term roadmap objective. It is not an MVP
-requirement, but interfaces must preserve compatibility with local back ends.
+```yaml
+timestamp: 2026-02-08T12:34:56Z
+execution_id: exec_7f2c
+call_id: call_0192
+tool: send_email
+decision: Deny
+reason_code: CONFIDENTIALITY_FORBIDDEN
+arg_summary_refs: [sum_33, sum_34]
+context_summary_ref: ctx_12
+witness_hash: sha256:...
+redaction_applied: true
+```
 
-## Observability and audit model
+### Confidentiality-first defaults
 
-### Confidentiality-first logging
+Audit defaults:
 
-Audit logging defaults to summaries rather than raw values.
-
-Required behaviour:
-
-- log stable identifiers and content hashes instead of plaintext values,
-- apply label-aware redaction before persistence,
-- avoid storing raw argument content by default,
-- treat logs as sensitive assets with restricted access.
+- store summaries and hashes, not raw payload values,
+- tokenize sensitive identifiers,
+- redact untrusted free text,
+- separate operational logs from policy evidence logs.
 
 ### Integrity and retention
 
-Tamper evidence is provided by append-only hash chaining for audit records.
-Optional local signing can be enabled where key management is available.
+Audit persistence requires:
 
-Retention requirements:
-
-- time-based deletion policy,
-- size caps with deterministic eviction rules,
-- explicit handling policy for exported logs and backups.
+- append-only record discipline,
+- hash-chain integrity between successive records,
+- configurable retention by age and size,
+- controlled export path with explicit re-redaction checks.
 
 ## Verification and evaluation strategy
 
-### Mechanistic correctness
+### Mechanistic correctness requirements
 
-The verification baseline includes:
+Required tests include:
 
-- opcode and built-in IFC completeness checks,
-- property-based tests for propagation and monotonicity,
-- mutation and aliasing soundness tests,
-- strict-mode control-context propagation tests,
-- fail-closed behaviour tests for budget exhaustion.
+- dependency monotonicity,
+- no spontaneous verification,
+- transitive closure correctness,
+- strict-mode control-context propagation,
+- container mutation and aliasing correctness,
+- fail-closed behaviour on budget overflow,
+- snapshot and resume equivalence.
 
-### Security regression corpus
+### Security regression suite
 
-A permanent regression corpus is required for:
+Regression suite must cover:
 
-- prompt injection variants through tool outputs,
-- control-flow side-channel attempts,
-- laundering attempts across string or serialisation transforms,
-- tool-catalogue and documentation trust-boundary bypass attempts.
+- tool-call occurrence side channels,
+- tool-call count side channels,
+- taint laundering patterns,
+- exception-text injection,
+- mutable tool documentation injection,
+- MCP trust-boundary bypass attempts.
+
+### Differential and metamorphic testing
+
+- differential tests compare behaviour with and without IFC for non-blocked
+  programs,
+- metamorphic tests assert label-equivalent outcomes under refactors such as
+  variable renaming or independent statement reordering.
 
 ### End-to-end adversarial evaluation roadmap
 
-Evaluation stages:
+Evaluation progression:
 
-- MVP: mechanistic suite plus curated regression corpus,
-- next stage: model-in-loop benchmark integration, including AgentDojo-class
-  tasks or equivalent,
-- later stage: continuous red-teaming with automated attack generation.
+- MVP: mechanistic suite plus curated adversarial corpus,
+- next: model-in-loop benchmark integration, including AgentDojo-class tasks
+  or equivalent,
+- later: continuous red-team generation and trend tracking.
 
-## Performance model and budgets
+## Performance and resource model
 
-Performance expectations are framed as measurable budgets rather than absolute
-startup equivalence claims.
+### Resource budget classes
 
-Budget categories:
+The design uses measurable budgets by class:
 
-- VM overhead budget: IFC propagation cost per representative opcode mix,
-- policy overhead budget: policy check latency for bounded summary sizes,
-- agent-step budget: end-to-end latency envelope including tool and LLM calls.
+- VM propagation overhead budget,
+- policy decision latency budget,
+- memory budgets for values, edges, and summaries,
+- end-to-end agent step latency budget.
 
-Budget exceedance policy:
+### Initial benchmark targets
 
-- alert when soft budgets are exceeded,
-- fail closed when safety budgets are exceeded and provenance certainty is lost.
+| Budget                  | Target                                      | Measurement context                           |
+| ----------------------- | ------------------------------------------- | --------------------------------------------- |
+| VM propagation overhead | <= 200 ns/op p50                            | Representative opcode mix with labels enabled |
+| Policy check latency    | <= 1 ms p95                                 | Argument summaries <= 100 origins             |
+| Summary traversal       | <= 10,000 steps per check                   | Overflow forces unknown-top summary           |
+| Memory growth           | linear in values with bounded witness state | Stress workload with mutation and loops       |
 
-## Open risks and deferred items
+Targets are revised with empirical baselines but remain measurable and testable.
 
-The following remain known risks or deferred work:
+### Safety behaviour under pressure
 
-- formal non-interference proofs are deferred,
-- cryptographic provenance signing for tool documentation is deferred,
-- complete local-only deployment profile is deferred,
-- continuous automated red-team generation is deferred.
+When safety-relevant budgets are exceeded:
 
-Deferred items do not weaken current invariants and must remain compatible with
-this system design.
+- summary state becomes unknown-top,
+- policy decisions become conservative,
+- runtime records explicit budget-overflow audit reasons.
+
+## Scope boundaries
+
+### In scope for the system design
+
+This design covers:
+
+- runtime semantics and invariants,
+- IFC and policy interfaces,
+- verification and authority model,
+- tool and MCP trust boundaries,
+- LLM sink governance,
+- audit semantics,
+- evaluation requirements.
+
+### Out of scope for this document
+
+This document does not define:
+
+- file-by-file implementation task lists,
+- project-management sequencing details,
+- CI workflow mechanics beyond required security outcomes.
+
+These concerns are tracked in `docs/roadmap.md` and
+`docs/zamburak-engineering-standards.md`.
 
 ## References
 
@@ -394,3 +645,5 @@ this system design.
   <https://simonwillison.net/2025/Jun/16/the-lethal-trifecta/>
 - Simon Willison on CaMeL:
   <https://simonwillison.net/2025/Apr/11/camel/>
+- Dromedary project: <https://github.com/microsoft/dromedary>
+- Pydantic AI: <https://github.com/pydantic/pydantic-ai>
