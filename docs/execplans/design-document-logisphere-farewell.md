@@ -1,4 +1,4 @@
-# Finalise Zamburak docs after Logisphere review and spec retirement
+# Finalize Zamburak docs after Logisphere review and spec retirement
 
 This ExecPlan is a living document. The sections `Constraints`, `Tolerances`,
 `Risks`, `Progress`, `Surprises & Discoveries`, `Decision Log`, and
@@ -210,7 +210,7 @@ Current core docs and responsibilities:
 - `docs/roadmap.md`: phase-step-task execution sequencing.
 - `docs/repository-layout.md`: repository structure and file-purpose mapping.
 
-The Logisphere review prioritised six additions:
+The Logisphere review prioritized six additions:
 
 - canonical policy schema v1 with compatibility and migration semantics,
 - explicit LLM sink enforcement architecture with audit placement,
