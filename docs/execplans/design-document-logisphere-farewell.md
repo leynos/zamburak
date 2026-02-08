@@ -1,4 +1,4 @@
-# Finalize Zamburak docs after Logisphere review and spec retirement
+# Finalise Zamburak docs after Logisphere review and spec retirement
 
 This ExecPlan is a living document. The sections `Constraints`, `Tolerances`,
 `Risks`, `Progress`, `Surprises & Discoveries`, `Decision Log`, and
@@ -39,7 +39,7 @@ in-repo references, for all nine required outcomes:
 - design-level acceptance criteria and contract conformance gates,
 - technology baseline and tool rationale,
 - verification target matrix and evidence expectations,
-- roadmap-to-artifact traceability.
+- roadmap-to-artefact traceability.
 
 ## Constraints
 
@@ -127,7 +127,7 @@ escalate with options.
     - [x] (2026-02-08 19:18Z) Drafted design-level acceptance criteria updates.
     - [x] (2026-02-08 19:18Z) Added `docs/tech-baseline.md`.
     - [x] (2026-02-08 19:18Z) Added `docs/verification-targets.md`.
-    - [x] (2026-02-08 19:18Z) Added roadmap-to-artifact traceability mapping
+    - [x] (2026-02-08 19:18Z) Added roadmap-to-artefact traceability mapping
       in `docs/roadmap.md`.
     - [x] (2026-02-08 19:18Z) Cross-linked affected docs for discoverability
       and consistency.
@@ -224,7 +224,7 @@ Final-farewell recommendations added three documentation artefacts:
 
 - `docs/tech-baseline.md`,
 - `docs/verification-targets.md`,
-- roadmap-to-artifact traceability mapping in `docs/roadmap.md`.
+- roadmap-to-artefact traceability mapping in `docs/roadmap.md`.
 
 ## Plan of Work
 
@@ -252,7 +252,7 @@ Stage B creates supporting reference docs:
 
 Stage C updates execution guidance:
 
-- add a roadmap-to-artifact traceability table in `docs/roadmap.md`,
+- add a roadmap-to-artefact traceability table in `docs/roadmap.md`,
 - add or refine cross-links in standards and layout docs so readers can find
   the new references quickly.
 
@@ -273,9 +273,9 @@ Run all commands from repository root: `/data/leynos/Projects/zamburac`.
    - `docs/verification-targets.md`.
 3. Implement Stage C in `docs/roadmap.md` and relevant cross-links.
 4. Run quality gates with log capture:
-   - `make fmt | tee /tmp/fmt-zamburak-$(git branch --show).out`
-   - `make markdownlint | tee /tmp/markdownlint-zamburak-$(git branch --show).out`
-   - `make nixie | tee /tmp/nixie-zamburak-$(git branch --show).out`
+   - `make fmt | tee /tmp/fmt-zamburak-$(git branch --show-current).out`
+   - `make markdownlint | tee /tmp/markdownlint-zamburak-$(git branch --show-current).out`
+   - `make nixie | tee /tmp/nixie-zamburak-$(git branch --show-current).out`
 5. Validate execution-readiness manually:
    - confirm each of the nine required outcomes is directly answerable from
      current docs without needing the original specification.
@@ -302,7 +302,7 @@ Acceptance is met only when all criteria below pass:
 - Farewell artefacts:
   - `docs/tech-baseline.md` exists and is cross-linked.
   - `docs/verification-targets.md` exists and is cross-linked.
-  - roadmap-to-artifact traceability is present in `docs/roadmap.md`.
+  - roadmap-to-artefact traceability is present in `docs/roadmap.md`.
 
 ## Idempotence and Recovery
 
@@ -334,7 +334,7 @@ Documentation interfaces that must be explicit after execution:
   obligations for planner and quarantined sink calls,
 - authority lifecycle interface: token state transitions and validity checks,
 - verification interface: target matrix and evidence contract,
-- roadmap interface: task-to-artifact mapping.
+- roadmap interface: task-to-artefact mapping.
 
 ## Revision note
 

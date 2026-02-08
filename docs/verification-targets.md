@@ -32,7 +32,7 @@ evidence exists and all listed gates pass.
 | Authority lifecycle             | Mint, delegation, revocation, expiry, and restore revalidation      | unit tests, integration tests           | lifecycle transition fixtures                   | block merge on invalid lifecycle transition  |
 | Tool catalogue and MCP boundary | Pinned schema/doc hashes and trust-class budget enforcement         | integration tests, security regressions | catalogue fixtures, trust-class outcomes        | block merge on unpinned or over-budget path  |
 | Audit pipeline                  | Confidentiality-first logging and tamper-evident chaining           | unit tests, integration tests           | redaction fixtures, hash-chain validator output | block merge on plaintext leak or chain break |
-| Snapshot and resume             | Policy-equivalent behaviour pre/post restore                        | integration tests, metamorphic tests    | before/after decision transcripts               | block merge on policy divergence             |
+| Snapshot and resume             | Policy-equivalent behaviour pre- and post-restore                   | integration tests, metamorphic tests    | before/after decision transcripts               | block merge on policy divergence             |
 
 _Table 1: Verification targets, evidence artefacts, and gate behaviour._
 

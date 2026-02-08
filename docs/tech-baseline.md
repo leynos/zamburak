@@ -60,7 +60,7 @@ All repository changes must run the quality gates that match scope:
 Command logging convention should follow `AGENTS.md`, using branch-qualified
 paths such as:
 
-`/tmp/<action>-zamburak-$(git branch --show).out`.
+`/tmp/<action>-zamburak-$(git branch --show-current).out`.
 
 ## Baseline update policy
 

@@ -27,7 +27,7 @@ tools over sensitive data.
 
 The core design motivation comes from two external observations:
 
-- the CaMeL research result in
+- the CApabilities for MachinE Learning (CaMeL) research result in
   [Defeating Prompt Injections by Design](https://arxiv.org/abs/2503.18813)
   shows that tool-using agents can be made more robust by moving security
   enforcement out of prompt text and into runtime control- and data-flow

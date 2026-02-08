@@ -242,7 +242,7 @@ _Table 13: Root and operational artefacts with purposes._
 
 - Place new code in the crate owning the domain concern, not by technical
   layer alone.
-- Add new side-effect adapters only under `zamburak-tools` with corresponding
+- Add new side effect adapters only under `zamburak-tools` with corresponding
   policy signatures.
 - Add or change any policy schema in `policies/schema.json` and update examples
   in the same change.

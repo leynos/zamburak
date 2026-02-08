@@ -1,6 +1,4 @@
-# [Contents index](contents.md) - Central index for all documentation files in
-
-`docs/`.
+# [Contents index](contents.md) - Central index for all documentation files in `docs/`
 
 - [Code complexity guide](complexity-antipatterns-and-refactoring-strategies.md)
   - Practical guidance for identifying complexity anti-patterns and applying

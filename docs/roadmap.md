@@ -82,7 +82,7 @@ Roadmap items are grouped as phases, steps, and tasks.
   - Completion criteria: no shared type is used to represent both data labels
     and authority; policy signatures compile against distinct inputs.
 - [ ] Task 1.1.2: Define verification kinds with testable semantics.
-  - Design reference: section "Verification and declassification semantics".
+  - Design reference: section "Verification, endorsement, and declassification".
   - Completion criteria: each verification kind has a deterministic
     implementation contract and at least one positive and one negative test
     case.
@@ -91,12 +91,12 @@ Roadmap items are grouped as phases, steps, and tasks.
 
 - [ ] Task 1.2.1: Implement execution-context summaries on all effect
       boundaries.
-  - Design reference: section "Policy model".
+  - Design reference: section "Policy evaluation semantics".
   - Completion criteria: every effectful call passes argument summaries and
     execution-context summary into policy evaluation.
-- [ ] Task 1.2.2: Encode control-flow side-effect regression tests.
-  - Design reference: sections "Strict-mode semantics" and
-    "Security regression corpus".
+- [ ] Task 1.2.2: Encode control-flow side effect regression tests.
+  - Design reference: sections "Strict-mode effect semantics" and
+    "Security regression suite".
   - Completion criteria: regression suite includes call-occurrence and
     call-count exfiltration attempts that are denied or confirmation-gated.
 
@@ -110,19 +110,19 @@ Roadmap items are grouped as phases, steps, and tasks.
     dependency graph remains acyclic in mutation-heavy tests.
 - [ ] Task 2.1.2: Validate aliasing behaviour and provenance propagation.
   - Design reference: sections "Container and mutation semantics" and
-    "Mechanistic correctness".
+    "Mechanistic correctness requirements".
   - Completion criteria: aliasing tests verify consistent provenance after
     interleaved updates and reads.
 
 ### Step 2.2: Provenance budgets and fail-closed semantics
 
 - [ ] Task 2.2.1: Add configurable provenance budgets and unknown-top fallback.
-  - Design reference: section "Provenance summaries and graph budgets".
+  - Design reference: section "Dependency representation".
   - Completion criteria: budget overflows produce unknown-top summaries and
     conservative policy outcomes.
 - [ ] Task 2.2.2: Add explainability witness bounds.
-  - Design reference: sections "Provenance summaries and graph budgets" and
-    "Policy model".
+  - Design reference: sections "Dependency representation" and
+    "Explanation contract".
   - Completion criteria: denial explanations remain bounded and redact raw
     sensitive values.
 
@@ -131,11 +131,11 @@ Roadmap items are grouped as phases, steps, and tasks.
 ### Step 3.1: Pinned tool catalogue
 
 - [ ] Task 3.1.1: Implement local pinned tool catalogue with hash verification.
-  - Design reference: section "Tool catalogue".
+  - Design reference: section "Tool catalogue and pinning".
   - Completion criteria: runtime refuses tool binding when version or hash does
     not match catalogue entry.
 - [ ] Task 3.1.2: Disallow mutable remote tool documentation at runtime.
-  - Design reference: sections "Tool catalogue" and
+  - Design reference: sections "Tool catalogue and pinning" and
     "Threat model and trust boundaries".
   - Completion criteria: policy and adapter paths consume only pinned docs.
 
@@ -146,7 +146,7 @@ Roadmap items are grouped as phases, steps, and tasks.
   - Completion criteria: `RemoteThirdParty` services cannot expose tools
     outside configured budgets.
 - [ ] Task 3.2.2: Validate draft and commit lineage enforcement.
-  - Design reference: section "Draft and commit pattern".
+  - Design reference: section "Draft and commit action model".
   - Completion criteria: high-risk tools require a reviewed draft before commit
     and emit linked audit records.
 
@@ -156,11 +156,11 @@ Roadmap items are grouped as phases, steps, and tasks.
 
 - [ ] Task 4.1.1: Treat planner large language model (P-LLM) and quarantined
       large language model (Q-LLM) calls as policy-governed sinks.
-  - Design reference: section "LLM calls as sinks".
+  - Design reference: section "LLM calls as exfiltration sinks".
   - Completion criteria: calls are blocked when labels exceed sink budget.
 - [ ] Task 4.1.2: Implement mandatory minimisation and redaction transforms.
-  - Design reference: sections "LLM calls as sinks" and
-    "Confidentiality-first logging".
+  - Design reference: sections "LLM calls as exfiltration sinks" and
+    "Confidentiality-first defaults".
   - Completion criteria: prompt payload paths apply required transforms before
     provider transmission.
 
@@ -168,11 +168,11 @@ Roadmap items are grouped as phases, steps, and tasks.
 
 - [ ] Task 4.2.1: Add end-to-end tests proving sink policy enforcement.
   - Design reference: sections "Privacy boundary statement" and
-    "Mechanistic correctness".
+    "Mechanistic correctness requirements".
   - Completion criteria: tests demonstrate denial for disallowed secret labels
     on LLM paths.
 - [ ] Task 4.2.2: Define local-only compatibility profile.
-  - Design reference: section "Local-only mode roadmap".
+  - Design reference: section "Privacy boundary statement".
   - Completion criteria: interfaces support local inference back ends without
     policy model changes.
 
@@ -181,7 +181,7 @@ Roadmap items are grouped as phases, steps, and tasks.
 ### Step 5.1: Confidentiality-first audit pipeline
 
 - [ ] Task 5.1.1: Enforce summary-only audit logging by default.
-  - Design reference: section "Confidentiality-first logging".
+  - Design reference: section "Confidentiality-first defaults".
   - Completion criteria: logs store identifiers and hashes by default; plaintext
     storage requires explicit opt-in controls.
 - [ ] Task 5.1.2: Add tamper-evident hash chain and retention policy.
@@ -217,7 +217,7 @@ when tasks are complete.
 | 1.1.1 | `crates/zamburak-core/src/trust.rs`, `crates/zamburak-core/src/authority.rs`, `crates/zamburak-policy/src/engine.rs`                              | Integrity, confidentiality, and authority remain separate types and interfaces.           |
 | 1.1.2 | `crates/zamburak-sanitizers/src/`, `tests/security/`                                                                                              | Verification kinds are deterministic and regression-tested.                               |
 | 1.2.1 | `crates/zamburak-core/src/control_context.rs`, `crates/zamburak-policy/src/engine.rs`                                                             | Effect checks include argument plus execution-context summaries.                          |
-| 1.2.2 | `tests/security/`, `tests/integration/`                                                                                                           | Control-flow side-effect exfiltration regressions are covered.                            |
+| 1.2.2 | `tests/security/`, `tests/integration/`                                                                                                           | Control-flow side effect exfiltration regressions are covered.                            |
 | 2.1.1 | `crates/zamburak-core/src/dependency_graph.rs`, `crates/zamburak-core/src/container_state.rs`                                                     | Mutable containers use versioned, acyclic provenance state.                               |
 | 2.1.2 | `tests/property/`, `tests/security/`                                                                                                              | Aliasing and mutation provenance remain sound under churn.                                |
 | 2.2.1 | `crates/zamburak-core/src/summary.rs`, `crates/zamburak-policy/src/engine.rs`                                                                     | Budget overflow yields unknown-top and conservative decisions.                            |

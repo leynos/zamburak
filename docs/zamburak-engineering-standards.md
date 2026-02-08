@@ -71,7 +71,7 @@ This document adds Zamburak-specific requirements for security-critical work.
 
 - mechanistic propagation and monotonicity tests,
 - mutable-container and aliasing soundness tests,
-- strict-mode control-context and side-effect tests,
+- strict-mode control-context and side effect tests,
 - provenance-budget overflow and fail-closed tests,
 - regression tests for each discovered bypass,
 - end-to-end LLM and tool sink policy enforcement tests.
