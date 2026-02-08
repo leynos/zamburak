@@ -86,9 +86,12 @@ Protected assets include:
 
 Zamburak defines these explicit boundaries:
 
-- Monty runtime boundary: VM values versus host side effects.
-- tool boundary: Zamburak core versus tool adapters and MCP servers.
-- LLM boundary: local process versus upstream LLM provider.
+- Monty runtime boundary: virtual machine (VM) values versus host side
+  effects.
+- tool boundary: Zamburak core versus tool adapters and Model Context Protocol
+  (MCP) servers.
+- large language model (LLM) boundary: local process versus upstream LLM
+  providers.
 - verification boundary: raw values versus verified and endorsed values.
 - audit boundary: runtime state versus persisted, inspectable logs.
 
@@ -109,8 +112,9 @@ Any bypass in these components invalidates policy-compliance claims.
 
 ## Architecture overview
 
-Zamburak uses a layered VM architecture: Monty executes program semantics,
-while Zamburak overlays IFC and policy enforcement at all effect boundaries.
+Zamburak uses a layered virtual machine (VM) architecture: Monty executes
+program semantics, while Zamburak overlays IFC and policy enforcement at all
+effect boundaries.
 
 For screen readers: The following diagram shows trusted query flow entering the
 planner, code running in Monty with IFC, and all side effects traversing policy
@@ -236,7 +240,8 @@ Only host-registered deterministic verifiers can mint
 
 #### Confidentiality labels
 
-Confidentiality labels describe leakage impact. Example labels:
+Confidentiality labels describe leakage impact. Example labels include
+personally identifiable information (PII):
 
 - `PII`,
 - `AUTH_SECRET`,
@@ -487,8 +492,10 @@ Commit requests must reference the approved draft identifier and lineage.
 
 Zamburak supports a dual-path design:
 
-- P-LLM planner: trusted query decomposition and plan synthesis,
-- Q-LLM or deterministic parser: transformation of untrusted tool outputs.
+- planner large language model (P-LLM): trusted query decomposition and plan
+  synthesis,
+- quarantined large language model (Q-LLM) or deterministic parser:
+  transformation of untrusted tool outputs.
 
 Q-path outputs are untrusted unless deterministically verified.
 
@@ -498,7 +505,7 @@ All LLM calls are treated as effectful sink calls with tool-like policy
 signatures. Policy enforces:
 
 - confidentiality budget per call,
-- required minimization/redaction transforms,
+- required minimisation/redaction transforms,
 - payload size and context limits,
 - provider-specific approval requirements where configured.
 
@@ -578,7 +585,8 @@ Regression suite must cover:
 
 Evaluation progression:
 
-- MVP: mechanistic suite plus curated adversarial corpus,
+- minimum viable product (MVP): mechanistic suite plus curated adversarial
+  corpus,
 - next: model-in-loop benchmark integration, including AgentDojo-class tasks
   or equivalent,
 - later: continuous red-team generation and trend tracking.
@@ -589,7 +597,7 @@ Evaluation progression:
 
 The design uses measurable budgets by class:
 
-- VM propagation overhead budget,
+- virtual machine (VM) propagation overhead budget,
 - policy decision latency budget,
 - memory budgets for values, edges, and summaries,
 - end-to-end agent step latency budget.
@@ -633,7 +641,8 @@ This document does not define:
 
 - file-by-file implementation task lists,
 - project-management sequencing details,
-- CI workflow mechanics beyond required security outcomes.
+- continuous integration (CI) workflow mechanics beyond required security
+  outcomes.
 
 These concerns are tracked in `docs/roadmap.md` and
 `docs/zamburak-engineering-standards.md`.

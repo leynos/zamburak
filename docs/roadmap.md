@@ -75,7 +75,7 @@ Roadmap items are grouped as phases, steps, and tasks.
   - Completion criteria: denial explanations remain bounded and redact raw
     sensitive values.
 
-## Phase 3: Tool and MCP trust boundaries
+## Phase 3: Tool and Model Context Protocol (MCP) trust boundaries
 
 ### Step 3.1: Pinned tool catalogue
 
@@ -88,7 +88,7 @@ Roadmap items are grouped as phases, steps, and tasks.
     "Threat model and trust boundaries".
   - Completion criteria: policy and adapter paths consume only pinned docs.
 
-### Step 3.2: MCP server trust classification
+### Step 3.2: Model Context Protocol (MCP) server trust classification
 
 - [ ] Task 3.2.1: Add MCP provider trust classes and capability budgets.
   - Design reference: section "MCP server trust classes".
@@ -99,14 +99,15 @@ Roadmap items are grouped as phases, steps, and tasks.
   - Completion criteria: high-risk tools require a reviewed draft before commit
     and emit linked audit records.
 
-## Phase 4: LLM sink governance and privacy controls
+## Phase 4: large language model (LLM) sink governance and privacy controls
 
 ### Step 4.1: LLM sink policy signatures
 
-- [ ] Task 4.1.1: Treat P-LLM and Q-LLM calls as policy-governed sinks.
+- [ ] Task 4.1.1: Treat planner large language model (P-LLM) and quarantined
+      large language model (Q-LLM) calls as policy-governed sinks.
   - Design reference: section "LLM calls as sinks".
   - Completion criteria: calls are blocked when labels exceed sink budget.
-- [ ] Task 4.1.2: Implement mandatory minimization and redaction transforms.
+- [ ] Task 4.1.2: Implement mandatory minimisation and redaction transforms.
   - Design reference: sections "LLM calls as sinks" and
     "Confidentiality-first logging".
   - Completion criteria: prompt payload paths apply required transforms before
@@ -141,8 +142,8 @@ Roadmap items are grouped as phases, steps, and tasks.
 
 - [ ] Task 5.2.1: Maintain mechanistic correctness and regression corpus gates.
   - Design reference: section "Verification and evaluation strategy".
-  - Completion criteria: CI blocks merge on invariant regressions and known
-    bypass reintroductions.
+  - Completion criteria: continuous integration (CI) blocks merge on invariant
+    regressions and known bypass reintroductions.
 - [ ] Task 5.2.2: Integrate model-in-loop adversarial benchmark stage.
   - Design reference: section "End-to-end adversarial evaluation roadmap".
   - Completion criteria: benchmark harness runs on representative task sets and

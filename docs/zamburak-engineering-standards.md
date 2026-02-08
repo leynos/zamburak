@@ -24,7 +24,7 @@ This document adds Zamburak-specific requirements for security-critical work.
   separate concepts and separate types.
 - Treat any attempt to collapse these into one structure as a design defect.
 - Require policy checks for every external side effect, including tool calls,
-  LLM calls, and commit operations.
+  large language model (LLM) calls, and commit operations.
 - Include execution-context summaries in effect checks, not only argument
   summaries.
 
@@ -42,7 +42,7 @@ This document adds Zamburak-specific requirements for security-critical work.
 - Declassification and endorsement require explicit policy support and, where
   configured, user confirmation.
 
-### Tool and MCP trust standards
+### Tool and Model Context Protocol (MCP) trust standards
 
 - Resolve tools only through a local pinned catalogue.
 - Reject mutable remote tool documentation at runtime.
@@ -52,7 +52,7 @@ This document adds Zamburak-specific requirements for security-critical work.
 ### LLM sink governance standards
 
 - Treat all LLM calls as external communication sinks.
-- Enforce label budgets, redaction, and minimization before prompt emission.
+- Enforce label budgets, redaction, and minimisation before prompt emission.
 - Keep local-only compatibility in interface contracts.
 
 ## Audit and observability standards
@@ -98,18 +98,18 @@ A change is not complete without evidence that:
 For documentation-only changes, run:
 
 ```sh
-make markdownlint | tee /tmp/markdownlint-zamburac-$(git branch --show).out
-make nixie | tee /tmp/nixie-zamburac-$(git branch --show).out
-make fmt | tee /tmp/fmt-zamburac-$(git branch --show).out
+make markdownlint | tee /tmp/markdownlint-zamburak-$(git branch --show-current).out
+make nixie | tee /tmp/nixie-zamburak-$(git branch --show-current).out
+make fmt | tee /tmp/fmt-zamburak-$(git branch --show-current).out
 ```
 
 For code-affecting changes, run repository quality gates from `AGENTS.md`
 including:
 
 ```sh
-make check-fmt | tee /tmp/check-fmt-zamburac-$(git branch --show).out
-make lint | tee /tmp/lint-zamburac-$(git branch --show).out
-make test | tee /tmp/test-zamburac-$(git branch --show).out
+make check-fmt | tee /tmp/check-fmt-zamburak-$(git branch --show-current).out
+make lint | tee /tmp/lint-zamburak-$(git branch --show-current).out
+make test | tee /tmp/test-zamburak-$(git branch --show-current).out
 ```
 
 ## Review and change-management standards
