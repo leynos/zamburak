@@ -54,6 +54,8 @@ This document adds Zamburak-specific requirements for security-critical work.
 - Treat all LLM calls as external communication sinks.
 - Enforce label budgets, redaction, and minimisation before prompt emission.
 - Keep local-only compatibility in interface contracts.
+- Maintain explicit contract tests proving P-LLM and Q-LLM sink checks execute
+  at the documented enforcement points.
 
 ## Audit and observability standards
 
@@ -89,6 +91,9 @@ A change is not complete without evidence that:
 - Keep `docs/roadmap.md` focused on phases, steps, and measurable tasks.
 - Keep `docs/repository-layout.md` current when module paths or ownership
   boundaries change.
+- Keep `docs/tech-baseline.md` current when toolchain or gate tooling changes.
+- Keep `docs/verification-targets.md` current when invariants, suites, or gate
+  thresholds change.
 - Use sentence-case headings, 80-column paragraph wrapping, and
   en-GB-oxendict spelling.
 - Keep diagrams and tables captioned when present.
@@ -98,18 +103,18 @@ A change is not complete without evidence that:
 For documentation-only changes, run:
 
 ```sh
-make markdownlint | tee /tmp/markdownlint-zamburak-$(git branch --show-current).out
-make nixie | tee /tmp/nixie-zamburak-$(git branch --show-current).out
-make fmt | tee /tmp/fmt-zamburak-$(git branch --show-current).out
+make markdownlint | tee /tmp/markdownlint-zamburak-$(git branch --show).out
+make nixie | tee /tmp/nixie-zamburak-$(git branch --show).out
+make fmt | tee /tmp/fmt-zamburak-$(git branch --show).out
 ```
 
 For code-affecting changes, run repository quality gates from `AGENTS.md`
 including:
 
 ```sh
-make check-fmt | tee /tmp/check-fmt-zamburak-$(git branch --show-current).out
-make lint | tee /tmp/lint-zamburak-$(git branch --show-current).out
-make test | tee /tmp/test-zamburak-$(git branch --show-current).out
+make check-fmt | tee /tmp/check-fmt-zamburak-$(git branch --show).out
+make lint | tee /tmp/lint-zamburak-$(git branch --show).out
+make test | tee /tmp/test-zamburak-$(git branch --show).out
 ```
 
 ## Review and change-management standards

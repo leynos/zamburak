@@ -4,7 +4,7 @@ This ExecPlan is a living document. The sections `Constraints`, `Tolerances`,
 `Risks`, `Progress`, `Surprises & Discoveries`, `Decision Log`, and
 `Outcomes & Retrospective` must be kept up to date as work proceeds.
 
-Status: DRAFT
+Status: COMPLETE
 
 `PLANS.md` is not present in this repository at the time this plan was drafted,
 so this document is the governing execution plan for this change set.
@@ -107,7 +107,7 @@ escalate with options.
       Severity: medium
       Likelihood: medium
       Mitigation: add glossary and run an explicit consistency pass, including
-      `LlMRemotePromptCap`.
+      `LlmRemotePromptCap`.
 
 ## Progress
 
@@ -115,18 +115,25 @@ escalate with options.
     - [x] (2026-02-08 19:04Z) Confirmed `PLANS.md` is absent.
     - [x] (2026-02-08 19:16Z) Confirmed `docs/execplans/design-document.md`
       already exists and selected a unique ExecPlan filename.
-    - [ ] Draft canonical policy schema v1 and migration semantics updates.
-    - [ ] Draft LLM sink enforcement architecture and audit-path updates.
-    - [ ] Draft authority token lifecycle semantics updates.
-    - [ ] Draft workload assumption and SLO/SLI envelope updates.
-    - [ ] Draft glossary and naming consistency updates.
-    - [ ] Draft design-level acceptance criteria updates.
-    - [ ] Add `docs/tech-baseline.md`.
-    - [ ] Add `docs/verification-targets.md`.
-    - [ ] Add roadmap-to-artifact traceability mapping in `docs/roadmap.md`.
-    - [ ] Cross-link affected docs for discoverability and consistency.
-    - [ ] Run Markdown quality gates and capture logs.
-    - [ ] Re-check that original spec can be removed without information loss.
+    - [x] (2026-02-08 19:18Z) Drafted canonical policy schema v1 and migration
+      semantics updates.
+    - [x] (2026-02-08 19:18Z) Drafted LLM sink enforcement architecture and
+      audit-path updates.
+    - [x] (2026-02-08 19:18Z) Drafted authority token lifecycle semantics
+      updates.
+    - [x] (2026-02-08 19:18Z) Drafted workload assumption and SLO/SLI envelope
+      updates.
+    - [x] (2026-02-08 19:18Z) Drafted glossary and naming consistency updates.
+    - [x] (2026-02-08 19:18Z) Drafted design-level acceptance criteria updates.
+    - [x] (2026-02-08 19:18Z) Added `docs/tech-baseline.md`.
+    - [x] (2026-02-08 19:18Z) Added `docs/verification-targets.md`.
+    - [x] (2026-02-08 19:18Z) Added roadmap-to-artifact traceability mapping
+      in `docs/roadmap.md`.
+    - [x] (2026-02-08 19:18Z) Cross-linked affected docs for discoverability
+      and consistency.
+    - [x] (2026-02-08 19:18Z) Ran Markdown quality gates and captured logs.
+    - [x] (2026-02-08 19:18Z) Re-checked that original spec can be removed
+      without information loss.
 
 ## Surprises & Discoveries
 
@@ -155,14 +162,42 @@ escalate with options.
       independently reviewable artefacts.
       Date/Author: 2026-02-08 / Codex
 
+    - Decision: Standardize authority token naming to `LlmRemotePromptCap`.
+      Rationale: removes the remaining mixed-case inconsistency and aligns with
+      glossary naming rules.
+      Date/Author: 2026-02-08 / Codex
+
+    - Decision: Add a Phase 0 contract-freeze section to the roadmap.
+      Rationale: design-level conformance requirements now gate phase-1 build
+      start and must appear explicitly in implementation sequencing.
+      Date/Author: 2026-02-08 / Codex
+
 ## Outcomes & Retrospective
 
-Pending implementation. On completion, this section must document:
+Implementation completed for all planned documentation artefacts.
 
-- which of the nine outcomes were fully delivered,
-- any accepted deviations and rationale,
-- remaining gaps before deleting the original technical specification,
-- lessons to improve future design-hardening cycles.
+Delivered outcomes:
+
+- all nine required outcomes are now explicitly documented across design,
+  standards, roadmap, and the two new reference docs,
+- quality gates passed for docs formatting, linting, and Mermaid validation,
+- cross-linking now lets a new reader navigate from architecture to baseline
+  and verification obligations without relying on the old specification.
+
+Accepted deviations:
+
+- none; plan scope was completed within constraints and tolerances.
+
+Remaining gaps before deleting the original technical specification:
+
+- no unresolved design-contract gaps were identified in this execution pass.
+
+Lessons learned:
+
+- a dedicated phase for design-contract freeze materially improves roadmap
+  clarity before implementation starts,
+- explicit glossary and traceability artefacts prevent terminology drift and
+  make review faster.
 
 ## Context and Orientation
 
@@ -205,7 +240,7 @@ semantics and contracts:
 - add workload assumptions plus SLO/SLI envelopes that tie benchmark budgets to
   realistic operating assumptions,
 - add glossary entries and resolve naming inconsistency for
-  `LlMRemotePromptCap`,
+  `LlmRemotePromptCap`,
 - add design-level acceptance criteria that gate Phase 1 on contract
   conformance tests.
 
@@ -238,9 +273,9 @@ Run all commands from repository root: `/data/leynos/Projects/zamburac`.
    - `docs/verification-targets.md`.
 3. Implement Stage C in `docs/roadmap.md` and relevant cross-links.
 4. Run quality gates with log capture:
-   - `make fmt | tee /tmp/fmt-zamburak-$(git branch --show-current).out`
-   - `make markdownlint | tee /tmp/markdownlint-zamburak-$(git branch --show-current).out`
-   - `make nixie | tee /tmp/nixie-zamburak-$(git branch --show-current).out`
+   - `make fmt | tee /tmp/fmt-zamburak-$(git branch --show).out`
+   - `make markdownlint | tee /tmp/markdownlint-zamburak-$(git branch --show).out`
+   - `make nixie | tee /tmp/nixie-zamburak-$(git branch --show).out`
 5. Validate execution-readiness manually:
    - confirm each of the nine required outcomes is directly answerable from
      current docs without needing the original specification.
@@ -261,7 +296,7 @@ Acceptance is met only when all criteria below pass:
   - workload assumptions and SLO/SLI envelopes are documented with benchmark
     linkage.
   - glossary resolves token-name inconsistency, including
-    `LlMRemotePromptCap`.
+    `LlmRemotePromptCap`.
   - design-level acceptance criteria require contract conformance tests before
     Phase 1 build-out.
 - Farewell artefacts:
@@ -306,3 +341,7 @@ Documentation interfaces that must be explicit after execution:
 Initial draft created to supersede filename collision with
 `docs/execplans/design-document.md` and to encode the Logisphere plus
 final-farewell recommendations in one execution-ready plan.
+
+Revision (2026-02-08): updated status to `COMPLETE`, checked all progress
+items, and recorded implementation outcomes after documentation delivery and
+quality-gate validation.

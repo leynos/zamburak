@@ -11,6 +11,10 @@ Repository path mapping and file ownership are defined in
 Engineering process and quality gates are defined in
 `docs/zamburak-engineering-standards.md` and `AGENTS.md`.
 
+Technology baseline constraints are defined in `docs/tech-baseline.md`.
+
+Verification target expectations are defined in `docs/verification-targets.md`.
+
 ## Scope model
 
 Roadmap items are grouped as phases, steps, and tasks.
@@ -18,6 +22,55 @@ Roadmap items are grouped as phases, steps, and tasks.
 - phases define major capability milestones,
 - steps define coherent workstreams within each phase,
 - tasks define measurable completion criteria.
+
+## Phase 0: Design-contract freeze and baseline artefacts
+
+### Step 0.1: Canonical policy schema contract
+
+- [ ] Task 0.1.1: Freeze canonical policy schema v1 and compatibility rules.
+  - Design reference: sections "Canonical policy schema v1" and
+    "Schema compatibility and migration semantics".
+  - Completion criteria: policy loader accepts only schema v1 and rejects
+    unknown versions fail-closed.
+- [ ] Task 0.1.2: Implement schema migration semantics and conformance tests.
+  - Design reference: section "Schema compatibility and migration semantics".
+  - Completion criteria: explicit version migrations are test-covered and
+    produce auditable migration records.
+
+### Step 0.2: Sink and authority lifecycle contracts
+
+- [ ] Task 0.2.1: Implement planner large language model (P-LLM) and
+      quarantined large language model (Q-LLM) sink enforcement architecture
+      contracts.
+  - Design reference: section "LLM sink enforcement architecture".
+  - Completion criteria: pre-dispatch policy checks, transport guards, and
+    linked audit records exist for P-LLM and Q-LLM paths.
+- [ ] Task 0.2.2: Implement authority token lifecycle conformance.
+  - Design reference: section "Authority token lifecycle semantics".
+  - Completion criteria: mint, delegation, revocation, expiry, and
+    snapshot-restore behaviour are covered by contract tests.
+
+### Step 0.3: Baseline and verification references
+
+- [ ] Task 0.3.1: Maintain technology baseline reference document.
+  - Design reference: section "Context and orientation" in
+    `docs/tech-baseline.md`.
+  - Completion criteria: toolchain and quality-gate baseline is documented and
+    versioned.
+- [ ] Task 0.3.2: Maintain verification target matrix reference document.
+  - Design reference: section "Verification target matrix" in
+    `docs/verification-targets.md`.
+  - Completion criteria: each security-relevant subsystem has explicit
+    verification target coverage and evidence requirements.
+
+### Step 0.4: Pre-phase conformance gate
+
+- [ ] Task 0.4.1: Enforce design-level conformance gate before Phase 1.
+  - Design reference: section
+    "Design-level acceptance criteria before phase 1 build-out".
+  - Completion criteria: schema, sink enforcement, and authority lifecycle
+    contract suites pass in continuous integration (CI) before phase-1 tasks
+    are allowed to start.
 
 ## Phase 1: Core runtime trust model
 
@@ -148,6 +201,41 @@ Roadmap items are grouped as phases, steps, and tasks.
   - Design reference: section "End-to-end adversarial evaluation roadmap".
   - Completion criteria: benchmark harness runs on representative task sets and
     publishes comparable trend metrics.
+
+## Roadmap-to-artifact traceability
+
+This table maps roadmap tasks to primary repository artefacts that should exist
+when tasks are complete.
+
+| Task  | Primary artefact paths                                                                                                                            | Expected outcome                                                                          |
+| ----- | ------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| 0.1.1 | `policies/schema.json`, `crates/zamburak-policy/src/policy_def.rs`, `docs/zamburak-design-document.md`                                            | Canonical policy schema v1 is normative and enforced fail-closed.                         |
+| 0.1.2 | `crates/zamburak-policy/src/migration.rs`, `tests/compatibility/`, `tests/security/`                                                              | Schema migrations are explicit, test-covered, and auditable.                              |
+| 0.2.1 | `crates/zamburak-agent/src/planner.rs`, `crates/zamburak-tools/src/llm_adapter.rs`, `crates/zamburak-policy/src/engine.rs`, `tests/integration/`  | P-LLM and Q-LLM sink checks run at defined enforcement points with linked audit evidence. |
+| 0.2.2 | `crates/zamburak-core/src/authority.rs`, `crates/zamburak-policy/src/engine.rs`, `crates/zamburak-interpreter/src/snapshot.rs`, `tests/security/` | Authority lifecycle semantics are implemented and contract-tested.                        |
+| 0.3.1 | `docs/tech-baseline.md`                                                                                                                           | Technology and toolchain baseline is documented and maintained.                           |
+| 0.3.2 | `docs/verification-targets.md`                                                                                                                    | Verification target matrix defines required evidence by subsystem.                        |
+| 0.4.1 | `.github/workflows/`, `Makefile`, `docs/zamburak-design-document.md`                                                                              | CI blocks phase-1 execution when design-contract conformance fails.                       |
+| 1.1.1 | `crates/zamburak-core/src/trust.rs`, `crates/zamburak-core/src/authority.rs`, `crates/zamburak-policy/src/engine.rs`                              | Integrity, confidentiality, and authority remain separate types and interfaces.           |
+| 1.1.2 | `crates/zamburak-sanitizers/src/`, `tests/security/`                                                                                              | Verification kinds are deterministic and regression-tested.                               |
+| 1.2.1 | `crates/zamburak-core/src/control_context.rs`, `crates/zamburak-policy/src/engine.rs`                                                             | Effect checks include argument plus execution-context summaries.                          |
+| 1.2.2 | `tests/security/`, `tests/integration/`                                                                                                           | Control-flow side-effect exfiltration regressions are covered.                            |
+| 2.1.1 | `crates/zamburak-core/src/dependency_graph.rs`, `crates/zamburak-core/src/container_state.rs`                                                     | Mutable containers use versioned, acyclic provenance state.                               |
+| 2.1.2 | `tests/property/`, `tests/security/`                                                                                                              | Aliasing and mutation provenance remain sound under churn.                                |
+| 2.2.1 | `crates/zamburak-core/src/summary.rs`, `crates/zamburak-policy/src/engine.rs`                                                                     | Budget overflow yields unknown-top and conservative decisions.                            |
+| 2.2.2 | `crates/zamburak-core/src/witness.rs`, `crates/zamburak-policy/src/decision.rs`                                                                   | Explanations remain bounded and redacted.                                                 |
+| 3.1.1 | `crates/zamburak-tools/src/catalogue.rs`, `policies/`, `tests/compatibility/`                                                                     | Runtime enforces pinned tool schema and hash constraints.                                 |
+| 3.1.2 | `crates/zamburak-tools/src/catalogue.rs`, `crates/zamburak-tools/src/mcp_bridge.rs`                                                               | Mutable remote tool documentation is rejected at runtime.                                 |
+| 3.2.1 | `crates/zamburak-tools/src/mcp_bridge.rs`, `crates/zamburak-policy/src/engine.rs`                                                                 | MCP trust classes enforce per-server capability budgets.                                  |
+| 3.2.2 | `crates/zamburak-tools/src/`, `crates/zamburak-agent/src/confirmation.rs`, `tests/integration/`                                                   | Draft/commit lineage is policy-enforced and audit-linked.                                 |
+| 4.1.1 | `crates/zamburak-agent/src/planner.rs`, `crates/zamburak-tools/src/llm_adapter.rs`, `crates/zamburak-policy/src/engine.rs`                        | All LLM calls are sink-governed with enforceable policy signatures.                       |
+| 4.1.2 | `crates/zamburak-interpreter/src/redaction.rs`, `crates/zamburak-tools/src/llm_adapter.rs`, `tests/security/`                                     | Prompt emission applies mandatory minimisation and redaction.                             |
+| 4.2.1 | `tests/integration/`, `tests/security/`                                                                                                           | End-to-end privacy boundary behaviour is validated.                                       |
+| 4.2.2 | `crates/zamburak-agent/src/planner.rs`, `crates/zamburak-tools/src/llm_adapter.rs`                                                                | Interfaces support local-only inference back ends.                                        |
+| 5.1.1 | `crates/zamburak-policy/src/audit.rs`, `crates/zamburak-cli/src/commands/audit.rs`                                                                | Audit defaults remain summary-only and confidentiality-first.                             |
+| 5.1.2 | `crates/zamburak-policy/src/audit_chain.rs`, `tests/integration/`                                                                                 | Tamper-evident chaining and retention controls are enforced.                              |
+| 5.2.1 | `.github/workflows/`, `tests/security/`, `tests/property/`                                                                                        | CI enforces mechanistic and regression corpus gates.                                      |
+| 5.2.2 | `tests/benchmarks/`, `scripts/`, `.github/workflows/`                                                                                             | Model-in-loop adversarial benchmark trends are reported.                                  |
 
 ## Cross-phase acceptance criteria
 

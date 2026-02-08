@@ -11,6 +11,11 @@ Implementation sequencing is defined in `docs/roadmap.md`.
 Engineering process and quality gates are defined in
 `docs/zamburak-engineering-standards.md` and `AGENTS.md`.
 
+Technology and tooling baseline constraints are defined in
+`docs/tech-baseline.md`.
+
+Verification target matrices are defined in `docs/verification-targets.md`.
+
 ## Layout goals
 
 The repository layout is designed to:
@@ -191,6 +196,8 @@ The paths below are the intended locations for core implementation units.
 | `docs/roadmap.md`                        | High-level implementation phases, steps, and tasks       |
 | `docs/zamburak-engineering-standards.md` | Project-specific engineering standards                   |
 | `docs/repository-layout.md`              | Proposed repository structure and file-purpose reference |
+| `docs/tech-baseline.md`                  | Toolchain and quality-gate baseline with rationale       |
+| `docs/verification-targets.md`           | Verification target matrix and evidence requirements     |
 
 ### Root and operational files
 

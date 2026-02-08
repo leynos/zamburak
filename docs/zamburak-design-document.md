@@ -15,6 +15,11 @@ Proposed repository structure and file ownership mapping belong in
 Engineering process and quality gates belong in
 `docs/zamburak-engineering-standards.md` and `AGENTS.md`.
 
+Technology and tooling baseline constraints are defined in
+`docs/tech-baseline.md`.
+
+Verification target matrices are defined in `docs/verification-targets.md`.
+
 ## Design context and motivation
 
 Zamburak is built to address prompt-injection risk in agent systems that use
@@ -66,6 +71,26 @@ Zamburak is not trying to make the underlying model perfectly trustworthy. It
 is designed to make unsafe data and control flows mechanically visible and
 policy-enforceable, so that high-risk effects can be blocked, drafted, or
 confirmed with clear provenance.
+
+## Terminology and naming glossary
+
+This glossary is normative for design interpretation and naming consistency.
+
+- CaMeL:
+  shorthand for CApabilities for MachinE Learning, a research architecture that
+  defends tool-using agents by enforcing policy at runtime control and
+  data-flow boundaries, instead of relying on prompt-only instruction following.
+- Lethal Trifecta:
+  the attack-enabling condition set of private-data access, exposure to
+  untrusted inputs, and external communication channels in one agent workflow.
+- planner large language model (P-LLM):
+  the model path used for trusted query decomposition and plan synthesis.
+- quarantined large language model (Q-LLM):
+  the isolated model path used for untrusted content transformation, always
+  treated as untrusted output unless deterministic verification succeeds.
+- authority token naming convention:
+  use `UpperCamelCase` with Rust-compatible initialism casing, for example
+  `EmailSendCap` and `LlmRemotePromptCap`.
 
 ## Goals and non-goals
 
@@ -310,9 +335,31 @@ Authority is represented as host-minted capability tokens. Example tokens:
 - `EmailSendCap`,
 - `CalendarWriteCap`,
 - `PaymentInitiateCap`,
-- `LlMRemotePromptCap`.
+- `LlmRemotePromptCap`.
 
 Monty code cannot forge authority tokens.
+
+#### Authority token lifecycle semantics
+
+Authority tokens are stateful security objects. Their lifecycle rules are
+normative:
+
+- mint scope:
+  only host-trusted components may mint tokens, and each token must encode
+  subject, capability, scope, and expiry.
+- delegation:
+  delegated tokens must be strict subsets of parent scope and lifetime; parent
+  provenance is retained for audit lineage.
+- revocation:
+  revocation is immediate at policy-evaluation boundaries using a host-managed
+  revocation index; revoked tokens fail closed.
+- expiry:
+  expired tokens are invalid regardless of cached summaries and must be removed
+  from effective authority sets before effect checks.
+- snapshot restore validation:
+  on restore, all tokens are revalidated against current revocation and expiry
+  state; invalid tokens are stripped and any dependent effect request is denied
+  or confirmation-gated conservatively.
 
 ### Verification, endorsement, and declassification
 
@@ -431,9 +478,13 @@ context_requirements:
 default_decision: RequireConfirmation
 ```
 
-### Policy definition example
+### Canonical policy schema v1
+
+The canonical policy contract for Zamburak is `schema_version: 1`. All policy
+files must parse into this schema before execution starts.
 
 ```yaml
+schema_version: 1
 policy_name: personal_assistant_default
 default_action: Deny
 strict_mode: true
@@ -461,6 +512,33 @@ tools:
       deny_if_pc_integrity_contains: [Untrusted]
     default_decision: RequireConfirmation
 ```
+
+Schema v1 required top-level fields are:
+
+- `schema_version`,
+- `policy_name`,
+- `default_action`,
+- `strict_mode`,
+- `budgets`,
+- `tools`.
+
+### Schema compatibility and migration semantics
+
+Compatibility rules for schema evolution are:
+
+1. additive optional fields are compatible only if their default behaviour is
+   not less restrictive than prior behaviour,
+2. field removals, renames, enum widening, or default weakening are breaking
+   changes and require a new schema version,
+3. readers must reject unknown schema versions and fail closed.
+
+Migration rules are:
+
+- migrations are explicit, version-to-version transforms,
+- each migration must preserve or tighten effective policy outcomes,
+- migration execution and result hashes must be recorded in audit metadata,
+- migration conformance tests are mandatory before adoption in the default
+  profile.
 
 ## Policy evaluation semantics
 
@@ -561,6 +639,24 @@ signatures. Policy enforces:
 - payload size and context limits,
 - provider-specific approval requirements where configured.
 
+### LLM sink enforcement architecture
+
+LLM sink checks run at three explicit points:
+
+1. pre-dispatch policy check in the runtime effect gateway, using argument and
+   execution-context summaries,
+2. adapter-level transport guard in the LLM tool adapter, ensuring required
+   redaction and minimisation transforms were applied,
+3. post-dispatch audit emission in the audit pipeline with decision code,
+   context summary reference, and payload-hash witness.
+
+For planner and quarantined paths:
+
+- P-LLM calls must pass policy before any remote prompt emission,
+- Q-LLM calls are always tagged untrusted on response ingestion unless
+  deterministic verification upgrades integrity,
+- both paths emit linked audit records keyed by execution id and call id.
+
 ### Privacy boundary statement
 
 Prompt injection resistance does not imply provider secrecy. If policy permits
@@ -643,6 +739,24 @@ Evaluation progression:
   or equivalent,
 - later: continuous red-team generation and trend tracking.
 
+### Design-level acceptance criteria before phase 1 build-out
+
+Before Phase 1 implementation begins, design-contract conformance tests must
+exist and pass for:
+
+- policy schema contract:
+  parser and validator tests proving canonical schema v1 compatibility and
+  fail-closed unknown-version handling.
+- LLM sink enforcement:
+  tests proving pre-dispatch checks, transport redaction enforcement, and audit
+  linkage for both P-LLM and Q-LLM call paths.
+- authority lifecycle:
+  tests covering mint scope, delegation narrowing, revocation, expiry, and
+  snapshot-restore revalidation behaviour.
+
+If any contract conformance suite is missing or failing, phase-1 build work is
+blocked.
+
 ## Performance and resource model
 
 ### Resource budget classes
@@ -664,6 +778,30 @@ The design uses measurable budgets by class:
 | Memory growth           | linear in values with bounded witness state | Stress workload with mutation and loops       |
 
 Targets are revised with empirical baselines but remain measurable and testable.
+
+### Workload assumptions and service envelopes
+
+Benchmark targets are interpreted against explicit workload assumptions:
+
+- workflow profile:
+  personal-assistant workloads with mixed read and write tools, bounded by 500
+  effect checks per execution and 50,000 tagged values per run.
+- side-effect profile:
+  at most 20 high-risk sink calls per execution requiring confirmation or draft
+  mediation.
+- mutability profile:
+  container-heavy transformations with up to 10,000 mutation operations per
+  execution.
+
+Service-level indicators (SLIs) and service-level objectives (SLOs) are:
+
+- SLI: p50 and p95 policy-check latency.
+  SLO: p95 remains within the policy decision latency budget for supported
+  summary sizes.
+- SLI: VM opcode propagation overhead by representative opcode mix.
+  SLO: p50 remains within the VM propagation overhead budget.
+- SLI: proportion of executions ending in budget-overflow unknown-top states.
+  SLO: overflow rate remains below 1 percent on representative workloads.
 
 ### Safety behaviour under pressure
 
@@ -701,6 +839,9 @@ These concerns are tracked in `docs/roadmap.md` and
 
 Repository path mapping and file-purpose documentation are tracked in
 `docs/repository-layout.md`.
+
+Technology baseline and verification target expectations are tracked in
+`docs/tech-baseline.md` and `docs/verification-targets.md`.
 
 ## References
 
