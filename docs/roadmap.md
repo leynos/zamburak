@@ -5,6 +5,9 @@ This roadmap is the high-level implementation plan for Zamburak.
 Detailed semantics, invariants, interfaces, and trust-boundary rules are
 defined in `docs/zamburak-design-document.md`.
 
+Repository path mapping and file ownership are defined in
+`docs/repository-layout.md`.
+
 Engineering process and quality gates are defined in
 `docs/zamburak-engineering-standards.md` and `AGENTS.md`.
 

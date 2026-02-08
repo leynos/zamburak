@@ -87,6 +87,8 @@ A change is not complete without evidence that:
 - Keep `docs/zamburak-design-document.md` architecture-first and authoritative
   for semantics and invariants.
 - Keep `docs/roadmap.md` focused on phases, steps, and measurable tasks.
+- Keep `docs/repository-layout.md` current when module paths or ownership
+  boundaries change.
 - Use sentence-case headings, 80-column paragraph wrapping, and
   en-GB-oxendict spelling.
 - Keep diagrams and tables captioned when present.

@@ -9,6 +9,9 @@ choices ad hoc.
 
 Implementation sequencing belongs in `docs/roadmap.md`.
 
+Proposed repository structure and file ownership mapping belong in
+`docs/repository-layout.md`.
+
 Engineering process and quality gates belong in
 `docs/zamburak-engineering-standards.md` and `AGENTS.md`.
 
@@ -634,6 +637,9 @@ This document does not define:
 
 These concerns are tracked in `docs/roadmap.md` and
 `docs/zamburak-engineering-standards.md`.
+
+Repository path mapping and file-purpose documentation are tracked in
+`docs/repository-layout.md`.
 
 ## References
 
