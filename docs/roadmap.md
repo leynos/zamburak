@@ -158,7 +158,7 @@ Roadmap items are grouped as phases, steps, and tasks.
       large language model (Q-LLM) calls as policy-governed sinks.
   - Design reference: section "LLM calls as exfiltration sinks".
   - Completion criteria: calls are blocked when labels exceed sink budget.
-- [ ] Task 4.1.2: Implement mandatory minimisation and redaction transforms.
+- [ ] Task 4.1.2: Implement mandatory minimization and redaction transforms.
   - Design reference: sections "LLM calls as exfiltration sinks" and
     "Confidentiality-first defaults".
   - Completion criteria: prompt payload paths apply required transforms before
@@ -227,7 +227,7 @@ when tasks are complete.
 | 3.2.1 | `crates/zamburak-tools/src/mcp_bridge.rs`, `crates/zamburak-policy/src/engine.rs`                                                                 | MCP trust classes enforce per-server capability budgets.                                  |
 | 3.2.2 | `crates/zamburak-tools/src/`, `crates/zamburak-agent/src/confirmation.rs`, `tests/integration/`                                                   | Draft/commit lineage is policy-enforced and audit-linked.                                 |
 | 4.1.1 | `crates/zamburak-agent/src/planner.rs`, `crates/zamburak-tools/src/llm_adapter.rs`, `crates/zamburak-policy/src/engine.rs`                        | All LLM calls are sink-governed with enforceable policy signatures.                       |
-| 4.1.2 | `crates/zamburak-interpreter/src/redaction.rs`, `crates/zamburak-tools/src/llm_adapter.rs`, `tests/security/`                                     | Prompt emission applies mandatory minimisation and redaction.                             |
+| 4.1.2 | `crates/zamburak-interpreter/src/redaction.rs`, `crates/zamburak-tools/src/llm_adapter.rs`, `tests/security/`                                     | Prompt emission applies mandatory minimization and redaction.                             |
 | 4.2.1 | `tests/integration/`, `tests/security/`                                                                                                           | End-to-end privacy boundary behaviour is validated.                                       |
 | 4.2.2 | `crates/zamburak-agent/src/planner.rs`, `crates/zamburak-tools/src/llm_adapter.rs`                                                                | Interfaces support local-only inference back ends.                                        |
 | 5.1.1 | `crates/zamburak-policy/src/audit.rs`, `crates/zamburak-cli/src/commands/audit.rs`                                                                | Audit defaults remain summary-only and confidentiality-first.                             |

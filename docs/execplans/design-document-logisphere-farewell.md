@@ -261,7 +261,7 @@ its validation checks.
 
 ## Concrete Steps
 
-Run all commands from repository root: `/data/leynos/Projects/zamburac`.
+Run all commands from repository root: `/data/leynos/Projects/zamburak`.
 
 1. Implement Stage A in `docs/zamburak-design-document.md`:
    - insert new subsections in policy, LLM interaction, authority model,

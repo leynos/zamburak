@@ -6,7 +6,7 @@
 - [Documentation style guide](documentation-style-guide.md) - Authoring,
   formatting, grammar, and structure conventions for project documentation.
 - [Design-document farewell ExecPlan](execplans/design-document-logisphere-farewell.md)
-  - Execution plan and completion record for finalising the Zamburak
+  - Execution plan and completion record for finalizing the Zamburak
   design-doc set.
 - [Reliable testing with dependency injection](reliable-testing-in-rust-via-dependency-injection.md)
   - Patterns for deterministic and parallel-safe Rust tests by isolating
@@ -18,7 +18,7 @@
 - [Rust doctest DRY guide](rust-doctest-dry-guide.md) - Techniques for writing
   maintainable, non-repetitive Rust doctests and documentation examples.
 - [Rust `rstest` fixtures guide](rust-testing-with-rstest-fixtures.md) -
-  Fixture patterns, parameterisation strategies, and test ergonomics using
+  Fixture patterns, parameterization strategies, and test ergonomics using
   `rstest`.
 - [Scripting standards](scripting-standards.md) - Standards for script clarity,
   reproducibility, dependency management, and maintainability.

@@ -62,7 +62,7 @@ The Lethal Trifecta is the practical attacker model for agent deployments:
 
 Its significance is operational rather than theoretical: if all three
 conditions exist, prompt injection can become direct data exfiltration. The
-Zamburak design therefore prioritises explicit containment and mediation of
+Zamburak design therefore prioritizes explicit containment and mediation of
 those three conditions rather than generic prompt hardening.
 
 ### Design intent summary
@@ -100,7 +100,7 @@ Zamburak is a capability-governed execution environment for agent-authored
 Monty programs. It reduces prompt injection impact by combining:
 
 - dynamic information flow control (IFC),
-- policy checks at every side-effect boundary,
+- policy checks at every side effect boundary,
 - deterministic verification and endorsement controls, and
 - explicit confirmation for high-risk actions.
 
@@ -146,7 +146,7 @@ The attacker can:
 - embed indirect instructions in untrusted content,
 - exploit call occurrence and call count as side channels,
 - exploit mutable or remote tool documentation if accepted at runtime,
-- attempt taint laundering through concatenation, slicing, serialisation,
+- attempt taint laundering through concatenation, slicing, serialization,
   templating, or container mutation.
 
 ### Protected assets
@@ -154,7 +154,7 @@ The attacker can:
 Protected assets include:
 
 - personal user content,
-- authentication and authorisation secrets,
+- authentication and authorization secrets,
 - financial and account metadata,
 - audit records,
 - host-minted authority tokens.
@@ -177,7 +177,7 @@ Zamburak defines these explicit boundaries:
 Security claims rely on correctness of these trusted components:
 
 - Monty fork plus VM hooks used by Zamburak,
-- IFC propagation and dependency summarisation logic,
+- IFC propagation and dependency summarization logic,
 - policy engine and policy loader,
 - deterministic verifier and sanitizer implementations,
 - authority token minting and validation,
@@ -606,7 +606,7 @@ MCP servers are classified as:
 - `TrustedLocal`,
 - `RemoteThirdParty`.
 
-Each class has explicit capability budgets and allowed side-effect classes.
+Each class has explicit capability budgets and allowed side effect classes.
 Remote third-party servers default to stricter controls and reduced authority.
 
 ### Draft and commit action model
@@ -637,7 +637,7 @@ All LLM calls are treated as effectful sink calls with tool-like policy
 signatures. Policy enforces:
 
 - confidentiality budget per call,
-- required minimisation/redaction transforms,
+- required minimization/redaction transforms,
 - payload size and context limits,
 - provider-specific approval requirements where configured.
 
@@ -648,7 +648,7 @@ LLM sink checks run at three explicit points:
 1. pre-dispatch policy check in the runtime effect gateway, using argument and
    execution-context summaries,
 2. adapter-level transport guard in the LLM tool adapter, ensuring required
-   redaction and minimisation transforms were applied,
+   redaction and minimization transforms were applied,
 3. post-dispatch audit emission in the audit pipeline with decision code,
    context summary reference, and payload-hash witness.
 
@@ -790,7 +790,7 @@ Benchmark targets are interpreted against explicit workload assumptions:
 - workflow profile:
   personal-assistant workloads with mixed read and write tools, bounded by 500
   effect checks per execution and 50,000 tagged values per run.
-- side-effect profile:
+- side effect profile:
   at most 20 high-risk sink calls per execution requiring confirmation or draft
   mediation.
 - mutability profile:

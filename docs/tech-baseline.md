@@ -43,7 +43,7 @@ _Table 1: Canonical technology and tooling baseline._
 | `make lint`         | Enforces strict Rust linting and warnings-as-errors quality discipline. |
 | `make test`         | Validates behavioural and regression correctness across the workspace.  |
 | `make markdownlint` | Enforces documentation consistency and readability constraints.         |
-| `make fmt`          | Normalises Rust and Markdown formatting before review.                  |
+| `make fmt`          | Normalizes Rust and Markdown formatting before review.                  |
 | `make nixie`        | Validates Mermaid diagrams to prevent broken architecture renderings.   |
 
 _Table 2: Required engineering tools and quality-gate rationale._

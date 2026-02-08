@@ -52,7 +52,7 @@ This document adds Zamburak-specific requirements for security-critical work.
 ### LLM sink governance standards
 
 - Treat all LLM calls as external communication sinks.
-- Enforce label budgets, redaction, and minimisation before prompt emission.
+- Enforce label budgets, redaction, and minimization before prompt emission.
 - Keep local-only compatibility in interface contracts.
 - Maintain explicit contract tests proving P-LLM and Q-LLM sink checks execute
   at the documented enforcement points.

@@ -84,7 +84,7 @@ The paths below are the intended locations for core implementation units.
 | `crates/zamburak-core/src/dependency_graph.rs` | Graph state and edge insertion semantics             |
 | `crates/zamburak-core/src/propagation.rs`      | Normal and strict propagation rules                  |
 | `crates/zamburak-core/src/control_context.rs`  | Control-context stack and strict-mode helpers        |
-| `crates/zamburak-core/src/summary.rs`          | Bounded transitive summarisation and caching         |
+| `crates/zamburak-core/src/summary.rs`          | Bounded transitive summarization and caching         |
 | `crates/zamburak-core/src/trust.rs`            | Integrity label and verification kinds               |
 | `crates/zamburak-core/src/capability.rs`       | Authority token and label-set helpers                |
 | `crates/zamburak-core/src/errors.rs`           | Core domain and runtime error types                  |
