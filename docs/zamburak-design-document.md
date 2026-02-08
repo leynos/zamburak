@@ -15,6 +15,58 @@ Proposed repository structure and file ownership mapping belong in
 Engineering process and quality gates belong in
 `docs/zamburak-engineering-standards.md` and `AGENTS.md`.
 
+## Design context and motivation
+
+Zamburak is built to address prompt-injection risk in agent systems that use
+tools over sensitive data.
+
+The core design motivation comes from two external observations:
+
+- the CaMeL research result in
+  [Defeating Prompt Injections by Design](https://arxiv.org/abs/2503.18813)
+  shows that tool-using agents can be made more robust by moving security
+  enforcement out of prompt text and into runtime control- and data-flow
+  enforcement,
+- the Lethal Trifecta model in
+  [The lethal trifecta for AI agents](https://simonwillison.net/2025/Jun/16/the-lethal-trifecta/)
+   describes when real-world data theft becomes easy: private-data access,
+  exposure to untrusted content, and external communication in the same agent
+  workflow.
+
+### What CaMeL contributes to this design
+
+In the CaMeL paper, the defence model is a protective system layer around the
+large language model (LLM), where control and data flows are tracked and tool
+calls are policy-gated. The key significance for Zamburak is architectural:
+security should be enforced by runtime semantics and policy checks, not by
+hoping the model consistently ignores hostile instructions.
+
+Zamburak adopts this direction in a Rust and Monty-oriented form:
+
+- values carry dependency and label metadata through execution,
+- side effects are checked against policy at tool boundaries,
+- strict mode propagates control context into effect decisions.
+
+### What the Lethal Trifecta contributes to this design
+
+The Lethal Trifecta is the practical attacker model for agent deployments:
+
+- access to private data,
+- exposure to attacker-controlled or untrusted content,
+- an output path that can communicate data externally.
+
+Its significance is operational rather than theoretical: if all three
+conditions exist, prompt injection can become direct data exfiltration. The
+Zamburak design therefore prioritises explicit containment and mediation of
+those three conditions rather than generic prompt hardening.
+
+### Design intent summary
+
+Zamburak is not trying to make the underlying model perfectly trustworthy. It
+is designed to make unsafe data and control flows mechanically visible and
+policy-enforceable, so that high-risk effects can be blocked, drafted, or
+confirmed with clear provenance.
+
 ## Goals and non-goals
 
 ### Product goal
