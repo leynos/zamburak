@@ -33,6 +33,8 @@ The baseline is normative for:
 | Markdown formatting       | `mdformat-all`           | `Makefile`                              |
 | Mermaid validation        | `nixie`                  | `Makefile`                              |
 
+_Table 1: Canonical technology and tooling baseline._
+
 ## Required engineering tools and rationale
 
 | Tool or target      | Why it is required                                                      |
@@ -43,6 +45,8 @@ The baseline is normative for:
 | `make markdownlint` | Enforces documentation consistency and readability constraints.         |
 | `make fmt`          | Normalises Rust and Markdown formatting before review.                  |
 | `make nixie`        | Validates Mermaid diagrams to prevent broken architecture renderings.   |
+
+_Table 2: Required engineering tools and quality-gate rationale._
 
 ## Baseline usage contract
 

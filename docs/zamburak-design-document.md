@@ -235,6 +235,8 @@ _Figure 1: Zamburak execution and effect mediation architecture._
 | Catalogue manager   | Pins tool metadata and schemas                 | Runtime rejects mutable unpinned docs                 |
 | Audit pipeline      | Produces reviewable records                    | Redacted summaries only by default                    |
 
+_Table 1: Component responsibilities and security-critical invariants._
+
 ## Runtime semantics
 
 ### Supported language subset
@@ -776,6 +778,8 @@ The design uses measurable budgets by class:
 | Policy check latency    | <= 1 ms p95                                 | Argument summaries <= 100 origins             |
 | Summary traversal       | <= 10,000 steps per check                   | Overflow forces unknown-top summary           |
 | Memory growth           | linear in values with bounded witness state | Stress workload with mutation and loops       |
+
+_Table 2: Initial performance budget targets and measurement contexts._
 
 Targets are revised with empirical baselines but remain measurable and testable.
 

@@ -40,8 +40,7 @@ Roadmap items are grouped as phases, steps, and tasks.
 ### Step 0.2: Sink and authority lifecycle contracts
 
 - [ ] Task 0.2.1: Implement planner large language model (P-LLM) and
-      quarantined large language model (Q-LLM) sink enforcement architecture
-      contracts.
+      quarantined large language model (Q-LLM) sink enforcement contracts.
   - Design reference: section "LLM sink enforcement architecture".
   - Completion criteria: pre-dispatch policy checks, transport guards, and
     linked audit records exist for P-LLM and Q-LLM paths.
@@ -77,8 +76,7 @@ Roadmap items are grouped as phases, steps, and tasks.
 ### Step 1.1: Label model separation and interfaces
 
 - [ ] Task 1.1.1: Introduce separate runtime representations for integrity
-      labels,
-  confidentiality labels, and authority tokens.
+      labels, confidentiality labels, and authority tokens.
   - Design reference: `docs/zamburak-design-document.md` section
     "Information flow model".
   - Completion criteria: no shared type is used to represent both data labels
@@ -152,7 +150,7 @@ Roadmap items are grouped as phases, steps, and tasks.
   - Completion criteria: high-risk tools require a reviewed draft before commit
     and emit linked audit records.
 
-## Phase 4: large language model (LLM) sink governance and privacy controls
+## Phase 4: Large language model (LLM) sink governance and privacy controls
 
 ### Step 4.1: LLM sink policy signatures
 
@@ -202,7 +200,7 @@ Roadmap items are grouped as phases, steps, and tasks.
   - Completion criteria: benchmark harness runs on representative task sets and
     publishes comparable trend metrics.
 
-## Roadmap-to-artifact traceability
+## Roadmap-to-artefact traceability
 
 This table maps roadmap tasks to primary repository artefacts that should exist
 when tasks are complete.
@@ -236,6 +234,8 @@ when tasks are complete.
 | 5.1.2 | `crates/zamburak-policy/src/audit_chain.rs`, `tests/integration/`                                                                                 | Tamper-evident chaining and retention controls are enforced.                              |
 | 5.2.1 | `.github/workflows/`, `tests/security/`, `tests/property/`                                                                                        | CI enforces mechanistic and regression corpus gates.                                      |
 | 5.2.2 | `tests/benchmarks/`, `scripts/`, `.github/workflows/`                                                                                             | Model-in-loop adversarial benchmark trends are reported.                                  |
+
+_Table 1: Roadmap tasks mapped to primary implementation artefacts._
 
 ## Cross-phase acceptance criteria
 

@@ -68,6 +68,8 @@ The repository layout is designed to:
 | `zamburak-agent`       | Planner loop, repair loop, and confirmations            | Redacted feedback and controlled commit flows            |
 | `zamburak-cli`         | Operational commands and validation tooling             | Administrative actions respect policy and audit controls |
 
+_Table 1: Crate boundaries and security-critical responsibilities._
+
 ## Crate file-purpose reference
 
 The paths below are the intended locations for core implementation units.
@@ -87,6 +89,8 @@ The paths below are the intended locations for core implementation units.
 | `crates/zamburak-core/src/capability.rs`       | Authority token and label-set helpers                |
 | `crates/zamburak-core/src/errors.rs`           | Core domain and runtime error types                  |
 
+_Table 2: Core crate file-purpose mapping._
+
 ### `crates/zamburak-interpreter`
 
 | Path                                                 | Purpose                                          |
@@ -98,6 +102,8 @@ The paths below are the intended locations for core implementation units.
 | `crates/zamburak-interpreter/src/snapshot.rs`        | Snapshot and resume semantics for IFC state      |
 | `crates/zamburak-interpreter/src/redaction.rs`       | Error and prompt-feedback redaction functions    |
 | `crates/zamburak-interpreter/src/resource_limits.rs` | Runtime budgets for values, graph, and summaries |
+
+_Table 3: Interpreter crate file-purpose mapping._
 
 ### `crates/zamburak-policy`
 
@@ -111,6 +117,8 @@ The paths below are the intended locations for core implementation units.
 | `crates/zamburak-policy/src/audit.rs`          | Decision-to-audit record transformations           |
 | `crates/zamburak-policy/src/defaults.rs`       | Baseline policy presets and safe defaults          |
 
+_Table 4: Policy crate file-purpose mapping._
+
 ### `crates/zamburak-sanitizers`
 
 | Path                                         | Purpose                                         |
@@ -121,6 +129,8 @@ The paths below are the intended locations for core implementation units.
 | `crates/zamburak-sanitizers/src/url.rs`      | URL parsing and allowlist verification          |
 | `crates/zamburak-sanitizers/src/numeric.rs`  | Numeric bounds and amount verification          |
 | `crates/zamburak-sanitizers/src/template.rs` | Safe templating and escaping transforms         |
+
+_Table 5: Sanitizer crate file-purpose mapping._
 
 ### `crates/zamburak-tools`
 
@@ -135,6 +145,8 @@ The paths below are the intended locations for core implementation units.
 | `crates/zamburak-tools/src/web_fetch.rs`      | Web-fetch untrusted source adapter                 |
 | `crates/zamburak-tools/src/mcp_bridge.rs`     | MCP server transport and trust-boundary wrapper    |
 
+_Table 6: Tool crate file-purpose mapping._
+
 ### `crates/zamburak-agent`
 
 | Path                                        | Purpose                                            |
@@ -144,6 +156,8 @@ The paths below are the intended locations for core implementation units.
 | `crates/zamburak-agent/src/repair_loop.rs`  | Repair loop with redacted error feedback           |
 | `crates/zamburak-agent/src/confirmation.rs` | Confirmation workflow and typed claim display      |
 | `crates/zamburak-agent/src/state.rs`        | Execution state, snapshots, and continuation logic |
+
+_Table 7: Agent crate file-purpose mapping._
 
 ### `crates/zamburak-cli`
 
@@ -157,6 +171,8 @@ The paths below are the intended locations for core implementation units.
 | `crates/zamburak-cli/src/commands/test_policy.rs` | Policy scenario and regression execution |
 | `crates/zamburak-cli/src/config.rs`               | CLI configuration loading                |
 
+_Table 8: CLI crate file-purpose mapping._
+
 ## Shared directories and file purposes
 
 ### `policies/`
@@ -169,6 +185,8 @@ The paths below are the intended locations for core implementation units.
 | `policies/examples/calendar_scheduling.yaml` | Example policy for scheduling workflows         |
 | `policies/schema.json`                       | Policy schema for structural validation         |
 
+_Table 9: Policy directory artefacts and purposes._
+
 ### `tests/`
 
 | Path                   | Purpose                                                     |
@@ -179,6 +197,8 @@ The paths below are the intended locations for core implementation units.
 | `tests/compatibility/` | Behavioural comparisons against upstream Monty              |
 | `tests/benchmarks/`    | Performance and overhead measurement tests                  |
 
+_Table 10: Test suite directories and purposes._
+
 ### `fuzz/`
 
 | Path                                 | Purpose                             |
@@ -187,6 +207,8 @@ The paths below are the intended locations for core implementation units.
 | `fuzz/fuzz_targets/fuzz_bytecode.rs` | VM and opcode execution fuzz target |
 | `fuzz/fuzz_targets/fuzz_policy.rs`   | Policy evaluation fuzz target       |
 | `fuzz/Cargo.toml`                    | Fuzz target workspace configuration |
+
+_Table 11: Fuzzing artefacts and purposes._
 
 ### `docs/`
 
@@ -198,6 +220,8 @@ The paths below are the intended locations for core implementation units.
 | `docs/repository-layout.md`              | Proposed repository structure and file-purpose reference |
 | `docs/tech-baseline.md`                  | Toolchain and quality-gate baseline with rationale       |
 | `docs/verification-targets.md`           | Verification target matrix and evidence requirements     |
+
+_Table 12: Core documentation artefacts and ownership._
 
 ### Root and operational files
 
@@ -211,6 +235,8 @@ The paths below are the intended locations for core implementation units.
 | `LICENSE`             | Project licence                                   |
 | `scripts/`            | Operational helper scripts for local workflows    |
 | `.github/workflows/`  | CI and automation workflow definitions            |
+
+_Table 13: Root and operational artefacts with purposes._
 
 ## Layout governance rules
 

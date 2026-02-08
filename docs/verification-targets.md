@@ -34,6 +34,8 @@ evidence exists and all listed gates pass.
 | Audit pipeline                  | Confidentiality-first logging and tamper-evident chaining           | unit tests, integration tests           | redaction fixtures, hash-chain validator output | block merge on plaintext leak or chain break |
 | Snapshot and resume             | Policy-equivalent behaviour pre/post restore                        | integration tests, metamorphic tests    | before/after decision transcripts               | block merge on policy divergence             |
 
+_Table 1: Verification targets, evidence artefacts, and gate behaviour._
+
 ## Evidence requirements by target class
 
 Every verification target must include:
