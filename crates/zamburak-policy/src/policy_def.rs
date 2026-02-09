@@ -8,6 +8,7 @@ pub const CANONICAL_POLICY_SCHEMA_VERSION: u64 = 1;
 
 /// A validated policy definition that can be used by runtime loaders.
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(deny_unknown_fields)]
 pub struct PolicyDefinition {
     /// Policy schema contract version.
     pub schema_version: u64,
@@ -93,6 +94,7 @@ pub enum SideEffectClass {
 
 /// Budget limits used by dependency summarization and traversal.
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(deny_unknown_fields)]
 pub struct PolicyBudgets {
     /// Maximum number of tracked values.
     pub max_values: u64,
@@ -106,6 +108,7 @@ pub struct PolicyBudgets {
 
 /// Per-tool policy definition.
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(deny_unknown_fields)]
 pub struct ToolPolicy {
     /// Tool identifier.
     pub tool: String,
@@ -126,6 +129,7 @@ pub struct ToolPolicy {
 
 /// Per-argument policy constraints.
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(deny_unknown_fields)]
 pub struct ArgRule {
     /// Argument identifier.
     pub arg: String,
@@ -139,6 +143,7 @@ pub struct ArgRule {
 
 /// Context constraints for a tool policy.
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(deny_unknown_fields)]
 pub struct ContextRules {
     /// Deny when program-counter integrity contains any listed labels.
     #[serde(default)]
@@ -153,27 +158,7 @@ mod tests {
     };
     use rstest::rstest;
 
-    const CANONICAL_POLICY_YAML: &str = r#"
-        schema_version: 1
-        policy_name: personal_assistant_default
-        default_action: Deny
-        strict_mode: true
-        budgets:
-          max_values: 100000
-          max_parents_per_value: 64
-          max_closure_steps: 10000
-          max_witness_depth: 32
-        tools:
-          - tool: send_email
-            side_effect_class: ExternalWrite
-            required_authority: [EmailSendCap]
-            arg_rules:
-              - arg: body
-                forbids_confidentiality: [AUTH_SECRET]
-            context_rules:
-              deny_if_pc_integrity_contains: [Untrusted]
-            default_decision: RequireConfirmation
-    "#;
+    const CANONICAL_POLICY_YAML: &str = include_str!("../../../policies/default.yaml");
 
     #[test]
     fn accepts_schema_version_one_yaml() {
@@ -283,6 +268,50 @@ mod tests {
 
         let error = PolicyDefinition::from_yaml_str(malformed_version_policy)
             .expect_err("must fail closed");
+
+        assert!(matches!(error, PolicyLoadError::InvalidYaml(_)));
+    }
+
+    #[test]
+    fn rejects_unknown_top_level_field() {
+        let policy_with_unknown_field = r#"
+            schema_version: 1
+            policy_name: personal_assistant_default
+            default_action: Deny
+            strict_mode: true
+            budgets:
+              max_values: 100000
+              max_parents_per_value: 64
+              max_closure_steps: 10000
+              max_witness_depth: 32
+            tools: []
+            unexpected_field: true
+        "#;
+
+        let error = PolicyDefinition::from_yaml_str(policy_with_unknown_field)
+            .expect_err("must fail closed on unknown top-level field");
+
+        assert!(matches!(error, PolicyLoadError::InvalidYaml(_)));
+    }
+
+    #[test]
+    fn rejects_unknown_nested_field() {
+        let policy_with_unknown_nested_field = r#"
+            schema_version: 1
+            policy_name: personal_assistant_default
+            default_action: Deny
+            strict_mode: true
+            budgets:
+              max_values: 100000
+              max_parents_per_value: 64
+              max_closure_steps: 10000
+              max_witness_depth: 32
+              unknown_budget_field: 1
+            tools: []
+        "#;
+
+        let error = PolicyDefinition::from_yaml_str(policy_with_unknown_nested_field)
+            .expect_err("must fail closed on unknown nested field");
 
         assert!(matches!(error, PolicyLoadError::InvalidYaml(_)));
     }

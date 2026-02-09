@@ -1,8 +1,9 @@
 # Freeze canonical policy schema v1 in runtime loading paths (Task 0.1.1)
 
-This ExecPlan is a living document. The sections `Constraints`, `Tolerances`,
-`Risks`, `Progress`, `Surprises & Discoveries`, `Decision Log`, and
-`Outcomes & Retrospective` must be kept up to date as work proceeds.
+This execution plan (ExecPlan) is a living document. The sections
+`Constraints`, `Tolerances`, `Risks`, `Progress`, `Surprises & Discoveries`,
+`Decision Log`, and `Outcomes & Retrospective` must be kept up to date as work
+proceeds.
 
 Status: COMPLETE
 
@@ -307,7 +308,7 @@ Acceptance is met only when all checks below pass:
 - If behavioural test integration blocks progress, stop at tolerance boundary
   and record alternatives in `Decision Log` before proceeding.
 
-## Artifacts and notes
+## Artefacts and notes
 
 Capture and keep these artefacts while executing:
 

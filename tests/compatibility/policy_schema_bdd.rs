@@ -1,12 +1,17 @@
+//! Behavioural tests validating policy schema loader compatibility contracts.
+
 use rstest::fixture;
 use rstest_bdd_macros::{given, scenario, then, when};
-use zamburak_policy::{PolicyEngine, PolicyLoadError};
+use zamburak_policy::{CANONICAL_POLICY_SCHEMA_VERSION, PolicyEngine, PolicyLoadError};
 
 #[derive(Default)]
 struct LoaderWorld {
     policy_document: String,
+    unknown_schema_version: Option<u64>,
     load_result: Option<Result<PolicyEngine, PolicyLoadError>>,
 }
+
+const CANONICAL_POLICY_YAML: &str = include_str!("../../policies/default.yaml");
 
 #[fixture]
 fn world() -> LoaderWorld {
@@ -15,11 +20,12 @@ fn world() -> LoaderWorld {
 
 #[given("a canonical schema v1 policy document")]
 fn canonical_schema_policy(world: &mut LoaderWorld) {
-    canonical_policy_yaml().clone_into(&mut world.policy_document);
+    CANONICAL_POLICY_YAML.clone_into(&mut world.policy_document);
 }
 
 #[given("a policy document with unknown schema version {schema_version:u64}")]
 fn unknown_schema_policy(world: &mut LoaderWorld, schema_version: u64) {
+    world.unknown_schema_version = Some(schema_version);
     world.policy_document = unknown_schema_policy_yaml(schema_version);
 }
 
@@ -34,22 +40,39 @@ fn policy_loads(world: &LoaderWorld) {
         panic!("load step must run before assertion");
     };
 
-    assert!(load_result.is_ok());
+    assert!(
+        load_result.is_ok(),
+        "expected policy to load successfully, got: {load_result:?}"
+    );
 }
 
 #[then("the runtime rejects the policy as unsupported schema version")]
 fn policy_rejected_for_unknown_schema_version(world: &LoaderWorld) {
+    let Some(expected_found_version) = world.unknown_schema_version else {
+        panic!("schema_version input must be set before assertion");
+    };
+
     let Some(load_result) = world.load_result.as_ref() else {
         panic!("load step must run before assertion");
     };
 
-    assert!(matches!(
-        load_result,
-        Err(PolicyLoadError::UnsupportedSchemaVersion {
-            found: 2,
-            expected: 1
-        })
-    ));
+    match load_result {
+        Ok(_) => panic!(
+            "expected unsupported schema rejection for version \
+             {expected_found_version}, but load succeeded"
+        ),
+        Err(PolicyLoadError::UnsupportedSchemaVersion { found, expected }) => {
+            assert_eq!(
+                *found, expected_found_version,
+                "found schema version did not match scenario input"
+            );
+            assert_eq!(
+                *expected, CANONICAL_POLICY_SCHEMA_VERSION,
+                "expected schema version mismatch"
+            );
+        }
+        Err(other_error) => panic!("unexpected error variant: {other_error:?}"),
+    }
 }
 
 #[scenario(
@@ -66,30 +89,6 @@ fn load_canonical_schema_policy(world: LoaderWorld) {
 )]
 fn reject_unknown_schema_policy(world: LoaderWorld) {
     assert!(world.load_result.is_some());
-}
-
-const fn canonical_policy_yaml() -> &'static str {
-    r"
-schema_version: 1
-policy_name: personal_assistant_default
-default_action: Deny
-strict_mode: true
-budgets:
-  max_values: 100000
-  max_parents_per_value: 64
-  max_closure_steps: 10000
-  max_witness_depth: 32
-tools:
-  - tool: send_email
-    side_effect_class: ExternalWrite
-    required_authority: [EmailSendCap]
-    arg_rules:
-      - arg: body
-        forbids_confidentiality: [AUTH_SECRET]
-    context_rules:
-      deny_if_pc_integrity_contains: [Untrusted]
-    default_decision: RequireConfirmation
-"
 }
 
 fn unknown_schema_policy_yaml(schema_version: u64) -> String {
