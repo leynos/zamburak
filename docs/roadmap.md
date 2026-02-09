@@ -32,7 +32,7 @@ completion criteria so the work can be sequenced and assessed without ambiguity.
 
 ### Step 0.1: Canonical policy and authority contracts
 
-- [ ] Task 0.1.1: Freeze canonical policy schema v1 in runtime loading paths.
+- [x] Task 0.1.1: Freeze canonical policy schema v1 in runtime loading paths.
   - Requirement signposts:
     - `docs/zamburak-design-document.md` section "Canonical policy schema v1",
     - `docs/verification-targets.md` row "Policy schema loader",

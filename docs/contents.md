@@ -26,6 +26,8 @@
   quality-gate baseline with rationale and drift controls.
 - [Verification targets](verification-targets.md) - Verification matrix,
   evidence expectations, and phase-gate acceptance criteria.
+- [User's guide](users-guide.md) - Consumer-facing behaviour and API guidance
+  for policy loading and runtime semantics.
 - [System design](zamburak-design-document.md) - Authoritative design covering
   semantics, invariants, trust boundaries, and policy contracts.
 - [Engineering standards](zamburak-engineering-standards.md) - Project-specific

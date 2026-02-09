@@ -4,7 +4,7 @@ This ExecPlan is a living document. The sections `Constraints`, `Tolerances`,
 `Risks`, `Progress`, `Surprises & Discoveries`, `Decision Log`, and
 `Outcomes & Retrospective` must be kept up to date as work proceeds.
 
-Status: DRAFT
+Status: COMPLETE
 
 This repository does not include `PLANS.md`; therefore this document is the
 authoritative execution plan for this task.
@@ -89,10 +89,14 @@ update user-facing documentation plus roadmap state when complete.
   controlling plan document.
 - [x] (2026-02-09 00:32Z) Confirmed `docs/users-guide.md` is absent and must be
   created during implementation.
-- [ ] Implement Stage A (design-lock and interface definition).
-- [ ] Implement Stage B (tests-first scaffolding and fixtures).
-- [ ] Implement Stage C (schema loader enforcement).
-- [ ] Implement Stage D (docs, roadmap update, and full quality gates).
+- [x] (2026-02-09 00:52Z) Implemented Stage A by creating
+  `crates/zamburak-policy` scaffolding and policy schema artefacts.
+- [x] (2026-02-09 01:05Z) Implemented Stage B with unit tests and
+  `rstest-bdd` compatibility scenarios under `tests/compatibility/`.
+- [x] (2026-02-09 01:06Z) Implemented Stage C loader and engine enforcement for
+  schema v1 only.
+- [x] (2026-02-09 01:11Z) Implemented Stage D docs updates, roadmap completion,
+  and quality-gate validation.
 
 ## Surprises & Discoveries
 
@@ -104,6 +108,12 @@ update user-facing documentation plus roadmap state when complete.
 - Observation: `docs/users-guide.md` does not exist.
   Evidence: path lookup during signpost review returned "No such file". Impact:
   user-guide update requires file creation and index linking.
+
+- Observation: integration test crate compilation failed with
+  `-D missing-docs` until the compatibility test crate had a crate-level doc
+  comment. Evidence: `cargo test --test compatibility` error from
+  `tests/compatibility/main.rs`. Impact: all new integration test crates in
+  this repository must include a leading `//!` crate comment.
 
 ## Decision Log
 
@@ -122,15 +132,43 @@ update user-facing documentation plus roadmap state when complete.
   Rationale: user request requires user-facing documentation updates and there
   is no existing guide file to edit. Date/Author: 2026-02-09 / Codex
 
+- Decision: Keep policy parsing strict on `schema_version` type and value:
+  non-numeric values fail parsing and numeric values other than `1` fail with
+  `UnsupportedSchemaVersion`. Rationale: this keeps fail-closed behaviour
+  explicit and deterministic for loader callers. Date/Author: 2026-02-09 / Codex
+
 ## Outcomes & Retrospective
 
-Pending implementation. Completion requires:
+Completed implementation outcomes:
 
-- runtime loader contract enforcing only schema v1,
-- passing unit plus behavioural tests for success and failure paths,
-- updated design and user-facing documentation,
-- roadmap item 0.1.1 marked done,
-- clean quality-gate run for formatting, linting, and tests.
+- Added runtime loading paths in `crates/zamburak-policy`:
+  `PolicyDefinition::from_yaml_str`, `PolicyDefinition::from_json_str`,
+  `PolicyEngine::from_yaml_str`, and `PolicyEngine::from_json_str`.
+- Enforced canonical schema freeze with
+  `CANONICAL_POLICY_SCHEMA_VERSION = 1` and fail-closed
+  `UnsupportedSchemaVersion` rejection.
+- Added unit tests for happy path and unhappy/edge cases:
+  unknown versions (`0`, `2`, `u64::MAX`), missing version, and malformed
+  version type.
+- Added behavioural tests using `rstest-bdd` v0.5.0 in
+  `tests/compatibility/features/policy_schema.feature` with matching step
+  bindings in `tests/compatibility/policy_schema_bdd.rs`.
+- Added policy schema artefacts in `policies/schema.json` and
+  `policies/default.yaml`.
+- Updated consumer and design docs plus roadmap completion state:
+  `docs/users-guide.md`, `docs/zamburak-design-document.md`,
+  `docs/contents.md`, and `docs/roadmap.md`.
+
+Quality gate outcomes:
+
+- passed: `make check-fmt`,
+- passed: `make lint`,
+- passed: `make test`,
+- passed: `make fmt`,
+- passed: `make markdownlint`,
+- passed: `make nixie`,
+- passed: targeted suites
+  (`cargo test -p zamburak-policy`, `cargo test --test compatibility`).
 
 ## Context and orientation
 
@@ -300,3 +338,7 @@ Expected dependency additions (if not already present):
 
 Initial draft created for roadmap Task 0.1.1 with explicit execution stages,
 test strategy, documentation obligations, and quality-gate requirements.
+
+Revision (2026-02-09): completed implementation, updated status to `COMPLETE`,
+checked all stage progress items, added test/discovery decisions, and recorded
+final outcomes and gate evidence.
