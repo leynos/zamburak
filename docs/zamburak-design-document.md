@@ -83,6 +83,10 @@ This glossary is normative for design interpretation and naming consistency.
 - Lethal Trifecta:
   the attack-enabling condition set of private-data access, exposure to
   untrusted inputs, and external communication channels in one agent workflow.
+- Monty:
+  the Python interpreter from `pydantic/monty` used as the execution substrate
+  for Zamburak plans. In this document, "Monty VM" means Zamburak's fork and
+  instrumentation layer around that interpreter.
 - planner large language model (P-LLM):
   the model path used for trusted query decomposition and plan synthesis.
 - quarantined large language model (Q-LLM):
