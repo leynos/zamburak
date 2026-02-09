@@ -3,6 +3,9 @@
 - [Code complexity guide](complexity-antipatterns-and-refactoring-strategies.md)
   - Practical guidance for identifying complexity anti-patterns and applying
   safe refactoring strategies.
+- [ADR: Monty VM hooks for IFC](adr-monty-ifc-vm-hooks.md) - Architectural
+  decision record assessing Monty hook surfaces and choosing an upstream-first
+  strategy for IFC integration.
 - [Documentation style guide](documentation-style-guide.md) - Authoring,
   formatting, grammar, and structure conventions for project documentation.
 - [Design-document farewell ExecPlan](execplans/design-document-logisphere-farewell.md)
