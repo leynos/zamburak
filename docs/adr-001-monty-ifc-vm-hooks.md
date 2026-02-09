@@ -104,6 +104,52 @@ Adopt Option C:
 - Keep IFC engine and policy logic in Zamburak-owned code.
 - Use a short-lived patch branch until upstream merge; do not vendor.
 
+## Temporary fork constraints
+
+The short-lived fork exists only to bridge the time between local integration
+and upstream acceptance. The fork must be managed under strict constraints to
+maximize mergeability.
+
+### Scope constraints
+
+- Fork changes are limited to hook substrate and tests needed to prove its
+  correctness.
+- No Zamburak policy semantics, label models, or product-specific behaviour may
+  be introduced in the fork.
+- No broad refactors, style churn, renames, or opportunistic clean-ups may be
+  included in fork pull requests.
+- If a required change is not directly about hook API enablement, it must be
+  proposed as an independent upstream contribution first.
+
+### Drift constraints
+
+- Fork `main` must remain within 7 calendar days of upstream `main`.
+- Fork pull requests must be rebased to current upstream `main` before merge.
+- If drift exceeds 7 days, feature work pauses until rebase and regression
+  checks are completed.
+- If drift exceeds 14 days, the fork is treated as off-track and requires an
+  explicit maintainer review before any new feature merge.
+
+### Standards and compatibility constraints
+
+- Fork code must follow upstream Monty coding, lint, formatting, test, and CI
+  standards exactly.
+- Public API changes must be additive where possible, with defaults that
+  preserve existing behaviour when hooks are not configured.
+- Hook event payloads must avoid exposing private interpreter internals as API
+  commitments.
+- Performance impact must be measured, and the default no-hook path must remain
+  near-zero overhead.
+
+### Merge readiness constraints
+
+- Every fork change must map to a corresponding upstream PR or draft PR.
+- Fork commits should be logically small and reviewable in isolation.
+- Each commit message must state why the change is required for generic Monty
+  capability rather than Zamburak-specific behaviour.
+- Before removing the fork, all required patches must be merged upstream or
+  explicitly superseded by upstream alternatives.
+
 ## Proposed Monty extension surface
 
 Expose an optional hook trait passed into VM execution:
