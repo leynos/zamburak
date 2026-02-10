@@ -192,7 +192,7 @@ Minimum stability window before deleting fork infrastructure:
 
 ## Proposed Monty extension surface
 
-Expose an optional hook trait passed into VM execution:
+Expose an optional hook trait passed into VM execution.
 
 ```rust
 pub trait VmHooks {
