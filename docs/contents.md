@@ -14,6 +14,9 @@
 - [Design-document farewell ExecPlan](execplans/design-document-logisphere-farewell.md)
   - Execution plan and completion record for finalizing the Zamburak
   design-doc set.
+- [Schema migration transforms ExecPlan](execplans/0-1-2-schema-migration-transforms.md)
+  - Execution plan for Task 0.1.2 covering explicit policy-schema migration
+  transforms, migration conformance tests, and audit evidence delivery.
 - [Reliable testing with dependency injection](reliable-testing-in-rust-via-dependency-injection.md)
   - Patterns for deterministic and parallel-safe Rust tests by isolating
   external dependencies.
