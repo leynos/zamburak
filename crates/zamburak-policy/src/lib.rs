@@ -5,6 +5,6 @@ mod policy_def;
 
 pub use engine::PolicyEngine;
 pub use policy_def::{
-    ArgRule, CANONICAL_POLICY_SCHEMA_VERSION, ContextRules, PolicyAction, PolicyBudgets,
-    PolicyDefinition, PolicyLoadError, SideEffectClass, ToolPolicy,
+    ArgRule, BudgetLimit, CANONICAL_POLICY_SCHEMA_VERSION, ContextRules, PolicyAction,
+    PolicyBudgets, PolicyDefinition, PolicyLoadError, SchemaVersion, SideEffectClass, ToolPolicy,
 };

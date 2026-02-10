@@ -63,7 +63,8 @@ fn policy_rejected_for_unknown_schema_version(world: &LoaderWorld) {
         ),
         Err(PolicyLoadError::UnsupportedSchemaVersion { found, expected }) => {
             assert_eq!(
-                *found, expected_found_version,
+                found.as_u64(),
+                expected_found_version,
                 "found schema version did not match scenario input"
             );
             assert_eq!(

@@ -1,17 +1,62 @@
 //! Canonical policy schema models and schema-version validation.
 
+use core::fmt;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
 /// Canonical schema version accepted by runtime policy loaders.
-pub const CANONICAL_POLICY_SCHEMA_VERSION: u64 = 1;
+pub const CANONICAL_POLICY_SCHEMA_VERSION: SchemaVersion = SchemaVersion::new(1);
+
+/// Canonical policy schema version wrapper to avoid integer soup in APIs.
+#[derive(Clone, Copy, Debug, Deserialize, Eq, Ord, PartialEq, PartialOrd, Serialize)]
+#[serde(transparent)]
+pub struct SchemaVersion(u64);
+
+impl SchemaVersion {
+    /// Build a schema version from a primitive value.
+    #[must_use]
+    pub const fn new(version: u64) -> Self {
+        Self(version)
+    }
+
+    /// Return the wrapped primitive schema version.
+    #[must_use]
+    pub const fn as_u64(&self) -> u64 {
+        self.0
+    }
+}
+
+impl fmt::Display for SchemaVersion {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(formatter, "{}", self.0)
+    }
+}
+
+/// Resource-budget limit wrapper used across policy definitions.
+#[derive(Clone, Copy, Debug, Deserialize, Eq, Ord, PartialEq, PartialOrd, Serialize)]
+#[serde(transparent)]
+pub struct BudgetLimit(u64);
+
+impl BudgetLimit {
+    /// Build a budget limit from a primitive value.
+    #[must_use]
+    pub const fn new(value: u64) -> Self {
+        Self(value)
+    }
+
+    /// Return the wrapped primitive budget value.
+    #[must_use]
+    pub const fn as_u64(&self) -> u64 {
+        self.0
+    }
+}
 
 /// A validated policy definition that can be used by runtime loaders.
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(deny_unknown_fields)]
 pub struct PolicyDefinition {
     /// Policy schema contract version.
-    pub schema_version: u64,
+    pub schema_version: SchemaVersion,
     /// Stable policy profile identifier.
     pub policy_name: String,
     /// Baseline action for non-matching tool rules.
@@ -46,7 +91,7 @@ impl PolicyDefinition {
     /// "#;
     ///
     /// let policy = PolicyDefinition::from_yaml_str(policy_yaml)?;
-    /// assert_eq!(policy.schema_version, 1);
+    /// assert_eq!(policy.schema_version.as_u64(), 1);
     ///
     /// Ok::<(), PolicyLoadError>(())
     /// ```
@@ -80,7 +125,7 @@ impl PolicyDefinition {
     /// "#;
     ///
     /// let policy = PolicyDefinition::from_json_str(policy_json)?;
-    /// assert_eq!(policy.schema_version, 1);
+    /// assert_eq!(policy.schema_version.as_u64(), 1);
     ///
     /// Ok::<(), PolicyLoadError>(())
     /// ```
@@ -115,9 +160,9 @@ pub enum PolicyLoadError {
     #[error("unsupported policy schema_version `{found}`; only `{expected}` is accepted")]
     UnsupportedSchemaVersion {
         /// Parsed schema version in the input document.
-        found: u64,
+        found: SchemaVersion,
         /// Canonical schema version accepted by the runtime.
-        expected: u64,
+        expected: SchemaVersion,
     },
 }
 
@@ -148,13 +193,13 @@ pub enum SideEffectClass {
 #[serde(deny_unknown_fields)]
 pub struct PolicyBudgets {
     /// Maximum number of tracked values.
-    pub max_values: u64,
+    pub max_values: BudgetLimit,
     /// Maximum number of parents per value.
-    pub max_parents_per_value: u64,
+    pub max_parents_per_value: BudgetLimit,
     /// Maximum number of closure traversal steps.
-    pub max_closure_steps: u64,
+    pub max_closure_steps: BudgetLimit,
     /// Maximum witness depth in explanations.
-    pub max_witness_depth: u64,
+    pub max_witness_depth: BudgetLimit,
 }
 
 /// Per-tool policy definition.
@@ -205,7 +250,7 @@ pub struct ContextRules {
 mod tests {
     use super::{
         CANONICAL_POLICY_SCHEMA_VERSION, PolicyDefinition, PolicyLoadError,
-        PolicyLoadError::UnsupportedSchemaVersion,
+        PolicyLoadError::UnsupportedSchemaVersion, SchemaVersion,
     };
     use rstest::rstest;
 
@@ -216,7 +261,10 @@ mod tests {
         let policy =
             PolicyDefinition::from_yaml_str(CANONICAL_POLICY_YAML).expect("valid schema v1");
 
-        assert_eq!(policy.schema_version, CANONICAL_POLICY_SCHEMA_VERSION);
+        assert_eq!(
+            policy.schema_version,
+            SchemaVersion::new(CANONICAL_POLICY_SCHEMA_VERSION.as_u64())
+        );
     }
 
     #[test]
@@ -246,7 +294,10 @@ mod tests {
         let policy =
             PolicyDefinition::from_json_str(canonical_policy_json).expect("valid schema v1");
 
-        assert_eq!(policy.schema_version, CANONICAL_POLICY_SCHEMA_VERSION);
+        assert_eq!(
+            policy.schema_version,
+            SchemaVersion::new(CANONICAL_POLICY_SCHEMA_VERSION.as_u64())
+        );
     }
 
     #[rstest]
@@ -278,91 +329,59 @@ mod tests {
             UnsupportedSchemaVersion {
                 found,
                 expected
-            } if found == schema_version && expected == CANONICAL_POLICY_SCHEMA_VERSION
+            } if found.as_u64() == schema_version
+                && expected == CANONICAL_POLICY_SCHEMA_VERSION
         ));
     }
 
-    #[test]
-    fn rejects_missing_schema_version() {
-        let missing_version_policy = r#"
-            policy_name: personal_assistant_default
-            default_action: Deny
-            strict_mode: true
-            budgets:
-              max_values: 100000
-              max_parents_per_value: 64
-              max_closure_steps: 10000
-              max_witness_depth: 32
-            tools: []
-        "#;
+    #[rstest]
+    #[case("", "", "", "must fail closed on missing schema version")]
+    #[case(
+        "schema_version: \"1\"\n",
+        "",
+        "",
+        "must fail closed on non-numeric schema version"
+    )]
+    #[case(
+        "schema_version: 1\n",
+        "unexpected_field: true\n",
+        "",
+        "must fail closed on unknown top-level field"
+    )]
+    #[case(
+        "schema_version: 1\n",
+        "",
+        "  unknown_budget_field: 1\n",
+        "must fail closed on unknown nested field"
+    )]
+    fn rejects_invalid_policy_shapes(
+        #[case] schema_version_line: &str,
+        #[case] top_level_extra: &str,
+        #[case] budget_extra: &str,
+        #[case] expectation_message: &str,
+    ) {
+        let invalid_policy_yaml = format!(
+            concat!(
+                "{schema_version_line}",
+                "policy_name: personal_assistant_default\n",
+                "default_action: Deny\n",
+                "strict_mode: true\n",
+                "budgets:\n",
+                "  max_values: 100000\n",
+                "  max_parents_per_value: 64\n",
+                "  max_closure_steps: 10000\n",
+                "  max_witness_depth: 32\n",
+                "{budget_extra}",
+                "tools: []\n",
+                "{top_level_extra}"
+            ),
+            schema_version_line = schema_version_line,
+            budget_extra = budget_extra,
+            top_level_extra = top_level_extra,
+        );
 
         let error =
-            PolicyDefinition::from_yaml_str(missing_version_policy).expect_err("must fail closed");
-
-        assert!(matches!(error, PolicyLoadError::InvalidYaml(_)));
-    }
-
-    #[test]
-    fn rejects_non_numeric_schema_version() {
-        let malformed_version_policy = r#"
-            schema_version: "1"
-            policy_name: personal_assistant_default
-            default_action: Deny
-            strict_mode: true
-            budgets:
-              max_values: 100000
-              max_parents_per_value: 64
-              max_closure_steps: 10000
-              max_witness_depth: 32
-            tools: []
-        "#;
-
-        let error = PolicyDefinition::from_yaml_str(malformed_version_policy)
-            .expect_err("must fail closed");
-
-        assert!(matches!(error, PolicyLoadError::InvalidYaml(_)));
-    }
-
-    #[test]
-    fn rejects_unknown_top_level_field() {
-        let policy_with_unknown_field = r#"
-            schema_version: 1
-            policy_name: personal_assistant_default
-            default_action: Deny
-            strict_mode: true
-            budgets:
-              max_values: 100000
-              max_parents_per_value: 64
-              max_closure_steps: 10000
-              max_witness_depth: 32
-            tools: []
-            unexpected_field: true
-        "#;
-
-        let error = PolicyDefinition::from_yaml_str(policy_with_unknown_field)
-            .expect_err("must fail closed on unknown top-level field");
-
-        assert!(matches!(error, PolicyLoadError::InvalidYaml(_)));
-    }
-
-    #[test]
-    fn rejects_unknown_nested_field() {
-        let policy_with_unknown_nested_field = r#"
-            schema_version: 1
-            policy_name: personal_assistant_default
-            default_action: Deny
-            strict_mode: true
-            budgets:
-              max_values: 100000
-              max_parents_per_value: 64
-              max_closure_steps: 10000
-              max_witness_depth: 32
-              unknown_budget_field: 1
-            tools: []
-        "#;
-
-        let error = PolicyDefinition::from_yaml_str(policy_with_unknown_nested_field)
-            .expect_err("must fail closed on unknown nested field");
+            PolicyDefinition::from_yaml_str(&invalid_policy_yaml).expect_err(expectation_message);
 
         assert!(matches!(error, PolicyLoadError::InvalidYaml(_)));
     }

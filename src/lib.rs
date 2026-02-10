@@ -1,6 +1,7 @@
 //! `Zamburak` library.
 
 pub use zamburak_policy::{
-    ArgRule, CANONICAL_POLICY_SCHEMA_VERSION, ContextRules, PolicyAction, PolicyBudgets,
-    PolicyDefinition, PolicyEngine, PolicyLoadError, SideEffectClass, ToolPolicy,
+    ArgRule, BudgetLimit, CANONICAL_POLICY_SCHEMA_VERSION, ContextRules, PolicyAction,
+    PolicyBudgets, PolicyDefinition, PolicyEngine, PolicyLoadError, SchemaVersion, SideEffectClass,
+    ToolPolicy,
 };
