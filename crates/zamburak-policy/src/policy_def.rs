@@ -26,6 +26,30 @@ pub struct PolicyDefinition {
 
 impl PolicyDefinition {
     /// Parse and validate a policy document from YAML.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use zamburak_policy::{PolicyDefinition, PolicyLoadError};
+    ///
+    /// let policy_yaml = r#"
+    /// schema_version: 1
+    /// policy_name: minimal_policy
+    /// default_action: Deny
+    /// strict_mode: true
+    /// budgets:
+    ///   max_values: 1
+    ///   max_parents_per_value: 1
+    ///   max_closure_steps: 1
+    ///   max_witness_depth: 1
+    /// tools: []
+    /// "#;
+    ///
+    /// let policy = PolicyDefinition::from_yaml_str(policy_yaml)?;
+    /// assert_eq!(policy.schema_version, 1);
+    ///
+    /// Ok::<(), PolicyLoadError>(())
+    /// ```
     pub fn from_yaml_str(policy_yaml: &str) -> Result<Self, PolicyLoadError> {
         let policy =
             serde_yaml::from_str::<Self>(policy_yaml).map_err(PolicyLoadError::InvalidYaml)?;
@@ -33,6 +57,33 @@ impl PolicyDefinition {
     }
 
     /// Parse and validate a policy document from JSON.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use zamburak_policy::{PolicyDefinition, PolicyLoadError};
+    ///
+    /// let policy_json = r#"
+    /// {
+    ///   "schema_version": 1,
+    ///   "policy_name": "minimal_policy",
+    ///   "default_action": "Deny",
+    ///   "strict_mode": true,
+    ///   "budgets": {
+    ///     "max_values": 1,
+    ///     "max_parents_per_value": 1,
+    ///     "max_closure_steps": 1,
+    ///     "max_witness_depth": 1
+    ///   },
+    ///   "tools": []
+    /// }
+    /// "#;
+    ///
+    /// let policy = PolicyDefinition::from_json_str(policy_json)?;
+    /// assert_eq!(policy.schema_version, 1);
+    ///
+    /// Ok::<(), PolicyLoadError>(())
+    /// ```
     pub fn from_json_str(policy_json: &str) -> Result<Self, PolicyLoadError> {
         let policy =
             serde_json::from_str::<Self>(policy_json).map_err(PolicyLoadError::InvalidJson)?;
