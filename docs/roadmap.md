@@ -46,7 +46,7 @@ completion criteria so the work can be sequenced and assessed without ambiguity.
   - Out of scope: future schema version authoring.
   - Completion criteria: loader accepts schema v1 only and rejects unknown
     schema versions fail-closed.
-- [ ] Task 0.1.2: Implement explicit schema migration transforms and migration
+- [x] Task 0.1.2: Implement explicit schema migration transforms and migration
       conformance tests.
   - Requirement signposts:
     - `docs/zamburak-design-document.md` section

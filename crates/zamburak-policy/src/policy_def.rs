@@ -1,11 +1,19 @@
-//! Canonical policy schema models and schema-version validation.
+//! Canonical policy schema models, migrations, and schema-version validation.
 
 use core::fmt;
+
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
+use crate::migration::{
+    MigrationAuditRecord, MigrationError, PolicyDefinitionV0, audit_for_canonical_policy,
+    migrate_schema_v0_to_v1,
+};
+
 /// Canonical schema version accepted by runtime policy loaders.
 pub const CANONICAL_POLICY_SCHEMA_VERSION: SchemaVersion = SchemaVersion::new(1);
+
+const LEGACY_POLICY_SCHEMA_VERSION: SchemaVersion = SchemaVersion::new(0);
 
 /// Canonical policy schema version wrapper to avoid integer soup in APIs.
 #[derive(Clone, Copy, Debug, Deserialize, Eq, Ord, PartialEq, PartialOrd, Serialize)]
@@ -48,6 +56,33 @@ impl BudgetLimit {
     #[must_use]
     pub const fn as_u64(&self) -> u64 {
         self.0
+    }
+}
+
+/// Outcome of loading a policy document with migration evidence.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct PolicyLoadOutcome {
+    policy_definition: PolicyDefinition,
+    migration_audit: MigrationAuditRecord,
+}
+
+impl PolicyLoadOutcome {
+    /// Return the validated canonical policy definition.
+    #[must_use]
+    pub const fn policy_definition(&self) -> &PolicyDefinition {
+        &self.policy_definition
+    }
+
+    /// Return migration audit evidence for this load operation.
+    #[must_use]
+    pub const fn migration_audit(&self) -> &MigrationAuditRecord {
+        &self.migration_audit
+    }
+
+    /// Consume this outcome and return both the policy and migration audit.
+    #[must_use]
+    pub fn into_parts(self) -> (PolicyDefinition, MigrationAuditRecord) {
+        (self.policy_definition, self.migration_audit)
     }
 }
 
@@ -96,9 +131,44 @@ impl PolicyDefinition {
     /// Ok::<(), PolicyLoadError>(())
     /// ```
     pub fn from_yaml_str(policy_yaml: &str) -> Result<Self, PolicyLoadError> {
-        let policy =
-            serde_yaml::from_str::<Self>(policy_yaml).map_err(PolicyLoadError::InvalidYaml)?;
-        policy.ensure_canonical_schema_version()
+        let load_outcome = Self::from_yaml_str_with_migration_audit(policy_yaml)?;
+        Ok(load_outcome.policy_definition)
+    }
+
+    /// Parse and validate a policy document from YAML with migration evidence.
+    pub fn from_yaml_str_with_migration_audit(
+        policy_yaml: &str,
+    ) -> Result<PolicyLoadOutcome, PolicyLoadError> {
+        let version_probe = serde_yaml::from_str::<SchemaVersionProbe>(policy_yaml)
+            .map_err(PolicyLoadError::InvalidYaml)?;
+
+        match version_probe.schema_version {
+            Some(schema_version) if schema_version == CANONICAL_POLICY_SCHEMA_VERSION => {
+                let policy_definition = parse_canonical_yaml_policy(policy_yaml)?;
+                canonical_load_outcome(policy_definition)
+            }
+            Some(schema_version) if schema_version == LEGACY_POLICY_SCHEMA_VERSION => {
+                let legacy_policy = serde_yaml::from_str::<PolicyDefinitionV0>(policy_yaml)
+                    .map_err(PolicyLoadError::InvalidYaml)?;
+                let migration_outcome = migrate_schema_v0_to_v1(legacy_policy)
+                    .map_err(PolicyLoadError::MigrationAuditFailed)?;
+                let policy_definition = migration_outcome
+                    .policy_definition
+                    .ensure_canonical_schema_version()?;
+                Ok(PolicyLoadOutcome {
+                    policy_definition,
+                    migration_audit: migration_outcome.migration_audit,
+                })
+            }
+            Some(schema_version) => Err(PolicyLoadError::UnsupportedSchemaVersion {
+                found: schema_version,
+                expected: CANONICAL_POLICY_SCHEMA_VERSION,
+            }),
+            None => {
+                let policy_definition = parse_canonical_yaml_policy(policy_yaml)?;
+                canonical_load_outcome(policy_definition)
+            }
+        }
     }
 
     /// Parse and validate a policy document from JSON.
@@ -130,9 +200,44 @@ impl PolicyDefinition {
     /// Ok::<(), PolicyLoadError>(())
     /// ```
     pub fn from_json_str(policy_json: &str) -> Result<Self, PolicyLoadError> {
-        let policy =
-            serde_json::from_str::<Self>(policy_json).map_err(PolicyLoadError::InvalidJson)?;
-        policy.ensure_canonical_schema_version()
+        let load_outcome = Self::from_json_str_with_migration_audit(policy_json)?;
+        Ok(load_outcome.policy_definition)
+    }
+
+    /// Parse and validate a policy document from JSON with migration evidence.
+    pub fn from_json_str_with_migration_audit(
+        policy_json: &str,
+    ) -> Result<PolicyLoadOutcome, PolicyLoadError> {
+        let version_probe = serde_json::from_str::<SchemaVersionProbe>(policy_json)
+            .map_err(PolicyLoadError::InvalidJson)?;
+
+        match version_probe.schema_version {
+            Some(schema_version) if schema_version == CANONICAL_POLICY_SCHEMA_VERSION => {
+                let policy_definition = parse_canonical_json_policy(policy_json)?;
+                canonical_load_outcome(policy_definition)
+            }
+            Some(schema_version) if schema_version == LEGACY_POLICY_SCHEMA_VERSION => {
+                let legacy_policy = serde_json::from_str::<PolicyDefinitionV0>(policy_json)
+                    .map_err(PolicyLoadError::InvalidJson)?;
+                let migration_outcome = migrate_schema_v0_to_v1(legacy_policy)
+                    .map_err(PolicyLoadError::MigrationAuditFailed)?;
+                let policy_definition = migration_outcome
+                    .policy_definition
+                    .ensure_canonical_schema_version()?;
+                Ok(PolicyLoadOutcome {
+                    policy_definition,
+                    migration_audit: migration_outcome.migration_audit,
+                })
+            }
+            Some(schema_version) => Err(PolicyLoadError::UnsupportedSchemaVersion {
+                found: schema_version,
+                expected: CANONICAL_POLICY_SCHEMA_VERSION,
+            }),
+            None => {
+                let policy_definition = parse_canonical_json_policy(policy_json)?;
+                canonical_load_outcome(policy_definition)
+            }
+        }
     }
 
     fn ensure_canonical_schema_version(self) -> Result<Self, PolicyLoadError> {
@@ -145,6 +250,30 @@ impl PolicyDefinition {
             })
         }
     }
+}
+
+fn parse_canonical_yaml_policy(policy_yaml: &str) -> Result<PolicyDefinition, PolicyLoadError> {
+    serde_yaml::from_str::<PolicyDefinition>(policy_yaml).map_err(PolicyLoadError::InvalidYaml)
+}
+
+fn parse_canonical_json_policy(policy_json: &str) -> Result<PolicyDefinition, PolicyLoadError> {
+    serde_json::from_str::<PolicyDefinition>(policy_json).map_err(PolicyLoadError::InvalidJson)
+}
+
+fn canonical_load_outcome(
+    policy_definition: PolicyDefinition,
+) -> Result<PolicyLoadOutcome, PolicyLoadError> {
+    let migration_audit = audit_for_canonical_policy(&policy_definition)
+        .map_err(PolicyLoadError::MigrationAuditFailed)?;
+    Ok(PolicyLoadOutcome {
+        policy_definition,
+        migration_audit,
+    })
+}
+
+#[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq)]
+struct SchemaVersionProbe {
+    schema_version: Option<SchemaVersion>,
 }
 
 /// Loader failure contract for policy definitions.
@@ -164,6 +293,9 @@ pub enum PolicyLoadError {
         /// Canonical schema version accepted by the runtime.
         expected: SchemaVersion,
     },
+    /// Migration-audit evidence generation failed during policy loading.
+    #[error("migration audit generation failed: {0}")]
+    MigrationAuditFailed(#[source] MigrationError),
 }
 
 /// Policy fallback and per-rule action types.
@@ -247,137 +379,4 @@ pub struct ContextRules {
 }
 
 #[cfg(test)]
-mod tests {
-    //! Unit tests for policy schema loading and fail-closed behaviour.
-
-    mod policy_yaml {
-        //! Shared policy YAML fixtures and schema-version helpers for tests.
-
-        include!(concat!(
-            env!("CARGO_MANIFEST_DIR"),
-            "/../../tests/test_utils/policy_yaml.rs"
-        ));
-    }
-
-    use super::{
-        CANONICAL_POLICY_SCHEMA_VERSION, PolicyDefinition, PolicyLoadError,
-        PolicyLoadError::UnsupportedSchemaVersion, SchemaVersion,
-    };
-    use rstest::rstest;
-
-    #[test]
-    fn accepts_schema_version_one_yaml() {
-        let policy = PolicyDefinition::from_yaml_str(policy_yaml::canonical_policy_yaml())
-            .expect("valid schema v1");
-
-        assert_eq!(
-            policy.schema_version,
-            SchemaVersion::new(CANONICAL_POLICY_SCHEMA_VERSION.as_u64())
-        );
-    }
-
-    #[test]
-    fn accepts_schema_version_one_json() {
-        let canonical_policy_json = r#"
-            {
-              "schema_version": 1,
-              "policy_name": "personal_assistant_default",
-              "default_action": "Deny",
-              "strict_mode": true,
-              "budgets": {
-                "max_values": 100000,
-                "max_parents_per_value": 64,
-                "max_closure_steps": 10000,
-                "max_witness_depth": 32
-              },
-              "tools": [
-                {
-                  "tool": "send_email",
-                  "side_effect_class": "ExternalWrite",
-                  "default_decision": "RequireConfirmation"
-                }
-              ]
-            }
-        "#;
-
-        let policy =
-            PolicyDefinition::from_json_str(canonical_policy_json).expect("valid schema v1");
-
-        assert_eq!(
-            policy.schema_version,
-            SchemaVersion::new(CANONICAL_POLICY_SCHEMA_VERSION.as_u64())
-        );
-    }
-
-    #[rstest]
-    #[case(0_u64)]
-    #[case(2_u64)]
-    #[case(u64::MAX)]
-    fn rejects_unknown_schema_versions(#[case] schema_version: u64) {
-        let unknown_schema_policy = policy_yaml::policy_yaml_with_schema_version(schema_version);
-
-        let error =
-            PolicyDefinition::from_yaml_str(&unknown_schema_policy).expect_err("must fail closed");
-
-        assert!(matches!(
-            error,
-            UnsupportedSchemaVersion {
-                found,
-                expected
-            } if found.as_u64() == schema_version
-                && expected == CANONICAL_POLICY_SCHEMA_VERSION
-        ));
-    }
-
-    #[rstest]
-    #[case("", "", "", "must fail closed on missing schema version")]
-    #[case(
-        "schema_version: \"1\"\n",
-        "",
-        "",
-        "must fail closed on non-numeric schema version"
-    )]
-    #[case(
-        "schema_version: 1\n",
-        "unexpected_field: true\n",
-        "",
-        "must fail closed on unknown top-level field"
-    )]
-    #[case(
-        "schema_version: 1\n",
-        "",
-        "  unknown_budget_field: 1\n",
-        "must fail closed on unknown nested field"
-    )]
-    fn rejects_invalid_policy_shapes(
-        #[case] schema_version_line: &str,
-        #[case] top_level_extra: &str,
-        #[case] budget_extra: &str,
-        #[case] expectation_message: &str,
-    ) {
-        let invalid_policy_yaml = format!(
-            concat!(
-                "{schema_version_line}",
-                "policy_name: personal_assistant_default\n",
-                "default_action: Deny\n",
-                "strict_mode: true\n",
-                "budgets:\n",
-                "  max_values: 100000\n",
-                "  max_parents_per_value: 64\n",
-                "  max_closure_steps: 10000\n",
-                "  max_witness_depth: 32\n",
-                "{budget_extra}",
-                "tools: []\n",
-                "{top_level_extra}"
-            ),
-            schema_version_line = schema_version_line,
-            budget_extra = budget_extra,
-            top_level_extra = top_level_extra,
-        );
-
-        let error =
-            PolicyDefinition::from_yaml_str(&invalid_policy_yaml).expect_err(expectation_message);
-
-        assert!(matches!(error, PolicyLoadError::InvalidYaml(_)));
-    }
-}
+mod tests;

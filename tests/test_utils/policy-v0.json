@@ -1,0 +1,29 @@
+{
+  "schema_version": 0,
+  "policy_name": "personal_assistant_default",
+  "default_action": "Deny",
+  "strict_mode": true,
+  "budgets": {
+    "max_values": 100000,
+    "max_parents_per_value": 64,
+    "max_closure_steps": 10000,
+    "max_witness_depth": 32
+  },
+  "tools": [
+    {
+      "name": "send_email",
+      "side_effect": "ExternalWrite",
+      "authority": ["EmailSendCap"],
+      "args": [
+        {
+          "name": "body",
+          "forbid_confidentiality": ["AUTH_SECRET"]
+        }
+      ],
+      "context": {
+        "deny_if_pc_integrity_contains": ["Untrusted"]
+      },
+      "default_decision": "RequireConfirmation"
+    }
+  ]
+}

@@ -5,7 +5,7 @@ This execution plan (ExecPlan) is a living document. The sections
 `Decision Log`, and `Outcomes & Retrospective` must be kept up to date as work
 proceeds.
 
-Status: DRAFT
+Status: COMPLETE
 
 This repository does not include `PLANS.md`; therefore this document is the
 authoritative execution plan for this task.
@@ -110,10 +110,14 @@ and all required quality gates pass.
   implementation baseline in `crates/zamburak-policy` and `tests/`.
 - [x] (2026-02-10 19:32Z) Drafted this ExecPlan with explicit tolerances,
   staged implementation, and validation criteria.
-- [ ] Implement migration module and loader integration.
-- [ ] Add migration conformance suites (unit, compatibility BDD, and security).
-- [ ] Update design and user documentation, then mark roadmap task complete.
-- [ ] Run all required gates and capture evidence logs.
+- [x] (2026-02-10 20:17Z) Implemented migration module, legacy schema-v0
+  transform, deterministic hashing, and audit-bearing loader APIs.
+- [x] (2026-02-10 20:17Z) Added migration conformance suites for unit,
+  compatibility (`rstest-bdd`), and security coverage.
+- [x] (2026-02-10 20:17Z) Updated design and user documentation and marked
+  roadmap Task 0.1.2 as done.
+- [x] (2026-02-10 20:20Z) Ran full quality and documentation gates with logs
+  and fixed one Clippy regression (`manual_let_else`) discovered during lint.
 
 ## Surprises & Discoveries
 
@@ -129,10 +133,16 @@ and all required quality gates pass.
   migration-audit evidence and failure-path checks.
 
 - Observation: roadmap traceability names
-  `crates/zamburak-policy/src/migration.rs`
-  as a primary artefact for Task 0.1.2. Evidence: `docs/roadmap.md` table row
-  `0.1.2`. Impact: plan must include a dedicated migration module rather than
-  embedding transform logic only inside `policy_def.rs`.
+  `crates/zamburak-policy/src/migration.rs` as a primary artefact for Task
+  0.1.2. Evidence: `docs/roadmap.md` table row `0.1.2`. Impact: plan must
+  include a dedicated migration module rather than embedding transform logic
+  only inside `policy_def.rs`.
+
+- Observation: sharing one fixture helper module between compatibility and
+  security suites caused a `dead_code` warning in compatibility builds.
+  Evidence: `cargo test --test compatibility` warned that
+  `legacy_policy_v0_json` was unused. Impact: compatibility tests now reference
+  the helper directly so `RUSTFLAGS="-D warnings"` gate runs remain clean.
 
 ## Decision Log
 
@@ -152,15 +162,52 @@ and all required quality gates pass.
   objective, automatable proof with the current policy engine surface and
   avoids speculative semantics. Date/Author: 2026-02-10 / Codex
 
+- Decision: support one explicit migration path in this task,
+  `schema_version: 0` to `schema_version: 1`, and keep all other unknown schema
+  versions fail-closed. Rationale: this satisfies roadmap scope for explicit
+  transforms without introducing cross-family compatibility risk. Date/Author:
+  2026-02-10 / Codex
+
 ## Outcomes & Retrospective
 
-This section remains pending until implementation is complete. At completion,
-record:
+Delivered outcomes:
 
-- delivered migration interfaces and transform chain,
-- evidence that restrictive-equivalent outcomes hold,
-- evidence that auditable migration records are emitted,
-- gate results and notable follow-up work.
+- Added explicit migration module:
+  `crates/zamburak-policy/src/migration.rs`.
+- Implemented explicit transform chain for supported legacy input:
+  `schema_version: 0` to canonical `schema_version: 1`.
+- Added migration audit evidence with deterministic canonicalized SHA-256
+  hashes and per-step transform records.
+- Added audit-bearing API surfaces:
+  `PolicyDefinition::from_yaml_str_with_migration_audit`,
+  `PolicyDefinition::from_json_str_with_migration_audit`,
+  `PolicyEngine::from_yaml_str_with_migration_audit`, and
+  `PolicyEngine::from_json_str_with_migration_audit`.
+- Added conformance tests:
+  unit tests in `crates/zamburak-policy/src/migration.rs` and
+  `crates/zamburak-policy/src/policy_def/tests.rs`, compatibility BDD scenarios
+  in `tests/compatibility/features/policy_schema.feature`, and security tests
+  in `tests/security/migration_security.rs`.
+- Added migration fixtures:
+  `tests/test_utils/policy-v0.yaml` and `tests/test_utils/policy-v0.json`.
+- Updated documentation:
+  `docs/zamburak-design-document.md`, `docs/users-guide.md`, and
+  `docs/roadmap.md` (Task 0.1.2 marked done).
+
+Gate results:
+
+- passed: `make fmt`,
+- passed: `make check-fmt`,
+- passed: `make lint`,
+- passed: `make test`,
+- passed: `make markdownlint`,
+- passed: `make nixie`.
+
+Notable lesson:
+
+- Shared test helpers used across multiple integration test crates should be
+  referenced from each crate to avoid warning drift under
+  `RUSTFLAGS="-D warnings"`.
 
 ## Context and orientation
 
@@ -374,3 +421,7 @@ Planned dependency posture:
 Initial draft created for roadmap Task 0.1.2 with explicit migration strategy,
 test plan (unit + compatibility + security), documentation obligations, and
 quality-gate requirements.
+
+Revision (2026-02-10): completed implementation and validation for Task 0.1.2,
+updated status to `COMPLETE`, recorded delivery outcomes and gate evidence, and
+captured the fixture-warning discovery plus final mitigation.
