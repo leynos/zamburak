@@ -1,4 +1,4 @@
-# Architectural decision record: Monty VM hooks for IFC
+# Architectural decision record: Monty VM hooks for information flow control (IFC)
 
 - Date: 2026-02-09
 - Status: Proposed
@@ -10,12 +10,31 @@ Zamburak's design requires a Monty VM hook layer with no bypass around
 information flow control (IFC), complete opcode propagation coverage, and
 strict mode support for control-context summaries at every effect boundary.[^1]
 
-This ADR assesses the current extension surfaces in `pydantic/monty` and
-chooses an implementation strategy that minimizes long-term fork maintenance
-cost while still meeting the design contract.
+This architectural decision record (ADR) assesses the current extension
+surfaces in `pydantic/monty` and chooses an implementation strategy that
+minimizes long-term fork maintenance cost while still meeting the design
+contract.
 
 Source analysis in this ADR is pinned to Monty commit
 `20d9d27bda234336e077c673ca1a2e713f2e787f` (main branch, 2026-02-09).
+
+### Requirement traceability to the system design
+
+To make requirement lineage explicit, key statements in this ADR map to these
+specific sections in `docs/zamburak-design-document.md`:
+
+- no-bypass VM hook expectation:
+  [component responsibilities](docs/zamburak-design-document.md#component-responsibilities),
+   especially the `Monty VM hook layer` invariants,
+- complete opcode propagation coverage and defect posture for missing rules:
+  [supported language subset](docs/zamburak-design-document.md#supported-language-subset),
+- strict-mode control-context requirements for effect decisions:
+  [strict-mode effect semantics](docs/zamburak-design-document.md#strict-mode-effect-semantics),
+- snapshot and resume behavioural equivalence requirements:
+  [snapshot and resume semantics](docs/zamburak-design-document.md#snapshot-and-resume-semantics),
+- conservative handling when summary information is incomplete:
+  [dependency representation](docs/zamburak-design-document.md#dependency-representation)
+   and [fail-closed rules](docs/zamburak-design-document.md#fail-closed-rules).
 
 ## Findings from source exploration
 
@@ -76,7 +95,7 @@ This aligns with Monty being explicitly experimental and fast-moving.[^6]
 - Pros: immediate full control.
 - Cons: high sync overhead, fragile against upstream internal refactors, larger
   trusted computing base churn.
-- Verdict: Rejected as default path due project-health risk.
+- Verdict: Rejected as default path due to project-health risk.
 
 ### Option C: Upstream-first hook substrate plus Zamburak IFC adapter
 
@@ -150,6 +169,27 @@ maximize mergeability.
 - Before removing the fork, all required patches must be merged upstream or
   explicitly superseded by upstream alternatives.
 
+### Fork retirement and upstream-only cutover criteria
+
+The temporary fork may be deleted only when all criteria below are met:
+
+- All fork-required upstream PRs are merged or closed as superseded by accepted
+  upstream alternatives.
+- A stable Monty release (non-prerelease) includes those merged changes.
+- Zamburak runs against that release with all relevant verification suites
+  passing, including snapshot and resume equivalence checks and policy gate
+  regression tests.
+- No local compatibility shims remain that depend on fork-only APIs.
+- Dependency references in build and release configuration point only to
+  upstream Monty sources.
+- Documentation and operational runbooks are updated to declare upstream-only
+  support and remove fork procedures.
+
+Minimum stability window before deleting fork infrastructure:
+
+- At least one full Zamburak release cycle on upstream-only Monty, with no
+  critical regressions attributed to hook substrate changes.
+
 ## Proposed Monty extension surface
 
 Expose an optional hook trait passed into VM execution:
@@ -175,6 +215,95 @@ Design rule:
 
 - event payloads must be sufficient for IFC dependency construction and strict
   control-context tracking, but avoid exposing Monty private internals as API.
+
+### Concrete opcode event examples
+
+The examples below are illustrative event sequences showing that the proposed
+fields are sufficient for IFC while remaining generic.
+
+Example A: branch opcode (`JumpIfFalse`)
+
+```json
+{
+  "hook": "on_opcode_start",
+  "frame_id": "f3",
+  "task_id": "t0",
+  "code_object_id": "co_main",
+  "ip": 418,
+  "opcode": "JumpIfFalse",
+  "reads": ["v_predicate"]
+}
+{
+  "hook": "on_branch",
+  "frame_id": "f3",
+  "task_id": "t0",
+  "ip": 418,
+  "opcode": "JumpIfFalse",
+  "predicate_value_id": "v_predicate",
+  "taken": true,
+  "target_ip": 442,
+  "fallthrough_ip": 421
+}
+{
+  "hook": "on_opcode_end",
+  "frame_id": "f3",
+  "task_id": "t0",
+  "ip": 418,
+  "opcode": "JumpIfFalse",
+  "result": "ok"
+}
+```
+
+IFC consequence:
+
+- `predicate_value_id` is added to the active control-context dependencies for
+  subsequent effect checks in strict mode.
+
+Example B: call opcode yielding an external effect (`CallFunction`)
+
+```json
+{
+  "hook": "on_opcode_start",
+  "frame_id": "f3",
+  "task_id": "t0",
+  "code_object_id": "co_main",
+  "ip": 512,
+  "opcode": "CallFunction",
+  "callable_value_id": "v_callable_send_email",
+  "arg_value_ids": ["v_to", "v_body"]
+}
+{
+  "hook": "on_effect_boundary",
+  "frame_id": "f3",
+  "task_id": "t0",
+  "ip": 512,
+  "opcode": "CallFunction",
+  "effect_kind": "external_call",
+  "call_id": 17,
+  "external_function_id": "send_email",
+  "arg_value_ids": ["v_to", "v_body"],
+  "control_context_value_ids": ["v_predicate"]
+}
+{
+  "hook": "on_opcode_end",
+  "frame_id": "f3",
+  "task_id": "t0",
+  "ip": 512,
+  "opcode": "CallFunction",
+  "result": "yield_external",
+  "call_id": 17
+}
+{
+  "hook": "on_snapshot",
+  "reason": "external_call",
+  "call_id": 17
+}
+```
+
+IFC consequence:
+
+- argument and control-context summaries can be computed using only opaque value
+  identifiers and emitted effect metadata, without exposing private VM layout.
 
 ## Consequences
 
@@ -208,8 +337,12 @@ Negative:
 
 ## References
 
-[^1]: Zamburak IFC and VM hook requirements:
-    `docs/zamburak-design-document.md`.
+[^1]: Zamburak IFC and VM-hook requirement anchors:
+    [component responsibilities](docs/zamburak-design-document.md#component-responsibilities),
+    [supported language subset](docs/zamburak-design-document.md#supported-language-subset),
+    [strict-mode effect semantics](docs/zamburak-design-document.md#strict-mode-effect-semantics),
+    and
+    [snapshot and resume semantics](docs/zamburak-design-document.md#snapshot-and-resume-semantics).
 [^2]: Monty VM boundary exits and dispatch loop:
     <https://github.com/pydantic/monty/blob/20d9d27bda234336e077c673ca1a2e713f2e787f/crates/monty/src/bytecode/vm/mod.rs#L195-L234>
     and
