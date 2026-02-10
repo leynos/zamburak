@@ -248,18 +248,23 @@ pub struct ContextRules {
 
 #[cfg(test)]
 mod tests {
+    mod policy_yaml {
+        include!(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/../../tests/test_utils/policy_yaml.rs"
+        ));
+    }
+
     use super::{
         CANONICAL_POLICY_SCHEMA_VERSION, PolicyDefinition, PolicyLoadError,
         PolicyLoadError::UnsupportedSchemaVersion, SchemaVersion,
     };
     use rstest::rstest;
 
-    const CANONICAL_POLICY_YAML: &str = include_str!("../../../policies/default.yaml");
-
     #[test]
     fn accepts_schema_version_one_yaml() {
-        let policy =
-            PolicyDefinition::from_yaml_str(CANONICAL_POLICY_YAML).expect("valid schema v1");
+        let policy = PolicyDefinition::from_yaml_str(policy_yaml::canonical_policy_yaml())
+            .expect("valid schema v1");
 
         assert_eq!(
             policy.schema_version,
@@ -305,21 +310,7 @@ mod tests {
     #[case(2_u64)]
     #[case(u64::MAX)]
     fn rejects_unknown_schema_versions(#[case] schema_version: u64) {
-        let unknown_schema_policy = format!(
-            concat!(
-                "schema_version: {schema_version}\n",
-                "policy_name: personal_assistant_default\n",
-                "default_action: Deny\n",
-                "strict_mode: true\n",
-                "budgets:\n",
-                "  max_values: 100000\n",
-                "  max_parents_per_value: 64\n",
-                "  max_closure_steps: 10000\n",
-                "  max_witness_depth: 32\n",
-                "tools: []\n"
-            ),
-            schema_version = schema_version,
-        );
+        let unknown_schema_policy = policy_yaml::policy_yaml_with_schema_version(schema_version);
 
         let error =
             PolicyDefinition::from_yaml_str(&unknown_schema_policy).expect_err("must fail closed");
