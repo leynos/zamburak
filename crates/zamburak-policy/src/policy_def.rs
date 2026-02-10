@@ -6,14 +6,12 @@ use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
 use crate::migration::{
-    MigrationAuditRecord, MigrationError, PolicyDefinitionV0, audit_for_canonical_policy,
-    migrate_schema_v0_to_v1,
+    LEGACY_POLICY_SCHEMA_VERSION, MigrationAuditRecord, MigrationError, PolicyDefinitionV0,
+    audit_for_canonical_policy, migrate_schema_v0_to_v1,
 };
 
 /// Canonical schema version accepted by runtime policy loaders.
 pub const CANONICAL_POLICY_SCHEMA_VERSION: SchemaVersion = SchemaVersion::new(1);
-
-const LEGACY_POLICY_SCHEMA_VERSION: SchemaVersion = SchemaVersion::new(0);
 
 /// Canonical policy schema version wrapper to avoid integer soup in APIs.
 #[derive(Clone, Copy, Debug, Deserialize, Eq, Ord, PartialEq, PartialOrd, Serialize)]
@@ -60,6 +58,32 @@ impl BudgetLimit {
 }
 
 /// Outcome of loading a policy document with migration evidence.
+///
+/// # Examples
+///
+/// ```rust
+/// use zamburak_policy::{PolicyDefinition, PolicyLoadError};
+///
+/// let policy_json = r#"{
+///   "schema_version": 1,
+///   "policy_name": "minimal_policy",
+///   "default_action": "Deny",
+///   "strict_mode": true,
+///   "budgets": {
+///     "max_values": 1,
+///     "max_parents_per_value": 1,
+///     "max_closure_steps": 1,
+///     "max_witness_depth": 1
+///   },
+///   "tools": []
+/// }"#;
+///
+/// let load_outcome = PolicyDefinition::from_json_str_with_migration_audit(policy_json)?;
+/// assert_eq!(load_outcome.policy_definition().schema_version.as_u64(), 1);
+/// assert!(!load_outcome.migration_audit().was_migrated());
+///
+/// Ok::<(), PolicyLoadError>(())
+/// ```
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct PolicyLoadOutcome {
     policy_definition: PolicyDefinition,
@@ -104,6 +128,59 @@ pub struct PolicyDefinition {
     pub tools: Vec<ToolPolicy>,
 }
 
+/// Generate a loader function with migration audit for a given serialisation format.
+macro_rules! define_loader_with_migration_audit {
+    (
+        fn_name: $fn_name:ident,
+        param_name: $param_name:ident,
+        format: $format:literal,
+        parser_module: $parser:ident,
+        canonical_parser: $canonical_parser:ident,
+        error_variant: $error_variant:ident
+    ) => {
+        #[doc = concat!("Parse and validate a policy document from ", $format, " with migration evidence.")]
+        #[doc = ""]
+        #[doc = "# Examples"]
+        #[doc = ""]
+        #[doc = "```rust"]
+        #[doc = "use zamburak_policy::{PolicyDefinition, PolicyLoadError};"]
+        #[doc = ""]
+        #[doc = "let policy_document = r#\"{"]
+        #[doc = "  \\\"schema_version\\\": 1,"]
+        #[doc = "  \\\"policy_name\\\": \\\"minimal_policy\\\","]
+        #[doc = "  \\\"default_action\\\": \\\"Deny\\\","]
+        #[doc = "  \\\"strict_mode\\\": true,"]
+        #[doc = "  \\\"budgets\\\": {"]
+        #[doc = "    \\\"max_values\\\": 1,"]
+        #[doc = "    \\\"max_parents_per_value\\\": 1,"]
+        #[doc = "    \\\"max_closure_steps\\\": 1,"]
+        #[doc = "    \\\"max_witness_depth\\\": 1"]
+        #[doc = "  },"]
+        #[doc = "  \\\"tools\\\": []"]
+        #[doc = "}\"#;"]
+        #[doc = ""]
+        #[doc = concat!("let load_outcome = PolicyDefinition::", stringify!($fn_name), "(policy_document)?;")]
+        #[doc = "assert_eq!(load_outcome.policy_definition().schema_version.as_u64(), 1);"]
+        #[doc = "assert!(!load_outcome.migration_audit().was_migrated());"]
+        #[doc = ""]
+        #[doc = "Ok::<(), PolicyLoadError>(())"]
+        #[doc = "```"]
+        pub fn $fn_name(
+            $param_name: &str,
+        ) -> Result<PolicyLoadOutcome, PolicyLoadError> {
+            load_with_migration_audit(
+                $param_name,
+                MigrationLoadParsers::new(
+                    |value| $parser::from_str::<SchemaVersionProbe>(value),
+                    $canonical_parser,
+                    |value| $parser::from_str::<PolicyDefinitionV0>(value),
+                    PolicyLoadError::$error_variant,
+                ),
+            )
+        }
+    };
+}
+
 impl PolicyDefinition {
     /// Parse and validate a policy document from YAML.
     ///
@@ -135,17 +212,13 @@ impl PolicyDefinition {
         Ok(load_outcome.policy_definition)
     }
 
-    /// Parse and validate a policy document from YAML with migration evidence.
-    pub fn from_yaml_str_with_migration_audit(
-        policy_yaml: &str,
-    ) -> Result<PolicyLoadOutcome, PolicyLoadError> {
-        load_with_migration_audit(
-            policy_yaml,
-            |value| serde_yaml::from_str::<SchemaVersionProbe>(value),
-            parse_canonical_yaml_policy,
-            |value| serde_yaml::from_str::<PolicyDefinitionV0>(value),
-            PolicyLoadError::InvalidYaml,
-        )
+    define_loader_with_migration_audit! {
+        fn_name: from_yaml_str_with_migration_audit,
+        param_name: policy_yaml,
+        format: "YAML",
+        parser_module: serde_yaml,
+        canonical_parser: parse_canonical_yaml_policy,
+        error_variant: InvalidYaml
     }
 
     /// Parse and validate a policy document from JSON.
@@ -181,17 +254,13 @@ impl PolicyDefinition {
         Ok(load_outcome.policy_definition)
     }
 
-    /// Parse and validate a policy document from JSON with migration evidence.
-    pub fn from_json_str_with_migration_audit(
-        policy_json: &str,
-    ) -> Result<PolicyLoadOutcome, PolicyLoadError> {
-        load_with_migration_audit(
-            policy_json,
-            |value| serde_json::from_str::<SchemaVersionProbe>(value),
-            parse_canonical_json_policy,
-            |value| serde_json::from_str::<PolicyDefinitionV0>(value),
-            PolicyLoadError::InvalidJson,
-        )
+    define_loader_with_migration_audit! {
+        fn_name: from_json_str_with_migration_audit,
+        param_name: policy_json,
+        format: "JSON",
+        parser_module: serde_json,
+        canonical_parser: parse_canonical_json_policy,
+        error_variant: InvalidJson
     }
 
     fn ensure_canonical_schema_version(self) -> Result<Self, PolicyLoadError> {
@@ -214,37 +283,48 @@ fn parse_canonical_json_policy(policy_json: &str) -> Result<PolicyDefinition, Po
     serde_json::from_str::<PolicyDefinition>(policy_json).map_err(PolicyLoadError::InvalidJson)
 }
 
-fn canonical_load_outcome(
-    policy_definition: PolicyDefinition,
-) -> Result<PolicyLoadOutcome, PolicyLoadError> {
-    let migration_audit = audit_for_canonical_policy(&policy_definition)
-        .map_err(PolicyLoadError::MigrationAuditFailed)?;
-    Ok(PolicyLoadOutcome {
-        policy_definition,
-        migration_audit,
-    })
+struct MigrationLoadParsers<ParseError> {
+    parse_schema_version: fn(&str) -> Result<SchemaVersionProbe, ParseError>,
+    parse_canonical_policy: fn(&str) -> Result<PolicyDefinition, PolicyLoadError>,
+    parse_legacy_policy: fn(&str) -> Result<PolicyDefinitionV0, ParseError>,
+    map_parse_error: fn(ParseError) -> PolicyLoadError,
 }
 
-#[expect(
-    clippy::too_many_arguments,
-    reason = "Helper signature is explicitly required by the refactor request"
-)]
-fn load_with_migration_audit<E>(
-    policy_str: &str,
-    probe_parser: impl FnOnce(&str) -> Result<SchemaVersionProbe, E>,
-    canonical_parser: impl FnOnce(&str) -> Result<PolicyDefinition, PolicyLoadError>,
-    legacy_parser: impl FnOnce(&str) -> Result<PolicyDefinitionV0, E>,
-    error_mapper: impl Fn(E) -> PolicyLoadError,
+impl<ParseError> MigrationLoadParsers<ParseError> {
+    fn new(
+        parse_schema_version: fn(&str) -> Result<SchemaVersionProbe, ParseError>,
+        parse_canonical_policy: fn(&str) -> Result<PolicyDefinition, PolicyLoadError>,
+        parse_legacy_policy: fn(&str) -> Result<PolicyDefinitionV0, ParseError>,
+        map_parse_error: fn(ParseError) -> PolicyLoadError,
+    ) -> Self {
+        Self {
+            parse_schema_version,
+            parse_canonical_policy,
+            parse_legacy_policy,
+            map_parse_error,
+        }
+    }
+}
+
+fn load_with_migration_audit<ParseError>(
+    serialized_policy: &str,
+    parsers: MigrationLoadParsers<ParseError>,
 ) -> Result<PolicyLoadOutcome, PolicyLoadError> {
-    let version_probe = probe_parser(policy_str).map_err(&error_mapper)?;
+    let MigrationLoadParsers {
+        parse_schema_version,
+        parse_canonical_policy,
+        parse_legacy_policy,
+        map_parse_error,
+    } = parsers;
+    let version_probe = parse_schema_version(serialized_policy).map_err(map_parse_error)?;
 
     match version_probe.schema_version {
         Some(schema_version) if schema_version == CANONICAL_POLICY_SCHEMA_VERSION => {
-            let policy_definition = canonical_parser(policy_str)?;
+            let policy_definition = parse_canonical_policy(serialized_policy)?;
             canonical_load_outcome(policy_definition)
         }
         Some(schema_version) if schema_version == LEGACY_POLICY_SCHEMA_VERSION => {
-            let legacy_policy = legacy_parser(policy_str).map_err(&error_mapper)?;
+            let legacy_policy = parse_legacy_policy(serialized_policy).map_err(map_parse_error)?;
             let migration_outcome = migrate_schema_v0_to_v1(legacy_policy)
                 .map_err(PolicyLoadError::MigrationAuditFailed)?;
             let policy_definition = migration_outcome
@@ -260,10 +340,21 @@ fn load_with_migration_audit<E>(
             expected: CANONICAL_POLICY_SCHEMA_VERSION,
         }),
         None => {
-            let policy_definition = canonical_parser(policy_str)?;
+            let policy_definition = parse_canonical_policy(serialized_policy)?;
             canonical_load_outcome(policy_definition)
         }
     }
+}
+
+fn canonical_load_outcome(
+    policy_definition: PolicyDefinition,
+) -> Result<PolicyLoadOutcome, PolicyLoadError> {
+    let migration_audit = audit_for_canonical_policy(&policy_definition)
+        .map_err(PolicyLoadError::MigrationAuditFailed)?;
+    Ok(PolicyLoadOutcome {
+        policy_definition,
+        migration_audit,
+    })
 }
 
 #[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq)]
