@@ -1,4 +1,4 @@
-//! Shared policy-YAML fixtures for compatibility and unit tests.
+// Shared policy-YAML fixtures for compatibility and unit tests.
 
 /// Return the canonical policy fixture YAML used across test suites.
 #[must_use]
