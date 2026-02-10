@@ -3,7 +3,17 @@ name = "zamburak"
 version = "0.1.0"
 edition = "2024"
 
+[workspace]
+members = ["crates/zamburak-policy"]
+resolver = "3"
+
 [dependencies]
+zamburak-policy = { path = "crates/zamburak-policy" }
+
+[dev-dependencies]
+rstest = "0.26.1"
+rstest-bdd = "0.5.0"
+rstest-bdd-macros = { version = "0.5.0", features = ["compile-time-validation"] }
 
 [lints.clippy]
 pedantic = { level = "warn", priority = -1 }

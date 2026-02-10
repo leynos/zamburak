@@ -1,0 +1,19 @@
+schema_version: 1
+policy_name: personal_assistant_default
+default_action: Deny
+strict_mode: true
+budgets:
+  max_values: 100000
+  max_parents_per_value: 64
+  max_closure_steps: 10000
+  max_witness_depth: 32
+tools:
+  - tool: send_email
+    side_effect_class: ExternalWrite
+    required_authority: [EmailSendCap]
+    arg_rules:
+      - arg: body
+        forbids_confidentiality: [AUTH_SECRET]
+    context_rules:
+      deny_if_pc_integrity_contains: [Untrusted]
+    default_decision: RequireConfirmation

@@ -528,6 +528,12 @@ Schema v1 required top-level fields are:
 - `budgets`,
 - `tools`.
 
+Implementation decision (2026-02-09): runtime loading entrypoints in
+`crates/zamburak-policy/src/policy_def.rs` (`from_yaml_str` and
+`from_json_str`) and engine constructors in
+`crates/zamburak-policy/src/engine.rs` accept only `schema_version: 1`. Any
+other version returns `UnsupportedSchemaVersion` and aborts policy loading.
+
 ### Schema compatibility and migration semantics
 
 Compatibility rules for schema evolution are:

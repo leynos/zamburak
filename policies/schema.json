@@ -1,0 +1,51 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Zamburak canonical policy schema v1",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "policy_name",
+    "default_action",
+    "strict_mode",
+    "budgets",
+    "tools"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "integer",
+      "const": 1,
+      "description": "Canonical schema version accepted by runtime loaders"
+    },
+    "policy_name": {
+      "type": "string",
+      "minLength": 1
+    },
+    "default_action": {
+      "type": "string",
+      "enum": ["Allow", "Deny", "RequireConfirmation", "RequireDraft"]
+    },
+    "strict_mode": {
+      "type": "boolean"
+    },
+    "budgets": {
+      "type": "object",
+      "required": [
+        "max_values",
+        "max_parents_per_value",
+        "max_closure_steps",
+        "max_witness_depth"
+      ],
+      "properties": {
+        "max_values": { "type": "integer", "minimum": 0 },
+        "max_parents_per_value": { "type": "integer", "minimum": 0 },
+        "max_closure_steps": { "type": "integer", "minimum": 0 },
+        "max_witness_depth": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "tools": {
+      "type": "array",
+      "items": { "type": "object" }
+    }
+  },
+  "additionalProperties": true
+}
