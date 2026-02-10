@@ -248,7 +248,11 @@ pub struct ContextRules {
 
 #[cfg(test)]
 mod tests {
+    //! Unit tests for policy schema loading and fail-closed behaviour.
+
     mod policy_yaml {
+        //! Shared policy YAML fixtures and schema-version helpers for tests.
+
         include!(concat!(
             env!("CARGO_MANIFEST_DIR"),
             "/../../tests/test_utils/policy_yaml.rs"
