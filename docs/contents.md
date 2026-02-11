@@ -1,5 +1,8 @@
 # [Contents index](contents.md) - Central index for all documentation files in `docs/`
 
+- [Architectural Decision Record (ADR) 002: Fluent localization architecture](adr-002-localization-and-internationalization-with-fluent.md)
+  - Decision record for internationalization and localization in Zamburak as a
+  library, using injection-first Fluent integration.
 - [Code complexity guide](complexity-antipatterns-and-refactoring-strategies.md)
   - Practical guidance for identifying complexity anti-patterns and applying
   safe refactoring strategies.

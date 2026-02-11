@@ -498,6 +498,78 @@ completion criteria so the work can be sequenced and assessed without ambiguity.
   - Completion criteria: script tests pass in CI with deterministic fixtures,
     and script failures are merge-blocking.
 
+## Phase 6: Localization and user-facing diagnostics
+
+### Step 6.1: Injection-first localization foundation
+
+- [ ] Task 6.1.1: Introduce core localization contracts and fallback-localizer
+      behaviour.
+  - Requirement signposts:
+    - `docs/zamburak-design-document.md` sections
+      "Localization and user-facing diagnostics" and
+      "Localization contract and ownership",
+    - `docs/adr-002-localization-and-internationalization-with-fluent.md`
+      sections "Decision outcome" and "Proposed architecture",
+    - `docs/repository-layout.md` sections `crates/zamburak-core` and
+      `tests/integration/`.
+  - Dependencies: Task 0.3.1.
+  - In scope: `Localizer` contract introduction, `NoOpLocalizer` fallback
+    semantics, and explicit localized-rendering call-shape requirements.
+  - Out of scope: policy for host application locale preferences.
+  - Completion criteria: localized rendering APIs require explicit localizer
+    context and return deterministic fallback text when lookups are unavailable.
+- [ ] Task 6.1.2: Implement optional Fluent adapters and embedded catalogue
+      loading helpers.
+  - Requirement signposts:
+    - `docs/zamburak-design-document.md` sections
+      "Fallback and Fluent layering semantics" and
+      "Fluent adapter integration profile",
+    - `docs/adr-002-localization-and-internationalization-with-fluent.md`
+      sections "Fallback order" and "Locale ownership and negotiation",
+    - `docs/repository-layout.md` sections `crates/zamburak-core` and
+      `crates/zamburak-tools`.
+  - Dependencies: Task 6.1.1.
+  - In scope: host-owned `FluentLanguageLoader` adapters, embedded `en-US`
+    resource exposure, and helper loading APIs.
+  - Out of scope: initializing the global singleton localization loader.
+  - Completion criteria: Fluent-backed localization composes with host-managed
+    loaders and preserves defined fallback ordering.
+
+### Step 6.2: Localized diagnostic rollout and conformance
+
+- [ ] Task 6.2.1: Refactor user-facing diagnostics to explicit localized
+      rendering entrypoints.
+  - Requirement signposts:
+    - `docs/zamburak-design-document.md` section
+      "Localized rendering semantics",
+    - `docs/adr-002-localization-and-internationalization-with-fluent.md`
+      section "Message rendering contract",
+    - `docs/repository-layout.md` sections `crates/zamburak-policy`,
+      `crates/zamburak-agent`, and `tests/security/`.
+  - Dependencies: Tasks 4.1.2 and 6.1.1.
+  - In scope: explicit `&dyn Localizer` plumbing for user-facing denial,
+    verification, and confirmation diagnostics.
+  - Out of scope: replacing stable English `Display` output used for logs and
+    machine assertions.
+  - Completion criteria: every public user-facing diagnostic has a localized
+    rendering path with explicit fallback copy.
+- [ ] Task 6.2.2: Add localization conformance tests and integration
+      documentation.
+  - Requirement signposts:
+    - `docs/zamburak-design-document.md` sections
+      "Fallback and Fluent layering semantics" and
+      "Design-level acceptance criteria before phase 1 build-out",
+    - `docs/adr-002-localization-and-internationalization-with-fluent.md`
+      sections "Implementation plan" and "Acceptance criteria",
+    - `docs/repository-layout.md` sections `tests/integration/`,
+      `tests/security/`, and `docs/`.
+  - Dependencies: Task 6.2.1 and Task 6.1.2.
+  - In scope: fallback-order tests, interpolation-failure tests, missing-key
+    behaviour tests, and host-integration usage documentation.
+  - Out of scope: locale-specific copywriting policy outside bundled resources.
+  - Completion criteria: localization suites demonstrate deterministic fallback
+    layering and prove absence of ambient global localization state.
+
 ## Roadmap-to-artefact traceability
 
 This table maps each task to primary repository artefacts that should exist
@@ -533,6 +605,10 @@ when the task is complete.
 | 5.2.2 | `tests/benchmarks/`, `scripts/`, `.github/workflows/`                                                                                     | Model-in-loop adversarial benchmark trends are produced in CI.         |
 | 5.3.1 | `scripts/`, `scripts/tests/`                                                                                                              | New scripts comply with Cyclopts, Plumbum, and Pathlib standards.      |
 | 5.3.2 | `scripts/tests/`, `.github/workflows/`, `docs/scripting-standards.md`                                                                     | Script tests and CI wiring are deterministic and enforced.             |
+| 6.1.1 | `crates/zamburak-core/src/i18n/mod.rs`, `crates/zamburak-core/src/i18n/localizer.rs`, `tests/integration/`                                | Core localization contracts enforce explicit localizer injection.      |
+| 6.1.2 | `crates/zamburak-core/src/i18n/fluent_adapter.rs`, `crates/zamburak-core/src/i18n/localizations.rs`, `locales/`                           | Fluent adapters compose with host loaders and bundled resources.       |
+| 6.2.1 | `crates/zamburak-policy/src/diagnostics.rs`, `crates/zamburak-agent/src/confirmation.rs`, `crates/zamburak-tools/src/`                    | User-facing diagnostics expose explicit localized rendering paths.     |
+| 6.2.2 | `tests/integration/`, `tests/security/`, `docs/`                                                                                          | Localization fallback and integration behaviour are test-covered.      |
 
 _Table 1: Roadmap tasks mapped to primary implementation artefacts._
 
@@ -547,5 +623,7 @@ The roadmap is complete when:
 - unknown analysis states fail closed,
 - LLM and tool communications honour confidentiality budgets,
 - audit records remain useful without becoming a secondary data-leak channel,
+- localized diagnostics use explicit localizer injection with deterministic
+  fallback layering and no global mutable localization state,
 - automation scripts required by roadmap tasks comply with
   `docs/scripting-standards.md`.
