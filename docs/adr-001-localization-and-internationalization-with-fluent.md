@@ -1,4 +1,4 @@
-# ADR-002: Adopt Fluent localization via injected localizer interfaces
+# Architectural Decision Record (ADR) 001: Adopt Fluent localization via injected localizer interfaces
 
 Date: 2026-02-11
 
