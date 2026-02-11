@@ -22,9 +22,9 @@ different shape from application-localized interfaces:
 To select an approach for Zamburak, this decision reviews two related codebases
 and one design note:
 
-- `https://github.com/leynos/rstest-bdd`
-- `https://github.com/leynos/ortho-config`
-- `docs/localizable-rust-libraries-with-fluent.md`
+- <https://github.com/leynos/rstest-bdd>
+- <https://github.com/leynos/ortho-config>
+- [Localisable Rust libraries with Fluent](localizable-rust-libraries-with-fluent.md)
 
 ## Review findings
 
