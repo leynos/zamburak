@@ -565,7 +565,7 @@ injection-first localization with Fluent adapters, without ambient global state.
 - the runtime provides `NoOpLocalizer` for deterministic fallback behaviour
   when no localization backend is configured,
 - Zamburak publishes embedded localization assets so host applications can load
-  Zamburak messages into their own localization stack,
+  Zamburak messages into their localization stack,
 - locale negotiation and loader lifecycle ownership remain with the host
   application.
 
@@ -1039,7 +1039,7 @@ This document does not define:
 
 - file-by-file implementation task lists,
 - project-management sequencing details,
-- host application locale negotiation user experience design,
+- user experience design for host application locale negotiation,
 - continuous integration (CI) workflow mechanics beyond required security
   outcomes.
 
