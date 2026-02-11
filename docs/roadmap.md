@@ -515,7 +515,7 @@ completion criteria so the work can be sequenced and assessed without ambiguity.
   - Dependencies: Task 0.3.1.
   - In scope: `Localizer` contract introduction, `NoOpLocalizer` fallback
     semantics, and explicit localized-rendering call-shape requirements.
-  - Out of scope: host application locale preference policy.
+  - Out of scope: policy for host application locale preferences.
   - Completion criteria: localized rendering APIs require explicit localizer
     context and return deterministic fallback text when lookups are unavailable.
 - [ ] Task 6.1.2: Implement optional Fluent adapters and embedded catalogue
@@ -531,7 +531,7 @@ completion criteria so the work can be sequenced and assessed without ambiguity.
   - Dependencies: Task 6.1.1.
   - In scope: host-owned `FluentLanguageLoader` adapters, embedded `en-US`
     resource exposure, and helper loading APIs.
-  - Out of scope: global singleton localization loader initialization.
+  - Out of scope: initializing the global singleton localization loader.
   - Completion criteria: Fluent-backed localization composes with host-managed
     loaders and preserves defined fallback ordering.
 
