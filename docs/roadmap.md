@@ -508,7 +508,7 @@ completion criteria so the work can be sequenced and assessed without ambiguity.
     - `docs/zamburak-design-document.md` sections
       "Localization and user-facing diagnostics" and
       "Localization contract and ownership",
-    - `docs/adr-001-localization-and-internationalization-with-fluent.md`
+    - `docs/adr-002-localization-and-internationalization-with-fluent.md`
       sections "Decision outcome" and "Proposed architecture",
     - `docs/repository-layout.md` sections `crates/zamburak-core` and
       `tests/integration/`.
@@ -524,7 +524,7 @@ completion criteria so the work can be sequenced and assessed without ambiguity.
     - `docs/zamburak-design-document.md` sections
       "Fallback and Fluent layering semantics" and
       "Fluent adapter integration profile",
-    - `docs/adr-001-localization-and-internationalization-with-fluent.md`
+    - `docs/adr-002-localization-and-internationalization-with-fluent.md`
       sections "Fallback order" and "Locale ownership and negotiation",
     - `docs/repository-layout.md` sections `crates/zamburak-core` and
       `crates/zamburak-tools`.
@@ -542,7 +542,7 @@ completion criteria so the work can be sequenced and assessed without ambiguity.
   - Requirement signposts:
     - `docs/zamburak-design-document.md` section
       "Localized rendering semantics",
-    - `docs/adr-001-localization-and-internationalization-with-fluent.md`
+    - `docs/adr-002-localization-and-internationalization-with-fluent.md`
       section "Message rendering contract",
     - `docs/repository-layout.md` sections `crates/zamburak-policy`,
       `crates/zamburak-agent`, and `tests/security/`.
@@ -559,7 +559,7 @@ completion criteria so the work can be sequenced and assessed without ambiguity.
     - `docs/zamburak-design-document.md` sections
       "Fallback and Fluent layering semantics" and
       "Design-level acceptance criteria before phase 1 build-out",
-    - `docs/adr-001-localization-and-internationalization-with-fluent.md`
+    - `docs/adr-002-localization-and-internationalization-with-fluent.md`
       sections "Implementation plan" and "Acceptance criteria",
     - `docs/repository-layout.md` sections `tests/integration/`,
       `tests/security/`, and `docs/`.

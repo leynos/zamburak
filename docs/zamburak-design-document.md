@@ -555,7 +555,7 @@ Migration rules are:
 ## Localization and user-facing diagnostics
 
 Zamburak adopts the localization model defined in
-`docs/adr-001-localization-and-internationalization-with-fluent.md`:
+`docs/adr-002-localization-and-internationalization-with-fluent.md`:
 injection-first localization with Fluent adapters, without ambient global state.
 
 ### Localization contract and ownership
@@ -1063,6 +1063,6 @@ Technology baseline and verification target expectations are tracked in
 - Simon Willison on CaMeL:
   <https://simonwillison.net/2025/Apr/11/camel/>
 - Dromedary project: <https://github.com/microsoft/dromedary>
-- ADR 001 localization architecture:
-  `docs/adr-001-localization-and-internationalization-with-fluent.md`
+- ADR 002 localization architecture:
+  `docs/adr-002-localization-and-internationalization-with-fluent.md`
 - Pydantic AI: <https://github.com/pydantic/pydantic-ai>
