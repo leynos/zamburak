@@ -552,6 +552,57 @@ Migration rules are:
 - migration conformance tests are mandatory before adoption in the default
   profile.
 
+## Localization and user-facing diagnostics
+
+Zamburak adopts the localization model defined in
+`docs/adr-001-localization-and-internationalization-with-fluent.md`:
+injection-first localization with Fluent adapters, without ambient global state.
+
+### Localization contract and ownership
+
+- all user-facing localized text is rendered through an injected `Localizer`
+  contract,
+- the runtime provides `NoOpLocalizer` for deterministic fallback behaviour
+  when no localization backend is configured,
+- Zamburak publishes embedded localization assets so host applications can load
+  Zamburak messages into their own localization stack,
+- locale negotiation and loader lifecycle ownership remain with the host
+  application.
+
+Zamburak must not read process locale environment variables directly and must
+not maintain mutable process-wide localization singletons.
+
+### Localized rendering semantics
+
+Core domain `Display` output remains stable English for machine-stable logs and
+test assertions. Localized user-facing diagnostics are exposed through explicit
+rendering APIs that accept an injected `&dyn Localizer` plus caller fallback
+copy.
+
+Localized rendering must always preserve a deterministic output path when
+translation lookup fails or localization is unavailable.
+
+### Fallback and Fluent layering semantics
+
+For Fluent-backed localization, message resolution order is:
+
+1. host application catalogue entries,
+2. Zamburak bundled entries for the requested locale,
+3. Zamburak bundled `en-US` entries,
+4. caller-provided fallback text.
+
+Formatting failures, missing interpolation arguments, and malformed patterns
+must emit structured diagnostics and continue through fallback resolution
+rather than failing open or panicking.
+
+### Fluent adapter integration profile
+
+Fluent integration is optional and adapter-based:
+
+- Fluent adapters consume a host-supplied `FluentLanguageLoader`,
+- helper APIs load Zamburak embedded assets into caller-owned loaders,
+- no adapter path may introduce ambient global localization state.
+
 ## Policy evaluation semantics
 
 ### Inputs
@@ -765,6 +816,10 @@ exist and pass for:
 - authority lifecycle:
   tests covering mint scope, delegation narrowing, revocation, expiry, and
   snapshot-restore revalidation behaviour.
+- localization contract:
+  tests proving explicit `Localizer` injection, deterministic fallback ordering
+  (`host -> bundled locale -> bundled en-US -> caller fallback`), and absence
+  of global mutable loader state.
 
 If any contract conformance suite is missing or failing, phase-1 build work is
 blocked.
@@ -837,6 +892,7 @@ This design covers:
 - tool and MCP trust boundaries,
 - LLM sink governance,
 - audit semantics,
+- localization contracts for user-facing diagnostics in library deployments,
 - evaluation requirements.
 
 ### Out of scope for this document
@@ -845,6 +901,7 @@ This document does not define:
 
 - file-by-file implementation task lists,
 - project-management sequencing details,
+- host application locale negotiation user experience design,
 - continuous integration (CI) workflow mechanics beyond required security
   outcomes.
 
@@ -868,4 +925,6 @@ Technology baseline and verification target expectations are tracked in
 - Simon Willison on CaMeL:
   <https://simonwillison.net/2025/Apr/11/camel/>
 - Dromedary project: <https://github.com/microsoft/dromedary>
+- ADR 001 localization architecture:
+  `docs/adr-001-localization-and-internationalization-with-fluent.md`
 - Pydantic AI: <https://github.com/pydantic/pydantic-ai>
