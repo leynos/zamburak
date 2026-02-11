@@ -1,7 +1,8 @@
 # Architecting localizable Rust libraries with Fluent
 
 When building a reusable Rust library (a crate), providing localized text for
-elements such as error messages and UI components presents a unique challenge.
+elements such as error messages and user interface (UI) components presents a
+unique challenge.
 The library itself cannot and should not make assumptions about the end user's
 language preference. The final application that consumes the library is the
 sole authority on the current locale.
@@ -34,8 +35,9 @@ libraries in Rust using the Fluent ecosystem.
 
 ## Implementing the pattern: A two-crate workspace example
 
-To illustrate this pattern, let's build a simple workspace containing an
-application (`my-app`) that consumes a localizable library (`my-lib`).
+To illustrate this pattern, the following example builds a simple workspace
+containing an application (`my-app`) that consumes a localizable library
+(`my-lib`).
 
 ### 1. Workspace setup
 
@@ -60,7 +62,7 @@ The root `Cargo.toml` defines the workspace members:
 
 `i18n-workspace/Cargo.toml`
 
-```ini,toml
+```toml
 [workspace]
 members = ["my-app", "my-lib"]
 
@@ -74,9 +76,9 @@ expose a function to retrieve localized messages.
 `my-lib/Cargo.toml`
 
 The library needs `i18n-embed` for the Fluent abstractions and `rust-embed` to
-bundle the `.ftl` files into the binary.1
+bundle the `.ftl` files into the binary.[^1]
 
-```ini,toml
+```toml
 [package]
 name = "my-lib"
 version = "0.1.0"
@@ -94,7 +96,7 @@ This file contains the library's localizable strings.
 
 ```fluent
 error-not-found = The requested item could not be found.
-error-permission-denied = You do not have permission to perform this action.
+error-permission-denied = Permission to perform this action is not granted.
 
 ```
 
@@ -108,8 +110,8 @@ use i18n_embed::fluent::FluentLanguageLoader;
 use rust_embed::RustEmbed;
 
 // 1. Embed the 'i18n' directory into the library binary.
-// This makes the.ftl files available to the consuming application.
-#
+// This makes the .ftl files available to the consuming application.
+#[derive(RustEmbed)]
 #[folder = "i18n/"]
 pub struct MyLibLocalizations;
 
@@ -130,9 +132,9 @@ calling the library.
 `my-app/Cargo.toml`
 
 The application depends on the library and adds the `desktop-requester` feature
-to `i18n-embed` to detect the system's locale.2
+to `i18n-embed` to detect the system's locale.[^2]
 
-```ini,toml
+```toml
 [package]
 name = "my-app"
 version = "0.1.0"
@@ -202,7 +204,7 @@ fn main() {
 ## Conclusion
 
 This dependency injection pattern provides a clean, robust, and scalable
-architecture for internationalization in a modular Rust ecosystem.1
+architecture for internationalization in a modular Rust ecosystem.[^1]
 
 - **For library authors:** The pattern enables shipping localizable components
   without imposing a specific localization strategy on consuming applications.
@@ -219,8 +221,9 @@ seamlessly.
 
 ## Works cited
 
-1. i18n_embed - Rust - [Docs.rs](http://Docs.rs), accessed on August 18, 2025,
-   [https://docs.rs/i18n-embed](https://docs.rs/i18n-embed)
+[^1]: i18n_embed - Rust - [Docs.rs](http://Docs.rs), accessed on August 18,
+  2025, [https://docs.rs/i18n-embed](https://docs.rs/i18n-embed)
 
-2. i18n_embed - Rust - [Docs.rs](http://Docs.rs), accessed on August 18, 2025,
-   [https://docs.rs/i18n-embed/0.14.1/i18n_embed/](https://docs.rs/i18n-embed/0.14.1/i18n_embed/)
+[^2]: i18n_embed - Rust - [Docs.rs](http://Docs.rs), accessed on August 18,
+  2025,
+  [https://docs.rs/i18n-embed/0.14.1/i18n_embed/](https://docs.rs/i18n-embed/0.14.1/i18n_embed/)

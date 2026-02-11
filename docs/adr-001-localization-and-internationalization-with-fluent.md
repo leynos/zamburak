@@ -2,7 +2,7 @@
 
 Date: 2026-02-11
 
-Status: Proposed
+Status: Accepted
 
 ## Context and problem statement
 
@@ -76,7 +76,8 @@ localization context.
 ## Decision drivers
 
 - library composability across mixed crates and host applications,
-- deterministic behaviour in tests and CI, regardless of host locale settings,
+- deterministic behaviour in tests and continuous integration (CI), regardless
+  of host locale settings,
 - compatibility with Fluent tooling and resource embedding patterns,
 - explicit fallback semantics when translation keys or arguments are missing,
 - thread-safe operation without cross-thread locale bleed.
