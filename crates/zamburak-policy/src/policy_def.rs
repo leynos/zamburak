@@ -139,36 +139,13 @@ impl PolicyDefinition {
     pub fn from_yaml_str_with_migration_audit(
         policy_yaml: &str,
     ) -> Result<PolicyLoadOutcome, PolicyLoadError> {
-        let version_probe = serde_yaml::from_str::<SchemaVersionProbe>(policy_yaml)
-            .map_err(PolicyLoadError::InvalidYaml)?;
-
-        match version_probe.schema_version {
-            Some(schema_version) if schema_version == CANONICAL_POLICY_SCHEMA_VERSION => {
-                let policy_definition = parse_canonical_yaml_policy(policy_yaml)?;
-                canonical_load_outcome(policy_definition)
-            }
-            Some(schema_version) if schema_version == LEGACY_POLICY_SCHEMA_VERSION => {
-                let legacy_policy = serde_yaml::from_str::<PolicyDefinitionV0>(policy_yaml)
-                    .map_err(PolicyLoadError::InvalidYaml)?;
-                let migration_outcome = migrate_schema_v0_to_v1(legacy_policy)
-                    .map_err(PolicyLoadError::MigrationAuditFailed)?;
-                let policy_definition = migration_outcome
-                    .policy_definition
-                    .ensure_canonical_schema_version()?;
-                Ok(PolicyLoadOutcome {
-                    policy_definition,
-                    migration_audit: migration_outcome.migration_audit,
-                })
-            }
-            Some(schema_version) => Err(PolicyLoadError::UnsupportedSchemaVersion {
-                found: schema_version,
-                expected: CANONICAL_POLICY_SCHEMA_VERSION,
-            }),
-            None => {
-                let policy_definition = parse_canonical_yaml_policy(policy_yaml)?;
-                canonical_load_outcome(policy_definition)
-            }
-        }
+        load_with_migration_audit(
+            policy_yaml,
+            |value| serde_yaml::from_str::<SchemaVersionProbe>(value),
+            parse_canonical_yaml_policy,
+            |value| serde_yaml::from_str::<PolicyDefinitionV0>(value),
+            PolicyLoadError::InvalidYaml,
+        )
     }
 
     /// Parse and validate a policy document from JSON.
@@ -208,36 +185,13 @@ impl PolicyDefinition {
     pub fn from_json_str_with_migration_audit(
         policy_json: &str,
     ) -> Result<PolicyLoadOutcome, PolicyLoadError> {
-        let version_probe = serde_json::from_str::<SchemaVersionProbe>(policy_json)
-            .map_err(PolicyLoadError::InvalidJson)?;
-
-        match version_probe.schema_version {
-            Some(schema_version) if schema_version == CANONICAL_POLICY_SCHEMA_VERSION => {
-                let policy_definition = parse_canonical_json_policy(policy_json)?;
-                canonical_load_outcome(policy_definition)
-            }
-            Some(schema_version) if schema_version == LEGACY_POLICY_SCHEMA_VERSION => {
-                let legacy_policy = serde_json::from_str::<PolicyDefinitionV0>(policy_json)
-                    .map_err(PolicyLoadError::InvalidJson)?;
-                let migration_outcome = migrate_schema_v0_to_v1(legacy_policy)
-                    .map_err(PolicyLoadError::MigrationAuditFailed)?;
-                let policy_definition = migration_outcome
-                    .policy_definition
-                    .ensure_canonical_schema_version()?;
-                Ok(PolicyLoadOutcome {
-                    policy_definition,
-                    migration_audit: migration_outcome.migration_audit,
-                })
-            }
-            Some(schema_version) => Err(PolicyLoadError::UnsupportedSchemaVersion {
-                found: schema_version,
-                expected: CANONICAL_POLICY_SCHEMA_VERSION,
-            }),
-            None => {
-                let policy_definition = parse_canonical_json_policy(policy_json)?;
-                canonical_load_outcome(policy_definition)
-            }
-        }
+        load_with_migration_audit(
+            policy_json,
+            |value| serde_json::from_str::<SchemaVersionProbe>(value),
+            parse_canonical_json_policy,
+            |value| serde_json::from_str::<PolicyDefinitionV0>(value),
+            PolicyLoadError::InvalidJson,
+        )
     }
 
     fn ensure_canonical_schema_version(self) -> Result<Self, PolicyLoadError> {
@@ -269,6 +223,47 @@ fn canonical_load_outcome(
         policy_definition,
         migration_audit,
     })
+}
+
+#[expect(
+    clippy::too_many_arguments,
+    reason = "Helper signature is explicitly required by the refactor request"
+)]
+fn load_with_migration_audit<E>(
+    policy_str: &str,
+    probe_parser: impl FnOnce(&str) -> Result<SchemaVersionProbe, E>,
+    canonical_parser: impl FnOnce(&str) -> Result<PolicyDefinition, PolicyLoadError>,
+    legacy_parser: impl FnOnce(&str) -> Result<PolicyDefinitionV0, E>,
+    error_mapper: impl Fn(E) -> PolicyLoadError,
+) -> Result<PolicyLoadOutcome, PolicyLoadError> {
+    let version_probe = probe_parser(policy_str).map_err(&error_mapper)?;
+
+    match version_probe.schema_version {
+        Some(schema_version) if schema_version == CANONICAL_POLICY_SCHEMA_VERSION => {
+            let policy_definition = canonical_parser(policy_str)?;
+            canonical_load_outcome(policy_definition)
+        }
+        Some(schema_version) if schema_version == LEGACY_POLICY_SCHEMA_VERSION => {
+            let legacy_policy = legacy_parser(policy_str).map_err(&error_mapper)?;
+            let migration_outcome = migrate_schema_v0_to_v1(legacy_policy)
+                .map_err(PolicyLoadError::MigrationAuditFailed)?;
+            let policy_definition = migration_outcome
+                .policy_definition
+                .ensure_canonical_schema_version()?;
+            Ok(PolicyLoadOutcome {
+                policy_definition,
+                migration_audit: migration_outcome.migration_audit,
+            })
+        }
+        Some(schema_version) => Err(PolicyLoadError::UnsupportedSchemaVersion {
+            found: schema_version,
+            expected: CANONICAL_POLICY_SCHEMA_VERSION,
+        }),
+        None => {
+            let policy_definition = canonical_parser(policy_str)?;
+            canonical_load_outcome(policy_definition)
+        }
+    }
 }
 
 #[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq)]
