@@ -12,11 +12,38 @@ use crate::policy_def::{
     SideEffectClass, ToolPolicy,
 };
 
-const SCHEMA_VERSION_V0: SchemaVersion = SchemaVersion::new(0);
+pub(crate) const LEGACY_POLICY_SCHEMA_VERSION: SchemaVersion = SchemaVersion::new(0);
 const SCHEMA_VERSION_V1: SchemaVersion = SchemaVersion::new(1);
 const SCHEMA_MIGRATION_V0_TO_V1: &str = "policy_schema_v0_to_v1";
 
 /// Auditable migration evidence for a loaded policy document.
+///
+/// # Examples
+///
+/// ```rust
+/// use zamburak_policy::PolicyDefinition;
+///
+/// let policy_yaml = r#"
+/// schema_version: 1
+/// policy_name: minimal_policy
+/// default_action: Deny
+/// strict_mode: true
+/// budgets:
+///   max_values: 1
+///   max_parents_per_value: 1
+///   max_closure_steps: 1
+///   max_witness_depth: 1
+/// tools: []
+/// "#;
+///
+/// let load_outcome = PolicyDefinition::from_yaml_str_with_migration_audit(policy_yaml)?;
+/// let audit = load_outcome.migration_audit();
+/// assert_eq!(audit.source_schema_version.as_u64(), 1);
+/// assert_eq!(audit.target_schema_version.as_u64(), 1);
+/// assert!(!audit.was_migrated());
+///
+/// Ok::<(), zamburak_policy::PolicyLoadError>(())
+/// ```
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub struct MigrationAuditRecord {
     /// Source schema version observed in the input policy document.
@@ -40,6 +67,35 @@ impl MigrationAuditRecord {
 }
 
 /// Auditable evidence for one explicit schema migration transform.
+///
+/// # Examples
+///
+/// ```rust
+/// use zamburak_policy::PolicyDefinition;
+///
+/// let legacy_policy_yaml = r#"
+/// schema_version: 0
+/// policy_name: minimal_policy
+/// default_action: Deny
+/// strict_mode: true
+/// budgets:
+///   max_values: 1
+///   max_parents_per_value: 1
+///   max_closure_steps: 1
+///   max_witness_depth: 1
+/// tools: []
+/// "#;
+///
+/// let load_outcome =
+///     PolicyDefinition::from_yaml_str_with_migration_audit(legacy_policy_yaml)?;
+/// let migration_step = &load_outcome.migration_audit().migration_steps[0];
+///
+/// assert_eq!(migration_step.from_schema_version.as_u64(), 0);
+/// assert_eq!(migration_step.to_schema_version.as_u64(), 1);
+/// assert_eq!(migration_step.transform_name, "policy_schema_v0_to_v1");
+///
+/// Ok::<(), zamburak_policy::PolicyLoadError>(())
+/// ```
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub struct MigrationStepRecord {
     /// Source schema version before this step.
@@ -112,9 +168,10 @@ pub(crate) fn audit_for_canonical_policy(
     policy_definition: &PolicyDefinition,
 ) -> Result<MigrationAuditRecord, MigrationError> {
     let canonical_hash = stable_policy_hash(policy_definition)?;
+    let schema_version = policy_definition.schema_version;
     Ok(MigrationAuditRecord {
-        source_schema_version: SCHEMA_VERSION_V1,
-        target_schema_version: SCHEMA_VERSION_V1,
+        source_schema_version: schema_version,
+        target_schema_version: schema_version,
         source_document_hash: canonical_hash.clone(),
         target_document_hash: canonical_hash,
         migration_steps: Vec::new(),
@@ -141,7 +198,7 @@ pub(crate) fn migrate_schema_v0_to_v1(
     let target_hash = stable_policy_hash(&migrated_policy)?;
 
     let migration_step = MigrationStepRecord {
-        from_schema_version: SCHEMA_VERSION_V0,
+        from_schema_version: LEGACY_POLICY_SCHEMA_VERSION,
         to_schema_version: SCHEMA_VERSION_V1,
         transform_name: SCHEMA_MIGRATION_V0_TO_V1.to_owned(),
         input_hash: source_hash.clone(),
@@ -149,7 +206,7 @@ pub(crate) fn migrate_schema_v0_to_v1(
     };
 
     let migration_audit = MigrationAuditRecord {
-        source_schema_version: SCHEMA_VERSION_V0,
+        source_schema_version: LEGACY_POLICY_SCHEMA_VERSION,
         target_schema_version: SCHEMA_VERSION_V1,
         source_document_hash: source_hash,
         target_document_hash: target_hash,
@@ -221,9 +278,12 @@ fn canonicalize_json_value(value: &Value) -> Value {
 mod tests {
     //! Unit tests for explicit migration transforms and audit evidence.
 
+    use rstest::{fixture, rstest};
+
     use super::{
-        MigrationAuditRecord, MigrationError, PolicyDefinitionV0, SCHEMA_MIGRATION_V0_TO_V1,
-        SCHEMA_VERSION_V0, SCHEMA_VERSION_V1, audit_for_canonical_policy, migrate_schema_v0_to_v1,
+        LEGACY_POLICY_SCHEMA_VERSION, MigrationAuditRecord, MigrationError, PolicyDefinitionV0,
+        SCHEMA_MIGRATION_V0_TO_V1, SCHEMA_VERSION_V1, audit_for_canonical_policy,
+        migrate_schema_v0_to_v1,
     };
     use crate::policy_def::{PolicyDefinition, SchemaVersion};
 
@@ -231,12 +291,17 @@ mod tests {
         serde_yaml::from_str(policy_yaml).expect("test fixture should deserialize as schema v0")
     }
 
-    #[test]
-    fn migrates_schema_v0_to_v1_with_auditable_step_record() {
-        let policy_v0 = parse_policy_v0(include_str!(concat!(
+    #[fixture]
+    fn legacy_policy_v0() -> PolicyDefinitionV0 {
+        parse_policy_v0(include_str!(concat!(
             env!("CARGO_MANIFEST_DIR"),
             "/../../tests/test_utils/policy-v0.yaml"
-        )));
+        )))
+    }
+
+    #[rstest]
+    fn migrates_schema_v0_to_v1_with_auditable_step_record(legacy_policy_v0: PolicyDefinitionV0) {
+        let policy_v0 = legacy_policy_v0;
 
         let migration_outcome =
             migrate_schema_v0_to_v1(policy_v0).expect("schema v0 fixture must migrate");
@@ -247,7 +312,7 @@ mod tests {
         );
         assert_eq!(
             migration_outcome.migration_audit.source_schema_version,
-            SCHEMA_VERSION_V0
+            LEGACY_POLICY_SCHEMA_VERSION
         );
         assert_eq!(
             migration_outcome.migration_audit.target_schema_version,
@@ -256,7 +321,7 @@ mod tests {
         assert_eq!(migration_outcome.migration_audit.migration_steps.len(), 1);
 
         let step = &migration_outcome.migration_audit.migration_steps[0];
-        assert_eq!(step.from_schema_version, SCHEMA_VERSION_V0);
+        assert_eq!(step.from_schema_version, LEGACY_POLICY_SCHEMA_VERSION);
         assert_eq!(step.to_schema_version, SCHEMA_VERSION_V1);
         assert_eq!(step.transform_name, SCHEMA_MIGRATION_V0_TO_V1);
         assert_eq!(
@@ -338,13 +403,9 @@ mod tests {
         );
     }
 
-    #[test]
-    fn migration_hashes_change_when_policy_input_changes() {
-        let baseline_policy = parse_policy_v0(include_str!(concat!(
-            env!("CARGO_MANIFEST_DIR"),
-            "/../../tests/test_utils/policy-v0.yaml"
-        )));
-
+    #[rstest]
+    fn migration_hashes_change_when_policy_input_changes(legacy_policy_v0: PolicyDefinitionV0) {
+        let baseline_policy = legacy_policy_v0;
         let changed_policy_yaml = include_str!(concat!(
             env!("CARGO_MANIFEST_DIR"),
             "/../../tests/test_utils/policy-v0.yaml"

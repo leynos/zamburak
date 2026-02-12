@@ -125,11 +125,9 @@ fn successful_load_outcome(world: &LoaderWorld) -> &PolicyEngineLoadOutcome {
     let Some(load_result) = world.load_result.as_ref() else {
         panic!("load step must run before assertion");
     };
-
-    match load_result {
-        Ok(load_outcome) => load_outcome,
-        Err(load_error) => panic!("expected successful load result, got error: {load_error:?}"),
-    }
+    load_result
+        .as_ref()
+        .unwrap_or_else(|load_error| panic!("expected successful load result, got: {load_error:?}"))
 }
 
 #[scenario(

@@ -3,11 +3,17 @@
 #[path = "../test_utils/policy_yaml.rs"]
 mod policy_yaml;
 
+use rstest::{fixture, rstest};
 use zamburak_policy::{PolicyEngine, PolicyEngineLoadOutcome, PolicyLoadError};
 
-#[test]
-fn migration_hashes_are_stable_for_equivalent_legacy_json_orderings() {
-    let first_legacy_json = policy_yaml::legacy_policy_v0_json();
+#[fixture]
+fn legacy_policy_v0_json() -> &'static str {
+    policy_yaml::legacy_policy_v0_json()
+}
+
+#[rstest]
+fn migration_hashes_are_stable_for_equivalent_legacy_json_orderings(legacy_policy_v0_json: &str) {
+    let first_legacy_json = legacy_policy_v0_json;
     let second_legacy_json = r#"{
         "tools": [
           {
@@ -56,9 +62,9 @@ fn migration_hashes_are_stable_for_equivalent_legacy_json_orderings() {
     );
 }
 
-#[test]
-fn migration_hashes_change_when_legacy_input_changes() {
-    let baseline_json = policy_yaml::legacy_policy_v0_json();
+#[rstest]
+fn migration_hashes_change_when_legacy_input_changes(legacy_policy_v0_json: &str) {
+    let baseline_json = legacy_policy_v0_json;
     let changed_json =
         baseline_json.replace("personal_assistant_default", "personal_assistant_changed");
 
@@ -94,14 +100,10 @@ fn unsupported_schema_version_remains_fail_closed() {
 
 #[test]
 fn migrated_policy_remains_restrictive_equivalent_to_canonical_fixture() {
-    let canonical_engine = match PolicyEngine::from_yaml_str(policy_yaml::canonical_policy_yaml()) {
-        Ok(policy_engine) => policy_engine,
-        Err(load_error) => panic!("canonical fixture should load: {load_error:?}"),
-    };
-    let migrated_engine = match PolicyEngine::from_yaml_str(policy_yaml::legacy_policy_v0_yaml()) {
-        Ok(policy_engine) => policy_engine,
-        Err(load_error) => panic!("legacy fixture should migrate and load: {load_error:?}"),
-    };
+    let canonical_engine = PolicyEngine::from_yaml_str(policy_yaml::canonical_policy_yaml())
+        .expect("canonical fixture should load");
+    let migrated_engine = PolicyEngine::from_yaml_str(policy_yaml::legacy_policy_v0_yaml())
+        .expect("legacy fixture should migrate and load");
 
     assert_eq!(
         migrated_engine.policy_definition(),
@@ -111,8 +113,7 @@ fn migrated_policy_remains_restrictive_equivalent_to_canonical_fixture() {
 }
 
 fn load_engine_with_audit_from_json(policy_json: &str) -> PolicyEngineLoadOutcome {
-    match PolicyEngine::from_json_str_with_migration_audit(policy_json) {
-        Ok(load_outcome) => load_outcome,
-        Err(load_error) => panic!("policy should load with migration audit: {load_error:?}"),
-    }
+    PolicyEngine::from_json_str_with_migration_audit(policy_json).unwrap_or_else(|load_error| {
+        panic!("policy should load with migration audit: {load_error:?}")
+    })
 }

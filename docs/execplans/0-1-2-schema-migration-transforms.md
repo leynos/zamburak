@@ -149,24 +149,24 @@ and all required quality gates pass.
 - Decision: keep canonical runtime target as schema v1 and treat migration as a
   pre-validation step into canonical v1, not an alternative runtime schema.
   Rationale: preserves Task 0.1.1 guarantees while adding explicit migration
-  behaviour required by Task 0.1.2. Date/Author: 2026-02-10 / Codex
+  behaviour required by Task 0.1.2. Date/Author: 2026-02-10 / Codex.
 
 - Decision: add audit-carrying loader entrypoints while preserving existing
   loader method signatures for compatibility. Rationale: migration evidence
   must be inspectable by consumers, but existing APIs should continue working
-  unchanged. Date/Author: 2026-02-10 / Codex
+  unchanged. Date/Author: 2026-02-10 / Codex.
 
 - Decision: define restrictive-equivalent conformance using deterministic
   canonical-policy comparisons for covered migration fixtures, plus
   non-weakening assertions for key decision fields. Rationale: this yields
   objective, automatable proof with the current policy engine surface and
-  avoids speculative semantics. Date/Author: 2026-02-10 / Codex
+  avoids speculative semantics. Date/Author: 2026-02-10 / Codex.
 
 - Decision: support one explicit migration path in this task,
   `schema_version: 0` to `schema_version: 1`, and keep all other unknown schema
   versions fail-closed. Rationale: this satisfies roadmap scope for explicit
   transforms without introducing cross-family compatibility risk. Date/Author:
-  2026-02-10 / Codex
+  2026-02-10 / Codex.
 
 ## Outcomes & Retrospective
 
@@ -176,8 +176,8 @@ Delivered outcomes:
   `crates/zamburak-policy/src/migration.rs`.
 - Implemented explicit transform chain for supported legacy input:
   `schema_version: 0` to canonical `schema_version: 1`.
-- Added migration audit evidence with deterministic canonicalized SHA-256
-  hashes and per-step transform records.
+- Added migration audit evidence with deterministic canonicalized
+  SHA-256 (Secure Hash Algorithm 256-bit) hashes and per-step transform records.
 - Added audit-bearing API surfaces:
   `PolicyDefinition::from_yaml_str_with_migration_audit`,
   `PolicyDefinition::from_json_str_with_migration_audit`,
@@ -192,7 +192,7 @@ Delivered outcomes:
   `tests/test_utils/policy-v0.yaml` and `tests/test_utils/policy-v0.json`.
 - Updated documentation:
   `docs/zamburak-design-document.md`, `docs/users-guide.md`, and
-  `docs/roadmap.md` (Task 0.1.2 marked done).
+  `docs/roadmap.md` (Task 0.1.2 marked as done).
 
 Gate results:
 
@@ -230,7 +230,7 @@ Target state for Task 0.1.2:
 - loader paths that can return migration audit records for supported transforms,
 - conformance tests in unit, compatibility, and security suites,
 - updated design and user docs documenting migration semantics and APIs,
-- roadmap task checkbox updated to done.
+- roadmap task checkbox marked as done.
 
 ## Plan of work
 

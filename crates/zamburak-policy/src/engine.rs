@@ -10,6 +10,31 @@ pub struct PolicyEngine {
 }
 
 /// Outcome of constructing a policy engine with migration evidence.
+///
+/// # Examples
+///
+/// ```rust
+/// use zamburak_policy::{PolicyEngine, PolicyLoadError};
+///
+/// let policy_yaml = r#"
+/// schema_version: 1
+/// policy_name: minimal_policy
+/// default_action: Deny
+/// strict_mode: true
+/// budgets:
+///   max_values: 1
+///   max_parents_per_value: 1
+///   max_closure_steps: 1
+///   max_witness_depth: 1
+/// tools: []
+/// "#;
+///
+/// let load_outcome = PolicyEngine::from_yaml_str_with_migration_audit(policy_yaml)?;
+/// let (_policy_engine, migration_audit) = load_outcome.into_parts();
+/// assert_eq!(migration_audit.source_schema_version.as_u64(), 1);
+///
+/// Ok::<(), PolicyLoadError>(())
+/// ```
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct PolicyEngineLoadOutcome {
     policy_engine: PolicyEngine,
@@ -44,6 +69,30 @@ impl PolicyEngine {
     }
 
     /// Build a policy engine from a YAML policy document with migration audit evidence.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use zamburak_policy::{PolicyEngine, PolicyLoadError};
+    ///
+    /// let policy_yaml = r#"
+    /// schema_version: 1
+    /// policy_name: minimal_policy
+    /// default_action: Deny
+    /// strict_mode: true
+    /// budgets:
+    ///   max_values: 1
+    ///   max_parents_per_value: 1
+    ///   max_closure_steps: 1
+    ///   max_witness_depth: 1
+    /// tools: []
+    /// "#;
+    ///
+    /// let load_outcome = PolicyEngine::from_yaml_str_with_migration_audit(policy_yaml)?;
+    /// assert!(!load_outcome.migration_audit().was_migrated());
+    ///
+    /// Ok::<(), PolicyLoadError>(())
+    /// ```
     pub fn from_yaml_str_with_migration_audit(
         policy_yaml: &str,
     ) -> Result<PolicyEngineLoadOutcome, PolicyLoadError> {
@@ -59,6 +108,31 @@ impl PolicyEngine {
     }
 
     /// Build a policy engine from a JSON policy document with migration audit evidence.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use zamburak_policy::{PolicyEngine, PolicyLoadError};
+    ///
+    /// let policy_json = r#"{
+    ///   "schema_version": 1,
+    ///   "policy_name": "minimal_policy",
+    ///   "default_action": "Deny",
+    ///   "strict_mode": true,
+    ///   "budgets": {
+    ///     "max_values": 1,
+    ///     "max_parents_per_value": 1,
+    ///     "max_closure_steps": 1,
+    ///     "max_witness_depth": 1
+    ///   },
+    ///   "tools": []
+    /// }"#;
+    ///
+    /// let load_outcome = PolicyEngine::from_json_str_with_migration_audit(policy_json)?;
+    /// assert_eq!(load_outcome.migration_audit().target_schema_version.as_u64(), 1);
+    ///
+    /// Ok::<(), PolicyLoadError>(())
+    /// ```
     pub fn from_json_str_with_migration_audit(
         policy_json: &str,
     ) -> Result<PolicyEngineLoadOutcome, PolicyLoadError> {

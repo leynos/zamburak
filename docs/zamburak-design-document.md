@@ -570,7 +570,7 @@ Unknown schema families remain fail-closed and return
 `UnsupportedSchemaVersion`.
 
 Migration audit metadata includes deterministic canonicalized SHA-256 hashes
-for source and target documents plus per-step hash evidence and transform
+for source and target documents, plus per-step hash evidence and transform
 identifier (`policy_schema_v0_to_v1`).
 
 Audit-bearing loader entrypoints are:
@@ -583,8 +583,8 @@ Audit-bearing loader entrypoints are:
 ## Localization and user-facing diagnostics
 
 Zamburak adopts the localization model defined in
-`adr-002-localization-and-internationalization-with-fluent.md`:
-injection-first localization with Fluent adapters, without ambient global state.
+`adr-002-localization-and-internationalization-with-fluent.md`: injection-first
+localization with Fluent adapters, without ambient global state.
 
 ### Localization contract and ownership
 

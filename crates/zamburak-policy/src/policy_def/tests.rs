@@ -11,46 +11,49 @@ mod policy_yaml {
 
 use super::{
     CANONICAL_POLICY_SCHEMA_VERSION, PolicyDefinition, PolicyLoadError,
-    PolicyLoadError::UnsupportedSchemaVersion, SchemaVersion,
+    PolicyLoadError::UnsupportedSchemaVersion, PolicyLoadOutcome, SchemaVersion,
 };
 use rstest::rstest;
 
-#[test]
-fn accepts_schema_version_one_yaml() {
-    let policy = PolicyDefinition::from_yaml_str(policy_yaml::canonical_policy_yaml())
-        .expect("valid schema v1");
-
-    assert_eq!(
-        policy.schema_version,
-        SchemaVersion::new(CANONICAL_POLICY_SCHEMA_VERSION.as_u64())
-    );
-}
-
-#[test]
-fn accepts_schema_version_one_json() {
-    let canonical_policy_json = r#"
+const CANONICAL_POLICY_JSON: &str = r#"
+    {
+      "schema_version": 1,
+      "policy_name": "personal_assistant_default",
+      "default_action": "Deny",
+      "strict_mode": true,
+      "budgets": {
+        "max_values": 100000,
+        "max_parents_per_value": 64,
+        "max_closure_steps": 10000,
+        "max_witness_depth": 32
+      },
+      "tools": [
         {
-          "schema_version": 1,
-          "policy_name": "personal_assistant_default",
-          "default_action": "Deny",
-          "strict_mode": true,
-          "budgets": {
-            "max_values": 100000,
-            "max_parents_per_value": 64,
-            "max_closure_steps": 10000,
-            "max_witness_depth": 32
-          },
-          "tools": [
-            {
-              "tool": "send_email",
-              "side_effect_class": "ExternalWrite",
-              "default_decision": "RequireConfirmation"
-            }
-          ]
+          "tool": "send_email",
+          "side_effect_class": "ExternalWrite",
+          "default_decision": "RequireConfirmation"
         }
-    "#;
+      ]
+    }
+"#;
 
-    let policy = PolicyDefinition::from_json_str(canonical_policy_json).expect("valid schema v1");
+#[rstest]
+#[case::yaml(
+    policy_yaml::canonical_policy_yaml(),
+    PolicyDefinition::from_yaml_str,
+    "valid schema v1 yaml"
+)]
+#[case::json(
+    CANONICAL_POLICY_JSON,
+    PolicyDefinition::from_json_str,
+    "valid schema v1 json"
+)]
+fn accepts_schema_version_one(
+    #[case] policy_document: &str,
+    #[case] loader: fn(&str) -> Result<PolicyDefinition, PolicyLoadError>,
+    #[case] expectation_message: &str,
+) {
+    let policy = loader(policy_document).expect(expectation_message);
 
     assert_eq!(
         policy.schema_version,
@@ -58,11 +61,23 @@ fn accepts_schema_version_one_json() {
     );
 }
 
-#[test]
-fn migrates_legacy_schema_version_zero_yaml_to_canonical_schema() {
-    let load_outcome =
-        PolicyDefinition::from_yaml_str_with_migration_audit(policy_yaml::legacy_policy_v0_yaml())
-            .expect("legacy schema v0 should migrate");
+#[rstest]
+#[case::yaml(
+    policy_yaml::legacy_policy_v0_yaml(),
+    PolicyDefinition::from_yaml_str_with_migration_audit,
+    "legacy schema v0 yaml should migrate"
+)]
+#[case::json(
+    policy_yaml::legacy_policy_v0_json(),
+    PolicyDefinition::from_json_str_with_migration_audit,
+    "legacy schema v0 json should migrate"
+)]
+fn migrates_legacy_schema_version_zero_to_canonical_schema(
+    #[case] policy_document: &str,
+    #[case] loader: fn(&str) -> Result<PolicyLoadOutcome, PolicyLoadError>,
+    #[case] expectation_message: &str,
+) {
+    let load_outcome = loader(policy_document).expect(expectation_message);
 
     assert_eq!(
         load_outcome.policy_definition().schema_version,
@@ -87,30 +102,17 @@ fn migrates_legacy_schema_version_zero_yaml_to_canonical_schema() {
 }
 
 #[test]
-fn migrates_legacy_schema_version_zero_json_to_canonical_schema() {
-    let load_outcome =
-        PolicyDefinition::from_json_str_with_migration_audit(&policy_yaml::legacy_policy_v0_json())
-            .expect("legacy schema v0 json should migrate");
-
-    assert!(load_outcome.migration_audit().was_migrated());
-    assert_eq!(
-        load_outcome.policy_definition().schema_version,
-        SchemaVersion::new(CANONICAL_POLICY_SCHEMA_VERSION.as_u64())
-    );
-}
-
-#[test]
 fn canonical_load_with_migration_audit_reports_no_migration_steps() {
     let load_outcome =
         PolicyDefinition::from_yaml_str_with_migration_audit(policy_yaml::canonical_policy_yaml())
             .expect("canonical schema v1 should load");
 
-    assert!(!load_outcome.migration_audit().was_migrated());
-    assert!(load_outcome.migration_audit().migration_steps.is_empty());
     assert_eq!(
         load_outcome.migration_audit().source_document_hash,
         load_outcome.migration_audit().target_document_hash
     );
+    assert!(!load_outcome.migration_audit().was_migrated());
+    assert!(load_outcome.migration_audit().migration_steps.is_empty());
 }
 
 #[rstest]
