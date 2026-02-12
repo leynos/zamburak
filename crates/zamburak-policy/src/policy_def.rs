@@ -144,10 +144,17 @@ macro_rules! define_loader_with_migration_audit {
         ) -> Result<PolicyLoadOutcome, PolicyLoadError> {
             load_with_migration_audit(
                 $param_name,
-                |value| $parser::from_str::<SchemaVersionProbe>(value),
-                $canonical_parser,
-                |value| $parser::from_str::<PolicyDefinitionV0>(value),
-                PolicyLoadError::$error_variant,
+                MigrationLoadParsers {
+                    parse_schema_version: (|value| {
+                        $parser::from_str::<SchemaVersionProbe>(value)
+                    }) as fn(&str) -> Result<SchemaVersionProbe, $parser::Error>,
+                    parse_canonical_policy: $canonical_parser,
+                    parse_legacy_policy: (|value| {
+                        $parser::from_str::<PolicyDefinitionV0>(value)
+                    }) as fn(&str) -> Result<PolicyDefinitionV0, $parser::Error>,
+                    map_parse_error: PolicyLoadError::$error_variant,
+                    _phantom: std::marker::PhantomData,
+                },
             )
         }
     };
@@ -257,10 +264,14 @@ fn parse_canonical_json_policy(policy_json: &str) -> Result<PolicyDefinition, Po
     serde_json::from_str::<PolicyDefinition>(policy_json).map_err(PolicyLoadError::InvalidJson)
 }
 
-#[allow(
-    clippy::too_many_arguments,
-    reason = "Macro-generated loaders pass explicit parser callbacks as part of the public loading contract"
-)]
+struct MigrationLoadParsers<ParseError, VersionParser, CanonicalParser, LegacyParser, ErrorMapper> {
+    parse_schema_version: VersionParser,
+    parse_canonical_policy: CanonicalParser,
+    parse_legacy_policy: LegacyParser,
+    map_parse_error: ErrorMapper,
+    _phantom: std::marker::PhantomData<ParseError>,
+}
+
 fn load_with_migration_audit<
     ParseError,
     VersionParser,
@@ -269,26 +280,31 @@ fn load_with_migration_audit<
     ErrorMapper,
 >(
     serialized_policy: &str,
-    parse_schema_version: VersionParser,
-    parse_canonical_policy: CanonicalParser,
-    parse_legacy_policy: LegacyParser,
-    map_parse_error: ErrorMapper,
+    parsers: MigrationLoadParsers<
+        ParseError,
+        VersionParser,
+        CanonicalParser,
+        LegacyParser,
+        ErrorMapper,
+    >,
 ) -> Result<PolicyLoadOutcome, PolicyLoadError>
 where
-    VersionParser: Fn(&str) -> Result<SchemaVersionProbe, ParseError>,
-    CanonicalParser: Fn(&str) -> Result<PolicyDefinition, PolicyLoadError>,
-    LegacyParser: Fn(&str) -> Result<PolicyDefinitionV0, ParseError>,
+    VersionParser: for<'a> Fn(&'a str) -> Result<SchemaVersionProbe, ParseError>,
+    CanonicalParser: for<'a> Fn(&'a str) -> Result<PolicyDefinition, PolicyLoadError>,
+    LegacyParser: for<'a> Fn(&'a str) -> Result<PolicyDefinitionV0, ParseError>,
     ErrorMapper: Fn(ParseError) -> PolicyLoadError + Copy,
 {
-    let version_probe = parse_schema_version(serialized_policy).map_err(map_parse_error)?;
+    let version_probe =
+        (parsers.parse_schema_version)(serialized_policy).map_err(parsers.map_parse_error)?;
 
     match version_probe.schema_version {
         Some(schema_version) if schema_version == CANONICAL_POLICY_SCHEMA_VERSION => {
-            let policy_definition = parse_canonical_policy(serialized_policy)?;
+            let policy_definition = (parsers.parse_canonical_policy)(serialized_policy)?;
             canonical_load_outcome(policy_definition)
         }
         Some(schema_version) if schema_version == LEGACY_POLICY_SCHEMA_VERSION => {
-            let legacy_policy = parse_legacy_policy(serialized_policy).map_err(map_parse_error)?;
+            let legacy_policy = (parsers.parse_legacy_policy)(serialized_policy)
+                .map_err(parsers.map_parse_error)?;
             let migration_outcome = migrate_schema_v0_to_v1(legacy_policy)
                 .map_err(PolicyLoadError::MigrationAuditFailed)?;
             let policy_definition = migration_outcome
@@ -306,7 +322,7 @@ where
             expected: CANONICAL_POLICY_SCHEMA_VERSION,
         }),
         None => {
-            let policy_definition = parse_canonical_policy(serialized_policy)?;
+            let policy_definition = (parsers.parse_canonical_policy)(serialized_policy)?;
             canonical_load_outcome(policy_definition)
         }
     }

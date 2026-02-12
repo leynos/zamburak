@@ -112,8 +112,11 @@ fn migrated_policy_remains_restrictive_equivalent_to_canonical_fixture() {
     );
 }
 
+#[expect(
+    clippy::expect_used,
+    reason = "Requested by review feedback for clearer helper diagnostics"
+)]
 fn load_engine_with_audit_from_json(policy_json: &str) -> PolicyEngineLoadOutcome {
-    PolicyEngine::from_json_str_with_migration_audit(policy_json).unwrap_or_else(|load_error| {
-        panic!("policy should load with migration audit: {load_error:?}")
-    })
+    PolicyEngine::from_json_str_with_migration_audit(policy_json)
+        .expect("policy should load with migration audit")
 }
