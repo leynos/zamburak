@@ -85,8 +85,9 @@ This glossary is normative for design interpretation and naming consistency.
   untrusted inputs, and external communication channels in one agent workflow.
 - Monty:
   the Python interpreter from `pydantic/monty` used as the execution substrate
-  for Zamburak plans. In this document, "Monty VM" means Zamburak's fork and
-  instrumentation layer around that interpreter.
+  for Zamburak plans. In this document, "Monty VM" means the `full-monty` fork
+  plus generic instrumentation substrate, while policy and IFC semantics remain
+  in Zamburak-owned crates.
 - planner large language model (P-LLM):
   the model path used for trusted query decomposition and plan synthesis.
 - quarantined large language model (Q-LLM):
@@ -180,7 +181,8 @@ Zamburak defines these explicit boundaries:
 
 Security claims rely on correctness of these trusted components:
 
-- Monty fork plus VM hooks used by Zamburak,
+- `full-monty` runtime substrate (stable runtime identity, generic observer
+  hooks, snapshot extension seam),
 - IFC propagation and dependency summarization logic,
 - policy engine and policy loader,
 - deterministic verifier and sanitizer implementations,
@@ -196,6 +198,29 @@ Any bypass in these components invalidates policy-compliance claims.
 Zamburak uses a layered virtual machine (VM) architecture: Monty executes
 program semantics, while Zamburak overlays IFC and policy enforcement at all
 effect boundaries.
+
+### Two-track execution model
+
+Zamburak follows an explicit two-track split:
+
+- `Track A` (`full-monty`):
+  generic runtime substrate only. This includes stable runtime IDs, generic
+  observer events, and optional snapshot-extension bytes for embedder-owned
+  state.
+- `Track B` (Zamburak crates):
+  opinionated governance semantics, including IFC propagation rules, policy
+  decisions, approval and denial behaviour, sanitization requirements, and
+  audit explanation payloads.
+
+`Track A` and `Track B` share one normative membrane: external-function control
+flow.
+
+- `start()` and `resume()` define the host-mediated call boundary,
+- `dump()` and `load()` define durability boundaries for governed execution
+  state.
+
+No Zamburak policy semantics may be implemented in `Track A` APIs. All policy
+meaning is owned by `Track B`.
 
 For screen readers: The following diagram shows trusted query flow entering the
 planner, code running in Monty with IFC, and all side effects traversing policy
@@ -228,16 +253,16 @@ _Figure 1: Zamburak execution and effect mediation architecture._
 
 ### Component responsibilities
 
-| Component           | Responsibility                                 | Security-critical invariants                          |
-| ------------------- | ---------------------------------------------- | ----------------------------------------------------- |
-| Monty VM hook layer | Executes code and emits value operations       | No bypass path around IFC hooks for supported opcodes |
-| IFC core            | Tracks provenance, labels, and control context | Monotonic propagation and complete edge coverage      |
-| Summary engine      | Produces bounded decision summaries            | Budget overflow produces unknown-top summary          |
-| Policy engine       | Decides effect outcomes                        | Unknown state fails closed by default                 |
-| Verifier framework  | Mints verified integrity labels                | Verification is deterministic and non-forgeable       |
-| Tool adapter layer  | Executes external effects                      | Every effect requires policy decision                 |
-| Catalogue manager   | Pins tool metadata and schemas                 | Runtime rejects mutable unpinned docs                 |
-| Audit pipeline      | Produces reviewable records                    | Redacted summaries only by default                    |
+| Component                  | Responsibility                                 | Security-critical invariants                                                             |
+| -------------------------- | ---------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| `full-monty` runtime layer | Executes code and emits generic runtime events | No bypass path around effect and value instrumentation in governed observer-enabled mode |
+| IFC core                   | Tracks provenance, labels, and control context | Monotonic propagation and complete edge coverage                                         |
+| Summary engine             | Produces bounded decision summaries            | Budget overflow produces unknown-top summary                                             |
+| Policy engine              | Decides effect outcomes                        | Unknown state fails closed by default                                                    |
+| Verifier framework         | Mints verified integrity labels                | Verification is deterministic and non-forgeable                                          |
+| Tool adapter layer         | Executes external effects                      | Every effect requires policy decision                                                    |
+| Catalogue manager          | Pins tool metadata and schemas                 | Runtime rejects mutable unpinned docs                                                    |
+| Audit pipeline             | Produces reviewable records                    | Redacted summaries only by default                                                       |
 
 _Table 1: Component responsibilities and security-critical invariants._
 
@@ -300,6 +325,9 @@ Snapshots preserve:
 - label summaries,
 - control-context state,
 - policy-relevant counters needed for rate- and history-based checks.
+- IFC state continuity across `start()` or `resume()` and `dump()` or `load()`
+  boundaries, either through runtime-native persistence or versioned
+  embedder-owned snapshot extension state.
 
 Restored execution must be semantically equivalent to uninterrupted execution
 for policy evaluation outcomes.
@@ -555,8 +583,8 @@ Migration rules are:
 ## Localization and user-facing diagnostics
 
 Zamburak adopts the localization model defined in
-`adr-002-localization-and-internationalization-with-fluent.md`:
-injection-first localization with Fluent adapters, without ambient global state.
+`adr-002-localization-and-internationalization-with-fluent.md`: injection-first
+localization with Fluent adapters, without ambient global state.
 
 ### Localization contract and ownership
 

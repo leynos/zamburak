@@ -31,12 +31,15 @@ The repository layout is designed to:
 /
 ├── crates/
 │   ├── zamburak-core/
+│   ├── zamburak-monty/
 │   ├── zamburak-interpreter/
 │   ├── zamburak-policy/
 │   ├── zamburak-sanitizers/
 │   ├── zamburak-tools/
 │   ├── zamburak-agent/
 │   └── zamburak-cli/
+├── third_party/
+│   └── full-monty/ (git submodule)
 ├── policies/
 ├── tests/
 │   ├── integration/
@@ -61,6 +64,7 @@ The repository layout is designed to:
 | Crate                  | Primary responsibility                                  | Security-critical invariants                             |
 | ---------------------- | ------------------------------------------------------- | -------------------------------------------------------- |
 | `zamburak-core`        | Value tagging, dependency graph, propagation, summaries | Complete IFC propagation and monotonic dependencies      |
+| `zamburak-monty`       | `full-monty` adapter and observer-driven execution glue | Every governed run traverses observer instrumentation    |
 | `zamburak-interpreter` | Monty integration and opcode hook execution             | No effect path bypasses policy interception              |
 | `zamburak-policy`      | Policy definitions, evaluation, and decisions           | Unknown states fail closed                               |
 | `zamburak-sanitizers`  | Deterministic verifiers and sanitizers                  | Verified labels are non-forgeable                        |
@@ -91,6 +95,18 @@ The paths below are the intended locations for core implementation units.
 
 _Table 2: Core crate file-purpose mapping._
 
+### `crates/zamburak-monty`
+
+| Path                                           | Purpose                                            |
+| ---------------------------------------------- | -------------------------------------------------- |
+| `crates/zamburak-monty/src/lib.rs`             | `full-monty` adapter crate entry point             |
+| `crates/zamburak-monty/src/run.rs`             | Governed run orchestration around `MontyRun`       |
+| `crates/zamburak-monty/src/observer.rs`        | Runtime observer implementation and event bridging |
+| `crates/zamburak-monty/src/external_call.rs`   | External-call mediation and policy gate hand-off   |
+| `crates/zamburak-monty/src/snapshot_bridge.rs` | Snapshot extension persistence bridge              |
+
+_Table 3: `full-monty` adapter crate file-purpose mapping._
+
 ### `crates/zamburak-interpreter`
 
 | Path                                                 | Purpose                                          |
@@ -103,7 +119,7 @@ _Table 2: Core crate file-purpose mapping._
 | `crates/zamburak-interpreter/src/redaction.rs`       | Error and prompt-feedback redaction functions    |
 | `crates/zamburak-interpreter/src/resource_limits.rs` | Runtime budgets for values, graph, and summaries |
 
-_Table 3: Interpreter crate file-purpose mapping._
+_Table 4: Interpreter crate file-purpose mapping._
 
 ### `crates/zamburak-policy`
 
@@ -117,7 +133,7 @@ _Table 3: Interpreter crate file-purpose mapping._
 | `crates/zamburak-policy/src/audit.rs`          | Decision-to-audit record transformations           |
 | `crates/zamburak-policy/src/defaults.rs`       | Baseline policy presets and safe defaults          |
 
-_Table 4: Policy crate file-purpose mapping._
+_Table 5: Policy crate file-purpose mapping._
 
 ### `crates/zamburak-sanitizers`
 
@@ -130,7 +146,7 @@ _Table 4: Policy crate file-purpose mapping._
 | `crates/zamburak-sanitizers/src/numeric.rs`  | Numeric bounds and amount verification          |
 | `crates/zamburak-sanitizers/src/template.rs` | Safe templating and escaping transforms         |
 
-_Table 5: Sanitizer crate file-purpose mapping._
+_Table 6: Sanitizer crate file-purpose mapping._
 
 ### `crates/zamburak-tools`
 
@@ -145,7 +161,7 @@ _Table 5: Sanitizer crate file-purpose mapping._
 | `crates/zamburak-tools/src/web_fetch.rs`      | Web-fetch untrusted source adapter                 |
 | `crates/zamburak-tools/src/mcp_bridge.rs`     | MCP server transport and trust-boundary wrapper    |
 
-_Table 6: Tool crate file-purpose mapping._
+_Table 7: Tool crate file-purpose mapping._
 
 ### `crates/zamburak-agent`
 
@@ -157,7 +173,7 @@ _Table 6: Tool crate file-purpose mapping._
 | `crates/zamburak-agent/src/confirmation.rs` | Confirmation workflow and typed claim display      |
 | `crates/zamburak-agent/src/state.rs`        | Execution state, snapshots, and continuation logic |
 
-_Table 7: Agent crate file-purpose mapping._
+_Table 8: Agent crate file-purpose mapping._
 
 ### `crates/zamburak-cli`
 
@@ -171,7 +187,7 @@ _Table 7: Agent crate file-purpose mapping._
 | `crates/zamburak-cli/src/commands/test_policy.rs` | Policy scenario and regression execution |
 | `crates/zamburak-cli/src/config.rs`               | CLI configuration loading                |
 
-_Table 8: CLI crate file-purpose mapping._
+_Table 9: CLI crate file-purpose mapping._
 
 ## Shared directories and file purposes
 
@@ -185,7 +201,7 @@ _Table 8: CLI crate file-purpose mapping._
 | `policies/examples/calendar_scheduling.yaml` | Example policy for scheduling workflows         |
 | `policies/schema.json`                       | Policy schema for structural validation         |
 
-_Table 9: Policy directory artefacts and purposes._
+_Table 10: Policy directory artefacts and purposes._
 
 ### `tests/`
 
@@ -197,7 +213,7 @@ _Table 9: Policy directory artefacts and purposes._
 | `tests/compatibility/` | Behavioural comparisons against upstream Monty              |
 | `tests/benchmarks/`    | Performance and overhead measurement tests                  |
 
-_Table 10: Test suite directories and purposes._
+_Table 11: Test suite directories and purposes._
 
 ### `fuzz/`
 
@@ -208,35 +224,38 @@ _Table 10: Test suite directories and purposes._
 | `fuzz/fuzz_targets/fuzz_policy.rs`   | Policy evaluation fuzz target       |
 | `fuzz/Cargo.toml`                    | Fuzz target workspace configuration |
 
-_Table 11: Fuzzing artefacts and purposes._
+_Table 12: Fuzzing artefacts and purposes._
 
 ### `docs/`
 
 | Path                                     | Purpose                                                  |
 | ---------------------------------------- | -------------------------------------------------------- |
 | `docs/zamburak-design-document.md`       | Authoritative system semantics and interfaces            |
+| `docs/adr-001-monty-ifc-vm-hooks.md`     | ADR for `full-monty` hooks and two-track constraints     |
+| `docs/monty-fork-policy.md`              | Fork governance rules and `full-monty` patch budget      |
 | `docs/roadmap.md`                        | High-level implementation phases, steps, and tasks       |
 | `docs/zamburak-engineering-standards.md` | Project-specific engineering standards                   |
 | `docs/repository-layout.md`              | Proposed repository structure and file-purpose reference |
 | `docs/tech-baseline.md`                  | Toolchain and quality-gate baseline with rationale       |
 | `docs/verification-targets.md`           | Verification target matrix and evidence requirements     |
 
-_Table 12: Core documentation artefacts and ownership._
+_Table 13: Core documentation artefacts and ownership._
 
 ### Root and operational files
 
-| Path                  | Purpose                                           |
-| --------------------- | ------------------------------------------------- |
-| `Cargo.toml`          | Workspace member registration and shared settings |
-| `Cargo.lock`          | Reproducible dependency resolution                |
-| `rust-toolchain.toml` | Toolchain pinning and compatibility               |
-| `.env.example`        | Configuration template for local integrations     |
-| `README.md`           | Project entry document and orientation            |
-| `LICENSE`             | Project licence                                   |
-| `scripts/`            | Operational helper scripts for local workflows    |
-| `.github/workflows/`  | CI and automation workflow definitions            |
+| Path                      | Purpose                                           |
+| ------------------------- | ------------------------------------------------- |
+| `Cargo.toml`              | Workspace member registration and shared settings |
+| `Cargo.lock`              | Reproducible dependency resolution                |
+| `rust-toolchain.toml`     | Toolchain pinning and compatibility               |
+| `.env.example`            | Configuration template for local integrations     |
+| `README.md`               | Project entry document and orientation            |
+| `LICENSE`                 | Project licence                                   |
+| `third_party/full-monty/` | `full-monty` submodule checkout for Track A work  |
+| `scripts/`                | Operational helper scripts for local workflows    |
+| `.github/workflows/`      | CI and automation workflow definitions            |
 
-_Table 13: Root and operational artefacts with purposes._
+_Table 14: Root and operational artefacts with purposes._
 
 ## Layout governance rules
 

@@ -1,361 +1,215 @@
-# Architectural decision record: Monty VM hooks for information flow control (IFC)
+# ADR: `full-monty` information flow control (IFC) hooks
 
-- Date: 2026-02-09
+- Date: 2026-02-11
 - Status: Proposed
 - Related: `docs/zamburak-design-document.md`
+- Related: `docs/roadmap.md`
 
 ## Context
 
-Zamburak's design requires a Monty VM hook layer with no bypass around
-information flow control (IFC), complete opcode propagation coverage, and
-strict mode support for control-context summaries at every effect boundary.[^1]
+Zamburak needs hard runtime control over capability use at the
+external-function boundary. Monty already exposes that boundary as an explicit
+pause/resume protocol:
 
-This architectural decision record (ADR) assesses the current extension
-surfaces in `pydantic/monty` and chooses an implementation strategy that
-minimizes long-term fork maintenance cost while still meeting the design
-contract.
+- `start()` can pause on an external function request and return a resumable
+  snapshot,
+- `resume()` continues execution after the host returns an external result,
+- both compiled runners and mid-flight snapshots support `dump()` and `load()`
+  byte serialization.[^1]
 
-Source analysis in this ADR is pinned to Monty commit
-`20d9d27bda234336e077c673ca1a2e713f2e787f` (main branch, 2026-02-09).
+Monty therefore already models the control-plane seam Zamburak needs. What it
+lacks for Zamburak's full IFC design is stable value identity and generic
+runtime instrumentation that can survive suspension and restore.
 
-### Requirement traceability to the system design
+Zamburak also already has an opinionated policy core in this repository,
+including explicit policy schema evolution and migration audit records.[^2]
 
-To make requirement lineage explicit, key statements in this ADR map to these
-specific sections in `docs/zamburak-design-document.md`:
+The architectural question is not whether to separate policy from interpreter
+internals. The question is how to separate them so that:
 
-- no-bypass VM hook expectation:
-  [component responsibilities](docs/zamburak-design-document.md#component-responsibilities),
-   especially the `Monty VM hook layer` invariants,
-- complete opcode propagation coverage and defect posture for missing rules:
-  [supported language subset](docs/zamburak-design-document.md#supported-language-subset),
-- strict-mode control-context requirements for effect decisions:
-  [strict-mode effect semantics](docs/zamburak-design-document.md#strict-mode-effect-semantics),
-- snapshot and resume behavioural equivalence requirements:
-  [snapshot and resume semantics](docs/zamburak-design-document.md#snapshot-and-resume-semantics),
-- conservative handling when summary information is incomplete:
-  [dependency representation](docs/zamburak-design-document.md#dependency-representation)
-   and [fail-closed rules](docs/zamburak-design-document.md#fail-closed-rules).
-
-## Findings from source exploration
-
-### 1. Existing hook and instrumentation mechanisms in Monty
-
-Monty currently exposes host boundary hooks, but not opcode-level VM
-instrumentation:
-
-- `FrameExit::{ExternalCall, OsCall, ResolveFutures}` lets the host intercept
-  external calls and OS operations via pause/resume flow.[^2]
-- `RunProgress` and `Snapshot` expose these boundary pauses in the public run
-  API.[^3]
-- `ResourceTracker` and `PrintWriter` allow resource metering and output capture
-  callbacks.[^4]
-
-Monty does not currently expose:
-
-- a public bytecode observer hook,
-- a per-opcode callback interface,
-- a public extension surface around `VM::run` dispatch,
-- or a public VM module API that downstream crates can instrument directly.[^5]
-
-### 2. Can this be done without forking or vendoring Monty?
-
-- Partial capability (effect-boundary checks only): yes, without forking.
-- Full IFC semantics required by Zamburak design: not with the current public
-  Monty API.
-
-Reason: host-boundary callbacks cannot provide complete value dependency
-tracking, control-context propagation, or opcode coverage guarantees. Those
-require VM-internal event points.
-
-### 3. Best way to augment execution-flow and data-model information
-
-The most effective path is an upstream-first, minimal hook API in Monty, then
-an out-of-tree IFC engine in Zamburak:
-
-- keep hook substrate small and generic in Monty core,
-- keep policy and IFC semantics in Zamburak-owned crates,
-- avoid a large behavioural fork of the interpreter.
-
-This aligns with Monty being explicitly experimental and fast-moving.[^6]
-
-## Options considered
-
-### Option A: Boundary-only enforcement with current Monty APIs
-
-- Description: use `RunProgress::FunctionCall` and `RunProgress::OsCall` only.
-- Pros: no Monty changes, no fork.
-- Cons: cannot satisfy complete IFC propagation and no-bypass requirements.
-- Verdict: Rejected as primary architecture; acceptable only as a temporary
-  bootstrap for effect-policy prototyping.
-
-### Option B: Long-lived Zamburak fork with deep IFC integration in VM
-
-- Description: embed IFC metadata directly into Monty runtime internals and
-  maintain a private branch indefinitely.
-- Pros: immediate full control.
-- Cons: high sync overhead, fragile against upstream internal refactors, larger
-  trusted computing base churn.
-- Verdict: Rejected as default path due to project-health risk.
-
-### Option C: Upstream-first hook substrate plus Zamburak IFC adapter
-
-- Description: propose and upstream a compact VM hook interface; implement IFC,
-  summaries, and policy in Zamburak crates using that interface.
-- Pros: low long-term divergence, preserves upstream velocity, supports full IFC
-  requirements.
-- Cons: needs upstream collaboration and an interim patch branch.
-- Verdict: Accepted.
-
-### Option D: Bytecode/source rewriting outside Monty
-
-- Description: rewrite Monty code or bytecode to inject IFC logic without VM
-  changes.
-- Pros: avoids modifying Monty core directly.
-- Cons: brittle, incomplete against dynamic semantics and builtins, difficult to
-  prove no bypass.
-- Verdict: Rejected.
+- the Monty delta stays small and upstream-PR-able,
+- Zamburak policy and IFC can evolve quickly without a large fork burden,
+- snapshot durability does not break provenance continuity.
 
 ## Decision
 
-Adopt Option C:
+Adopt a two-track architecture with an explicitly constrained Monty fork named
+`full-monty`.
 
-- Build a minimal VM hook API upstream in `pydantic/monty`.
-- Keep IFC engine and policy logic in Zamburak-owned code.
-- Use a short-lived patch branch until upstream merge; do not vendor.
+- `Track A` is `full-monty` as a generic interpreter substrate.
+  - Scope: stable runtime IDs, lightweight observer hooks, and an optional
+    generic snapshot-extension mechanism.
+  - Constraint: no Zamburak semantics or nomenclature.
+- `Track B` is Zamburak runtime governance.
+  - Scope: IFC dependency graph, policy evaluation, allow/deny/confirmation
+    semantics, audit explanations, and adapter behaviour.
+  - Constraint: evolves independently of Monty internals.
 
-## Temporary fork constraints
+`full-monty` will be integrated as a Git submodule in the Zamburak repository
+and maintained with a strict "keep the diff PR-able" policy.
 
-The short-lived fork exists only to bridge the time between local integration
-and upstream acceptance. The fork must be managed under strict constraints to
-maximize mergeability.
+## Track A requirements (`full-monty`, upstream-friendly)
 
-### Scope constraints
+### A1. Stable, host-only runtime IDs
 
-- Fork changes are limited to hook substrate and tests needed to prove its
-  correctness.
-- No Zamburak policy semantics, label models, or product-specific behaviour may
-  be introduced in the fork.
-- No broad refactors, style churn, renames, or opportunistic clean-ups may be
-  included in fork pull requests.
-- If a required change is not directly about hook API enablement, it must be
-  proposed as an independent upstream contribution first.
+`full-monty` must provide stable runtime identity (for example `ValueId`) that
+is:
 
-### Drift constraints
+- unique per execution,
+- stable across `start()` and `resume()`,
+- stable across snapshot `dump()` and `load()`.
 
-- Fork `main` must remain within 7 calendar days of upstream `main`.
-- Fork pull requests must be rebased to current upstream `main` before merge.
-- If drift exceeds 7 days, feature work pauses until rebase and regression
-  checks are completed.
-- If drift exceeds 14 days, the fork is treated as off-track and requires an
-  explicit maintainer review before any new feature merge.
+IDs are host-facing instrumentation data, not guest-Python writable state.
 
-### Standards and compatibility constraints
+### A2. Lightweight event emission hooks
 
-- Fork code must follow upstream Monty coding, lint, formatting, test, and CI
-  standards exactly.
-- Public API changes must be additive where possible, with defaults that
-  preserve existing behaviour when hooks are not configured.
-- Hook event payloads must avoid exposing private interpreter internals as API
-  commitments.
-- Performance impact must be measured, and the default no-hook path must remain
-  near-zero overhead.
+`full-monty` must expose a generic observer interface with zero-cost defaults.
 
-### Merge readiness constraints
+Requirements:
 
-- Every fork change must map to a corresponding upstream PR or draft PR.
-- Fork commits should be logically small and reviewable in isolation.
-- Each commit message must state why the change is required for generic Monty
-  capability rather than Zamburak-specific behaviour.
-- Before removing the fork, all required patches must be merged upstream or
-  explicitly superseded by upstream alternatives.
+- when no observer is installed, behaviour remains unchanged with negligible
+  overhead,
+- no per-event heap allocation on hot paths,
+- events are generic and tooling-focused, not policy-focused.
 
-### Fork retirement and upstream-only cutover criteria
+Minimum event set:
 
-The temporary fork may be deleted only when all criteria below are met:
+- `ExternalCallRequested`,
+- `ExternalCallReturned`,
+- `ValueCreated`,
+- `OpResult` (output ID plus input IDs),
+- `ControlCondition` (needed for strict-mode control influence).
 
-- All fork-required upstream PRs are merged or closed as superseded by accepted
-  upstream alternatives.
-- A stable Monty release (non-prerelease) includes those merged changes.
-- Zamburak runs against that release with all relevant verification suites
-  passing, including snapshot and resume equivalence checks and policy gate
-  regression tests.
-- No local compatibility shims remain that depend on fork-only APIs.
-- Dependency references in build and release configuration point only to
-  upstream Monty sources.
-- Documentation and operational runbooks are updated to declare upstream-only
-  support and remove fork procedures.
+These event classes are the canonical Track A event surface and are reused by
+`docs/roadmap.md` Task `0.5.2` to avoid drift between planning and ADR
+requirements.
 
-Minimum stability window before deleting fork infrastructure:
+### A3. Snapshot extension seam (optional but preferred)
 
-- At least one full Zamburak release cycle on upstream-only Monty, with no
-  critical regressions attributed to hook substrate changes.
+If Zamburak IFC state is not serialized directly in Monty runtime state,
+`full-monty` should expose a generic snapshot-extension byte blob owned by the
+embedder.
 
-## Proposed Monty extension surface
+Monty must not interpret this blob. Zamburak owns its versioning and decoding.
 
-Expose an optional hook trait passed into VM execution.
+### A4. Compatibility and upstreamability invariants
 
-```rust
-pub trait VmHooks {
-    fn on_opcode_start(&mut self, event: OpcodeStartEvent) {}
-    fn on_opcode_end(&mut self, event: OpcodeEndEvent) {}
-    fn on_branch(&mut self, event: BranchEvent) {}
-    fn on_effect_boundary(&mut self, event: EffectBoundaryEvent) {}
-    fn on_snapshot(&mut self, event: SnapshotEvent) {}
-}
-```
+- hook-disabled mode preserves upstream Monty semantics,
+- no-op observer mode preserves semantics with understood overhead bounds,
+- any new public API is additive and generic,
+- no `taint`, `policy`, `capabilities`, or `Zamburak` naming in `Track A`
+  surface APIs.
 
-Expose stable, low-coupling event payloads:
+## Track B requirements (Zamburak-owned governance)
 
-- `frame_id`, `task_id`, `code_object_id`, `ip`, `opcode`
-- opaque `value_id` handles (not raw `Value` internals)
-- operation role metadata (`read`, `write`, `mutate`, `call`, `return`)
-- effect boundary linkage (`call_id`, external function id or OS function)
+### B1. IFC substrate
 
-Design rule:
+Implement `ValueId`-keyed dependency tracking with:
 
-- event payloads must be sufficient for IFC dependency construction and strict
-  control-context tracking, but avoid exposing Monty private internals as API.
+- direct dependency DAG,
+- bounded transitive summary path,
+- `Normal` and `Strict` propagation modes.
 
-### Concrete opcode event examples
+Strict mode adds control-context influence to effect decisions.
 
-The examples below are illustrative event sequences showing that the proposed
-fields are sufficient for IFC while remaining generic.
+### B2. Boundary enforcement at external calls
 
-Example A: branch opcode (`JumpIfFalse`)
+Treat every external function call as a mandatory policy sink decision.
 
-```json
-{
-  "hook": "on_opcode_start",
-  "frame_id": "f3",
-  "task_id": "t0",
-  "code_object_id": "co_main",
-  "ip": 418,
-  "opcode": "JumpIfFalse",
-  "reads": ["v_predicate"]
-}
-{
-  "hook": "on_branch",
-  "frame_id": "f3",
-  "task_id": "t0",
-  "ip": 418,
-  "opcode": "JumpIfFalse",
-  "predicate_value_id": "v_predicate",
-  "taken": true,
-  "target_ip": 442,
-  "fallthrough_ip": 421
-}
-{
-  "hook": "on_opcode_end",
-  "frame_id": "f3",
-  "task_id": "t0",
-  "ip": 418,
-  "opcode": "JumpIfFalse",
-  "result": "ok"
-}
-```
+At each external boundary:
 
-IFC consequence:
+- compute argument dependency summaries and context summaries,
+- evaluate against `zamburak-policy`,
+- return one of the supported outcomes (allow, deny, confirmation, or other
+  policy-defined gated path).
 
-- `predicate_value_id` is added to the active control-context dependencies for
-  subsequent effect checks in strict mode.
+### B3. Durable and versioned IFC state
 
-Example B: call opcode yielding an external effect (`CallFunction`)
+IFC state serialization is versioned, explicit, and round-trip tested. Snapshot
+restore must preserve governance semantics, not only interpreter state.
 
-```json
-{
-  "hook": "on_opcode_start",
-  "frame_id": "f3",
-  "task_id": "t0",
-  "code_object_id": "co_main",
-  "ip": 512,
-  "opcode": "CallFunction",
-  "callable_value_id": "v_callable_send_email",
-  "arg_value_ids": ["v_to", "v_body"]
-}
-{
-  "hook": "on_effect_boundary",
-  "frame_id": "f3",
-  "task_id": "t0",
-  "ip": 512,
-  "opcode": "CallFunction",
-  "effect_kind": "external_call",
-  "call_id": 17,
-  "external_function_id": "send_email",
-  "arg_value_ids": ["v_to", "v_body"],
-  "control_context_value_ids": ["v_predicate"]
-}
-{
-  "hook": "on_opcode_end",
-  "frame_id": "f3",
-  "task_id": "t0",
-  "ip": 512,
-  "opcode": "CallFunction",
-  "result": "yield_external",
-  "call_id": 17
-}
-{
-  "hook": "on_snapshot",
-  "reason": "external_call",
-  "call_id": 17
-}
-```
+### B4. Auditable decisions
 
-IFC consequence:
+Every deny or confirmation path must include:
 
-- argument and control-context summaries can be computed using only opaque value
-  identifiers and emitted effect metadata, without exposing private VM layout.
+- matched rule identifier,
+- implicated value and origin identities,
+- human-readable, redacted explanation.
+
+## Implementation plan
+
+### Step 0: Repository mechanics and guardrails
+
+- add `full-monty` as a Git submodule at `third_party/full-monty/`,
+- add `docs/monty-fork-policy.md` with allowed fork-change categories,
+- add `make monty-sync` to fetch upstream Monty, sync fork branch, and run
+  Monty plus Zamburak integration checks.
+
+### Track A staged pull requests
+
+- PR A1: stable runtime IDs with snapshot continuity tests,
+- PR A2: observer/event trait with no-op parity tests,
+- PR A3: snapshot extension seam (if needed for external IFC state).
+
+### Track B staged pull requests
+
+- PR B1: add `zamburak-monty` adapter crate and governed run API,
+- PR B2: add IFC core crate (`zamburak-ifc` or equivalent) with pure ID-based
+  propagation logic,
+- PR B3: connect observer events to IFC updates,
+- PR B4: enforce policy at external-call boundary,
+- PR B5: add compatibility, security, and snapshot-governance regression suites.
+
+## Process requirements to keep the fork PR-able
+
+### Patch budget
+
+Allow only:
+
+- stable IDs,
+- generic hook substrate,
+- optional generic snapshot extension,
+- narrowly necessary refactors that directly enable the above.
+
+Reject all Zamburak-specific semantics in `full-monty`.
+
+### Upstream-shaped commits
+
+- small, test-complete commits,
+- each commit must provide generic Monty value independent of Zamburak,
+- each fork PR should be reviewable as a standalone upstream candidate.
+
+### Continuous range-diff control
+
+On each upstream sync:
+
+- run `git range-diff` between previous and current fork deltas,
+- investigate any sudden delta growth before continuing feature work.
 
 ## Consequences
 
 Positive:
 
-- meets Zamburak IFC requirements with auditable coverage,
-- minimizes long-term fork maintenance burden,
-- keeps interpreter correctness and performance work in upstream Monty.
+- preserves a clean separation between interpreter substrate and governance
+  semantics,
+- reduces long-lived fork risk,
+- supports fast policy and IFC iteration in Zamburak,
+- keeps snapshot durability as a first-class security requirement.
 
 Negative:
 
-- requires initial upstream API negotiation,
-- requires maintaining a temporary patch branch until merge.
-
-## Risk management
-
-- Keep initial Monty patch small and mechanical: hook plumbing only.
-- Keep IFC logic entirely outside Monty core.
-- Add coverage tests proving every supported opcode emits required hook events.
-- Add snapshot/restore invariance tests for hook state continuity.
-- Gate upgrades on a compatibility test suite pinned to Monty versions.
-
-## Implementation phases
-
-1. Prototype phase: use current boundary hooks for policy gateway integration
-   and audit schema plumbing.
-2. Hook substrate phase: upstream `VmHooks` API and event types.
-3. IFC phase: implement propagation engine in Zamburak over hook events.
-4. Hardening phase: opcode coverage matrix, differential tests, and performance
-   budgets from the design document.[^1]
+- introduces an additional repository-management surface (submodule plus sync
+  procedure),
+- requires discipline to keep `full-monty` generic and upstream-shaped.
 
 ## References
 
-[^1]: Zamburak IFC and VM-hook requirement anchors:
-    [component responsibilities](docs/zamburak-design-document.md#component-responsibilities),
-    [supported language subset](docs/zamburak-design-document.md#supported-language-subset),
-    [strict-mode effect semantics](docs/zamburak-design-document.md#strict-mode-effect-semantics),
-    and
-    [snapshot and resume semantics](docs/zamburak-design-document.md#snapshot-and-resume-semantics).
-[^2]: Monty VM boundary exits and dispatch loop:
-    <https://github.com/pydantic/monty/blob/20d9d27bda234336e077c673ca1a2e713f2e787f/crates/monty/src/bytecode/vm/mod.rs#L195-L234>
-    and
-    <https://github.com/pydantic/monty/blob/20d9d27bda234336e077c673ca1a2e713f2e787f/crates/monty/src/bytecode/vm/mod.rs#L660-L760>.
-[^3]: Monty public pause/resume API:
+[^1]: Pydantic Monty API references pinned to immutable revision
+    `20d9d27bda234336e077c673ca1a2e713f2e787f`:
     <https://github.com/pydantic/monty/blob/20d9d27bda234336e077c673ca1a2e713f2e787f/crates/monty/src/run.rs#L146-L232>
     and
     <https://github.com/pydantic/monty/blob/20d9d27bda234336e077c673ca1a2e713f2e787f/crates/monty/src/run.rs#L613-L688>.
-[^4]: Extensible callbacks currently exposed:
-    <https://github.com/pydantic/monty/blob/20d9d27bda234336e077c673ca1a2e713f2e787f/crates/monty/src/resource.rs#L104-L155>
+[^2]: Zamburak policy migration work:
+    <https://github.com/leynos/zamburak/pull/8>
     and
-    <https://github.com/pydantic/monty/blob/20d9d27bda234336e077c673ca1a2e713f2e787f/crates/monty/src/io.rs#L5-L28>.
-[^5]: Monty public exports and non-export of VM internals:
-    <https://github.com/pydantic/monty/blob/20d9d27bda234336e077c673ca1a2e713f2e787f/crates/monty/src/lib.rs#L3-L40>.
-[^6]: Monty project maturity statement:
-    <https://github.com/pydantic/monty/blob/20d9d27bda234336e077c673ca1a2e713f2e787f/README.md#L19-L33>.
+    <https://github.com/leynos/zamburak/pull/8/files>.

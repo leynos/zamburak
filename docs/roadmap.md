@@ -142,6 +142,205 @@ completion criteria so the work can be sequenced and assessed without ambiguity.
   - Completion criteria: phase-1 implementation is blocked until all required
     conformance suites pass.
 
+### Step 0.4: `full-monty` repository mechanics and guardrails
+
+- [ ] Task 0.4.1: Add `full-monty` as a Git submodule and define fork rules.
+  - Requirement signposts:
+    - `docs/adr-001-monty-ifc-vm-hooks.md` sections "Decision" and
+      "Process requirements to keep the fork PR-able",
+    - `docs/zamburak-design-document.md` section
+      "Two-track execution model",
+    - `docs/repository-layout.md` section "Root and operational files".
+  - Dependencies: Task 0.3.1.
+  - In scope: submodule placement, documentation of allowed fork-change
+    categories, and prohibition of Zamburak semantics in fork APIs.
+  - Out of scope: implementation of hook substrate internals.
+  - Completion criteria: submodule and fork-policy document exist, and review
+    policy rejects non-generic fork changes.
+- [ ] Task 0.4.2: Add `make monty-sync` with fork sync and verification gates.
+  - Requirement signposts:
+    - `docs/adr-001-monty-ifc-vm-hooks.md` section "Implementation plan",
+    - `docs/zamburak-engineering-standards.md` section
+      "Command and gateway standards",
+    - `docs/tech-baseline.md` section "Baseline usage contract".
+  - Dependencies: Task 0.4.1.
+  - In scope: sync workflow for upstream Monty updates, `full-monty` branch
+    refresh, and post-sync verification commands.
+  - Out of scope: release automation outside repository-local tooling.
+  - Completion criteria: maintainers can run one target that syncs fork state
+    and executes defined verification suites.
+
+### Step 0.5: Track A (`full-monty`) upstream-friendly substrate
+
+- [ ] Task 0.5.1: Implement stable runtime IDs in `full-monty`.
+  - Requirement signposts:
+    - `docs/adr-001-monty-ifc-vm-hooks.md` section
+      "A1. Stable, host-only runtime IDs",
+    - `docs/zamburak-design-document.md` section
+      "Snapshot and resume semantics",
+    - `docs/verification-targets.md` row "IFC propagation".
+  - Dependencies: Task 0.4.2.
+  - In scope: unique, host-only IDs with continuity across `start()` or
+    `resume()` and `dump()` or `load()`.
+  - Out of scope: policy meanings encoded in runtime IDs.
+  - Completion criteria: tests prove ID uniqueness and round-trip continuity
+    across suspend, resume, dump, and load.
+- [ ] Task 0.5.2: Introduce generic runtime observer events in `full-monty`.
+  - Requirement signposts:
+    - `docs/adr-001-monty-ifc-vm-hooks.md` section
+      "A2. Lightweight event emission hooks",
+    - `docs/zamburak-design-document.md` section
+      "Two-track execution model",
+    - `docs/verification-targets.md` row "IFC propagation".
+  - Dependencies: Task 0.5.1.
+  - In scope: canonical observer events `ValueCreated`, `OpResult`,
+    `ExternalCallRequested`, `ExternalCallReturned`, and `ControlCondition`,
+    matching the ADR Track A minimum event set.
+  - Out of scope: policy decision types in observer payloads.
+  - Completion criteria: observer events are emitted with no behavioural drift
+    and no-op observers preserve baseline semantics.
+- [ ] Task 0.5.3: Add generic snapshot extension bytes in `full-monty` when
+      required.
+  - Requirement signposts:
+    - `docs/adr-001-monty-ifc-vm-hooks.md` section
+      "A3. Snapshot extension seam (optional but preferred)",
+    - `docs/zamburak-design-document.md` sections
+      "Two-track execution model" and "Snapshot and resume semantics",
+    - `docs/verification-targets.md` row "Control context".
+  - Dependencies: Task 0.5.2.
+  - In scope: embedder-owned opaque bytes attached to snapshot persistence
+    without Monty semantic interpretation.
+  - Out of scope: Zamburak-specific encoding formats in `full-monty`.
+  - Completion criteria: snapshot extension round-trips are stable and API
+    contracts remain generic.
+- [ ] Task 0.5.4: Enforce Track A compatibility and performance invariants.
+  - Requirement signposts:
+    - `docs/adr-001-monty-ifc-vm-hooks.md` section
+      "A4. Compatibility and upstreamability invariants",
+    - `docs/zamburak-engineering-standards.md` section
+      "Testing and verification evidence standards",
+    - `docs/verification-targets.md` row "IFC propagation".
+  - Dependencies: Task 0.5.3.
+  - In scope: differential behaviour checks versus baseline Monty and
+    measurement of hook-disabled or no-op overhead.
+  - Out of scope: policy-layer benchmark targets outside Track A.
+  - Completion criteria: compatibility suite and performance checks pass for
+    both hook-disabled and no-op-observer modes.
+
+### Step 0.6: Track B (Zamburak governance) integration workstream
+
+- [ ] Task 0.6.1: Add `crates/zamburak-monty` adapter crate for governed
+      execution.
+  - Requirement signposts:
+    - `docs/adr-001-monty-ifc-vm-hooks.md` section "Track B staged pull
+      requests",
+    - `docs/zamburak-design-document.md` sections "Architecture overview" and
+      "Policy evaluation semantics",
+    - `docs/repository-layout.md` section `crates/zamburak-monty`.
+  - Dependencies: Tasks 0.5.2 and 0.1.1.
+  - In scope: `full-monty` integration, observer installation, and one governed
+    run entrypoint.
+  - Out of scope: full IFC propagation semantics.
+  - Completion criteria: governed execution path uses `full-monty` adapter with
+    deterministic external-call mediation hooks.
+- [ ] Task 0.6.2: Add IFC core crate with `ValueId`-keyed dependency graph.
+  - Requirement signposts:
+    - `docs/adr-001-monty-ifc-vm-hooks.md` section "B1. IFC substrate",
+    - `docs/zamburak-design-document.md` sections
+      "Dependency representation" and "Strict-mode effect semantics",
+    - `docs/verification-targets.md` row "IFC propagation".
+  - Dependencies: Task 0.6.1.
+  - In scope: dependency DAG, summary joins, and normal or strict propagation
+    mode handling.
+  - Out of scope: direct coupling to Monty internal value types.
+  - Completion criteria: IFC core unit and property tests validate dependency
+    propagation invariants independently of interpreter internals.
+- [ ] Task 0.6.3: Wire `full-monty` observer events into IFC updates.
+  - Requirement signposts:
+    - `docs/adr-001-monty-ifc-vm-hooks.md` section
+      "Track B staged pull requests",
+    - `docs/zamburak-design-document.md` sections
+      "Component responsibilities" and "Strict-mode effect semantics",
+    - `docs/verification-targets.md` rows "IFC propagation" and
+      "Control context".
+  - Dependencies: Tasks 0.6.2 and 0.5.3.
+  - In scope: event-to-IFC graph updates and strict-mode control dependency
+    tracking.
+  - Out of scope: policy decision presentation UX.
+  - Completion criteria: integration tests prove observer-driven IFC state is
+    complete for supported event classes.
+- [ ] Task 0.6.4: Gate external calls through policy decisions at runtime.
+  - Requirement signposts:
+    - `docs/adr-001-monty-ifc-vm-hooks.md` section
+      "B2. Boundary enforcement at external calls",
+    - `docs/zamburak-design-document.md` section
+      "Policy evaluation semantics",
+    - `docs/verification-targets.md` rows "Policy engine" and
+      "LLM sink enforcement".
+  - Dependencies: Tasks 0.6.3 and 0.1.2.
+  - In scope: allow, deny, and confirmation policy result wiring for
+    external-function boundaries.
+  - Out of scope: tool-specific UI interaction design.
+  - Completion criteria: every external call path requests a policy decision
+    before side-effect execution.
+- [ ] Task 0.6.5: Add compatibility, security, and snapshot-governance suites.
+  - Requirement signposts:
+    - `docs/adr-001-monty-ifc-vm-hooks.md` sections
+      "B3. Durable and versioned IFC state" and "B4. Auditable decisions",
+    - `docs/zamburak-design-document.md` sections
+      "Mechanistic correctness requirements" and "Security regression suite",
+    - `docs/verification-targets.md` rows "IFC propagation",
+      "Control context", and "Audit pipeline".
+  - Dependencies: Task 0.6.4.
+  - In scope: permissive-policy parity, strict-mode security regressions, and
+    snapshot or resume governance continuity checks.
+  - Out of scope: model-in-loop benchmark expansion.
+  - Completion criteria: suites pass and prove policy-equivalent outcomes for
+    uninterrupted and snapshot-restored execution.
+
+### Step 0.7: `full-monty` PR-ability process controls
+
+- [ ] Task 0.7.1: Enforce fork patch-budget and naming constraints in review.
+  - Requirement signposts:
+    - `docs/adr-001-monty-ifc-vm-hooks.md` section "Patch budget",
+    - `docs/zamburak-design-document.md` section
+      "Two-track execution model",
+    - `docs/zamburak-engineering-standards.md` section
+      "Review and change-management standards".
+  - Dependencies: Task 0.4.1.
+  - In scope: reviewer checklist that rejects policy or Zamburak semantics in
+    Track A changes.
+  - Out of scope: automatic semantic classification tooling.
+  - Completion criteria: all Track A pull requests carry explicit patch-budget
+    classification and pass review checks.
+- [ ] Task 0.7.2: Require upstream-shaped commits for `full-monty` deltas.
+  - Requirement signposts:
+    - `docs/adr-001-monty-ifc-vm-hooks.md` section "Upstream-shaped commits",
+    - `docs/zamburak-engineering-standards.md` section "Change quality and
+      committing",
+    - `docs/verification-targets.md` section
+      "Evidence requirements by target class".
+  - Dependencies: Task 0.7.1.
+  - In scope: small, test-complete commits with upstream-value rationale and
+    mapped upstream PR references.
+  - Out of scope: batching unrelated maintenance changes with Track A work.
+  - Completion criteria: each `full-monty` change is traceable to an upstream
+    PR candidate and passes quality gates in isolation.
+- [ ] Task 0.7.3: Add continuous `git range-diff` drift checks for fork delta
+      growth.
+  - Requirement signposts:
+    - `docs/adr-001-monty-ifc-vm-hooks.md` section
+      "Continuous range-diff control",
+    - `docs/zamburak-engineering-standards.md` section
+      "Review and change-management standards",
+    - `docs/tech-baseline.md` section "Baseline usage contract".
+  - Dependencies: Task 0.7.2.
+  - In scope: repeatable drift check command and documented escalation on fork
+    delta growth.
+  - Out of scope: automatic merge conflict resolution.
+  - Completion criteria: sync workflow records range-diff output and blocks
+    progress when unexplained delta growth is detected.
+
 ## Phase 1: Core trust semantics and policy inputs
 
 ### Step 1.1: Information-flow model separation
@@ -156,7 +355,7 @@ completion criteria so the work can be sequenced and assessed without ambiguity.
     - `docs/verification-targets.md` rows "IFC propagation" and
       "Policy engine",
     - `docs/repository-layout.md` section `crates/zamburak-core`.
-  - Dependencies: Task 0.3.1.
+  - Dependencies: Tasks 0.3.1 and 0.6.5.
   - In scope: data model separation, joins, and policy-input compatibility.
   - Out of scope: authority declassification shortcuts.
   - Completion criteria: no single type conflates data labels with authority
@@ -584,6 +783,20 @@ when the task is complete.
 | 0.2.2 | `.github/workflows/`, `Makefile`, `docs/verification-targets.md`                                                                          | Phase-gate suites are wired as merge-blocking checks.                  |
 | 0.2.3 | `scripts/`, `scripts/tests/`, `docs/scripting-standards.md`                                                                               | Script delivery follows defined runtime and testing standards.         |
 | 0.3.1 | `.github/workflows/`, `tests/compatibility/`, `tests/integration/`, `tests/security/`                                                     | Phase 1 start is blocked until design-contract suites pass.            |
+| 0.4.1 | `.gitmodules`, `third_party/full-monty/`, `docs/monty-fork-policy.md`                                                                     | `full-monty` submodule exists with explicit fork-policy constraints.   |
+| 0.4.2 | `Makefile`, `scripts/`, `docs/adr-001-monty-ifc-vm-hooks.md`                                                                              | `make monty-sync` provides repeatable fork sync plus verification.     |
+| 0.5.1 | `third_party/full-monty/`, `tests/compatibility/`                                                                                         | Stable runtime IDs survive suspend or resume and dump or load cycles.  |
+| 0.5.2 | `third_party/full-monty/`, `tests/compatibility/`, `tests/security/`                                                                      | Generic observer events exist with no-op semantic parity checks.       |
+| 0.5.3 | `third_party/full-monty/`, `tests/compatibility/`                                                                                         | Snapshot extension seam round-trips opaque embedder state safely.      |
+| 0.5.4 | `tests/compatibility/`, `tests/benchmarks/`, `docs/verification-targets.md`                                                               | Track A compatibility and overhead invariants are enforced in gates.   |
+| 0.6.1 | `crates/zamburak-monty/src/`, `src/`, `tests/integration/`                                                                                | Governed execution path wraps `full-monty` through one adapter API.    |
+| 0.6.2 | `crates/zamburak-ifc/src/`, `tests/property/`, `tests/security/`                                                                          | IFC dependency graph and propagation rules are implemented and tested. |
+| 0.6.3 | `crates/zamburak-monty/src/observer.rs`, `crates/zamburak-ifc/src/`, `tests/integration/`                                                 | Observer events drive complete IFC updates in normal and strict modes. |
+| 0.6.4 | `crates/zamburak-monty/src/external_call.rs`, `crates/zamburak-policy/src/engine.rs`, `tests/security/`                                   | Every external call is policy-gated before effect execution.           |
+| 0.6.5 | `tests/compatibility/`, `tests/security/`, `tests/integration/`                                                                           | Compatibility, security, and snapshot-governance suites are active.    |
+| 0.7.1 | `docs/monty-fork-policy.md`, `docs/zamburak-engineering-standards.md`                                                                     | Track A patch-budget and naming constraints are enforced in review.    |
+| 0.7.2 | `third_party/full-monty/`, `docs/adr-001-monty-ifc-vm-hooks.md`                                                                           | Track A commits are upstream-shaped and mapped to upstream PRs.        |
+| 0.7.3 | `Makefile`, `scripts/`, `docs/monty-fork-policy.md`                                                                                       | Range-diff drift checks are repeatable and escalation-triggered.       |
 | 1.1.1 | `crates/zamburak-core/src/trust.rs`, `crates/zamburak-core/src/capability.rs`, `crates/zamburak-policy/src/engine.rs`                     | Integrity, confidentiality, and authority remain separate types.       |
 | 1.1.2 | `crates/zamburak-sanitizers/src/`, `crates/zamburak-policy/src/engine.rs`, `tests/security/`                                              | Verification and endorsement semantics are deterministic and enforced. |
 | 1.2.1 | `crates/zamburak-core/src/control_context.rs`, `crates/zamburak-interpreter/src/external_call.rs`, `crates/zamburak-policy/src/engine.rs` | Effect checks include execution-context summaries.                     |
@@ -623,6 +836,7 @@ The roadmap is complete when:
 - unknown analysis states fail closed,
 - LLM and tool communications honour confidentiality budgets,
 - audit records remain useful without becoming a secondary data-leak channel,
+- `full-monty` delta stays upstream-PR-able and free of Zamburak semantics,
 - localized diagnostics use explicit localizer injection with deterministic
   fallback layering and no global mutable localization state,
 - automation scripts required by roadmap tasks comply with
