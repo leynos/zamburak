@@ -1,6 +1,7 @@
 //! Policy schema loading, explicit migrations, and runtime policy-engine entrypoints.
 
 mod engine;
+mod load_outcome;
 mod migration;
 mod policy_def;
 

@@ -5,6 +5,7 @@ use core::fmt;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
+use crate::load_outcome::LoadOutcome;
 use crate::migration::{
     LEGACY_POLICY_SCHEMA_VERSION, MigrationAuditRecord, MigrationError, PolicyDefinitionV0,
     audit_for_canonical_policy, migrate_schema_v0_to_v1,
@@ -86,27 +87,26 @@ impl BudgetLimit {
 /// ```
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct PolicyLoadOutcome {
-    policy_definition: PolicyDefinition,
-    migration_audit: MigrationAuditRecord,
+    load_outcome: LoadOutcome<PolicyDefinition>,
 }
 
 impl PolicyLoadOutcome {
     /// Return the validated canonical policy definition.
     #[must_use]
     pub const fn policy_definition(&self) -> &PolicyDefinition {
-        &self.policy_definition
+        self.load_outcome.value()
     }
 
     /// Return migration audit evidence for this load operation.
     #[must_use]
     pub const fn migration_audit(&self) -> &MigrationAuditRecord {
-        &self.migration_audit
+        self.load_outcome.migration_audit()
     }
 
     /// Consume this outcome and return both the policy and migration audit.
     #[must_use]
     pub fn into_parts(self) -> (PolicyDefinition, MigrationAuditRecord) {
-        (self.policy_definition, self.migration_audit)
+        self.load_outcome.into_parts()
     }
 }
 
@@ -181,7 +181,8 @@ impl PolicyDefinition {
     /// ```
     pub fn from_yaml_str(policy_yaml: &str) -> Result<Self, PolicyLoadError> {
         let load_outcome = Self::from_yaml_str_with_migration_audit(policy_yaml)?;
-        Ok(load_outcome.policy_definition)
+        let (policy_definition, _migration_audit) = load_outcome.into_parts();
+        Ok(policy_definition)
     }
 
     define_loader_with_migration_audit! {
@@ -223,7 +224,8 @@ impl PolicyDefinition {
     /// ```
     pub fn from_json_str(policy_json: &str) -> Result<Self, PolicyLoadError> {
         let load_outcome = Self::from_json_str_with_migration_audit(policy_json)?;
-        Ok(load_outcome.policy_definition)
+        let (policy_definition, _migration_audit) = load_outcome.into_parts();
+        Ok(policy_definition)
     }
 
     define_loader_with_migration_audit! {
@@ -293,8 +295,10 @@ where
                 .policy_definition
                 .ensure_canonical_schema_version()?;
             Ok(PolicyLoadOutcome {
-                policy_definition,
-                migration_audit: migration_outcome.migration_audit,
+                load_outcome: LoadOutcome::new(
+                    policy_definition,
+                    migration_outcome.migration_audit,
+                ),
             })
         }
         Some(schema_version) => Err(PolicyLoadError::UnsupportedSchemaVersion {
@@ -311,11 +315,11 @@ where
 fn canonical_load_outcome(
     policy_definition: PolicyDefinition,
 ) -> Result<PolicyLoadOutcome, PolicyLoadError> {
+    let policy_definition = policy_definition.ensure_canonical_schema_version()?;
     let migration_audit = audit_for_canonical_policy(&policy_definition)
         .map_err(PolicyLoadError::MigrationAuditFailed)?;
     Ok(PolicyLoadOutcome {
-        policy_definition,
-        migration_audit,
+        load_outcome: LoadOutcome::new(policy_definition, migration_audit),
     })
 }
 

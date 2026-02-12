@@ -1,5 +1,6 @@
 //! Runtime policy-engine construction from validated policy definitions.
 
+use crate::load_outcome::LoadOutcome;
 use crate::migration::MigrationAuditRecord;
 use crate::policy_def::{PolicyDefinition, PolicyLoadError, PolicyLoadOutcome};
 
@@ -37,27 +38,26 @@ pub struct PolicyEngine {
 /// ```
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct PolicyEngineLoadOutcome {
-    policy_engine: PolicyEngine,
-    migration_audit: MigrationAuditRecord,
+    load_outcome: LoadOutcome<PolicyEngine>,
 }
 
 impl PolicyEngineLoadOutcome {
     /// Return the built policy engine.
     #[must_use]
     pub const fn policy_engine(&self) -> &PolicyEngine {
-        &self.policy_engine
+        self.load_outcome.value()
     }
 
     /// Return migration audit evidence for this load operation.
     #[must_use]
     pub const fn migration_audit(&self) -> &MigrationAuditRecord {
-        &self.migration_audit
+        self.load_outcome.migration_audit()
     }
 
     /// Consume this outcome and return both engine and audit evidence.
     #[must_use]
     pub fn into_parts(self) -> (PolicyEngine, MigrationAuditRecord) {
-        (self.policy_engine, self.migration_audit)
+        self.load_outcome.into_parts()
     }
 }
 
@@ -65,7 +65,8 @@ impl PolicyEngine {
     /// Build a policy engine from a YAML policy document.
     pub fn from_yaml_str(policy_yaml: &str) -> Result<Self, PolicyLoadError> {
         let load_outcome = Self::from_yaml_str_with_migration_audit(policy_yaml)?;
-        Ok(load_outcome.policy_engine)
+        let (policy_engine, _migration_audit) = load_outcome.into_parts();
+        Ok(policy_engine)
     }
 
     /// Build a policy engine from a YAML policy document with migration audit evidence.
@@ -104,7 +105,8 @@ impl PolicyEngine {
     /// Build a policy engine from a JSON policy document.
     pub fn from_json_str(policy_json: &str) -> Result<Self, PolicyLoadError> {
         let load_outcome = Self::from_json_str_with_migration_audit(policy_json)?;
-        Ok(load_outcome.policy_engine)
+        let (policy_engine, _migration_audit) = load_outcome.into_parts();
+        Ok(policy_engine)
     }
 
     /// Build a policy engine from a JSON policy document with migration audit evidence.
@@ -152,7 +154,6 @@ fn build_engine_load_outcome(policy_load_outcome: PolicyLoadOutcome) -> PolicyEn
     let (policy_definition, migration_audit) = policy_load_outcome.into_parts();
     let policy_engine = PolicyEngine { policy_definition };
     PolicyEngineLoadOutcome {
-        policy_engine,
-        migration_audit,
+        load_outcome: LoadOutcome::new(policy_engine, migration_audit),
     }
 }
