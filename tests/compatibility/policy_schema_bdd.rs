@@ -69,8 +69,11 @@ fn policy_rejected_for_unknown_schema_version(world: &LoaderWorld) {
 
     match load_result {
         Ok(_) => panic!(
-            "expected unsupported schema rejection for version \
-             {expected_found_version}, but load succeeded"
+            concat!(
+                "expected unsupported schema rejection for version ",
+                "{}, but load succeeded"
+            ),
+            expected_found_version
         ),
         Err(PolicyLoadError::UnsupportedSchemaVersion { found, expected }) => {
             assert_eq!(
