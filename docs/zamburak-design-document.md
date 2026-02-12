@@ -209,8 +209,8 @@ Zamburak follows an explicit two-track split:
   state.
 - `Track B` (Zamburak crates):
   opinionated governance semantics, including IFC propagation rules, policy
-  decisions, approval and deny behaviour, sanitization requirements, and audit
-  explanation payloads.
+  decisions, approval and denial behaviour, sanitization requirements, and
+  audit explanation payloads.
 
 `Track A` and `Track B` share one normative membrane: external-function control
 flow.
@@ -253,16 +253,16 @@ _Figure 1: Zamburak execution and effect mediation architecture._
 
 ### Component responsibilities
 
-| Component                  | Responsibility                                 | Security-critical invariants                           |
-| -------------------------- | ---------------------------------------------- | ------------------------------------------------------ |
-| `full-monty` runtime layer | Executes code and emits generic runtime events | No bypass path around effect and value instrumentation |
-| IFC core                   | Tracks provenance, labels, and control context | Monotonic propagation and complete edge coverage       |
-| Summary engine             | Produces bounded decision summaries            | Budget overflow produces unknown-top summary           |
-| Policy engine              | Decides effect outcomes                        | Unknown state fails closed by default                  |
-| Verifier framework         | Mints verified integrity labels                | Verification is deterministic and non-forgeable        |
-| Tool adapter layer         | Executes external effects                      | Every effect requires policy decision                  |
-| Catalogue manager          | Pins tool metadata and schemas                 | Runtime rejects mutable unpinned docs                  |
-| Audit pipeline             | Produces reviewable records                    | Redacted summaries only by default                     |
+| Component                  | Responsibility                                 | Security-critical invariants                                                             |
+| -------------------------- | ---------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| `full-monty` runtime layer | Executes code and emits generic runtime events | No bypass path around effect and value instrumentation in governed observer-enabled mode |
+| IFC core                   | Tracks provenance, labels, and control context | Monotonic propagation and complete edge coverage                                         |
+| Summary engine             | Produces bounded decision summaries            | Budget overflow produces unknown-top summary                                             |
+| Policy engine              | Decides effect outcomes                        | Unknown state fails closed by default                                                    |
+| Verifier framework         | Mints verified integrity labels                | Verification is deterministic and non-forgeable                                          |
+| Tool adapter layer         | Executes external effects                      | Every effect requires policy decision                                                    |
+| Catalogue manager          | Pins tool metadata and schemas                 | Runtime rejects mutable unpinned docs                                                    |
+| Audit pipeline             | Produces reviewable records                    | Redacted summaries only by default                                                       |
 
 _Table 1: Component responsibilities and security-critical invariants._
 
@@ -583,8 +583,8 @@ Migration rules are:
 ## Localization and user-facing diagnostics
 
 Zamburak adopts the localization model defined in
-`adr-002-localization-and-internationalization-with-fluent.md`:
-injection-first localization with Fluent adapters, without ambient global state.
+`adr-002-localization-and-internationalization-with-fluent.md`: injection-first
+localization with Fluent adapters, without ambient global state.
 
 ### Localization contract and ownership
 

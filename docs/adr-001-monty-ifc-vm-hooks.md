@@ -1,4 +1,4 @@
-# Architectural decision record: `full-monty` hooks for IFC governance
+# ADR: `full-monty` information flow control (IFC) hooks
 
 - Date: 2026-02-11
 - Status: Proposed
@@ -74,11 +74,15 @@ Requirements:
 
 Minimum event set:
 
-- external call requested,
-- external call returned,
-- value created,
-- operation result (output ID plus input IDs),
-- control-flow condition event (needed for strict-mode control influence).
+- `ExternalCallRequested`,
+- `ExternalCallReturned`,
+- `ValueCreated`,
+- `OpResult` (output ID plus input IDs),
+- `ControlCondition` (needed for strict-mode control influence).
+
+These event classes are the canonical Track A event surface and are reused by
+`docs/roadmap.md` Task `0.5.2` to avoid drift between planning and ADR
+requirements.
 
 ### A3. Snapshot extension seam (optional but preferred)
 
@@ -136,7 +140,7 @@ Every deny or confirmation path must include:
 
 ### Step 0: Repository mechanics and guardrails
 
-- add `full-monty` as a Git submodule (for example `third_party/full-monty/`),
+- add `full-monty` as a Git submodule at `third_party/full-monty/`,
 - add `docs/monty-fork-policy.md` with allowed fork-change categories,
 - add `make monty-sync` to fetch upstream Monty, sync fork branch, and run
   Monty plus Zamburak integration checks.
@@ -200,8 +204,11 @@ Negative:
 
 ## References
 
-[^1]: Pydantic Monty repository and runtime API:
-    <https://github.com/pydantic/monty>.
+[^1]: Pydantic Monty API references pinned to immutable revision
+    `20d9d27bda234336e077c673ca1a2e713f2e787f`:
+    <https://github.com/pydantic/monty/blob/20d9d27bda234336e077c673ca1a2e713f2e787f/crates/monty/src/run.rs#L146-L232>
+    and
+    <https://github.com/pydantic/monty/blob/20d9d27bda234336e077c673ca1a2e713f2e787f/crates/monty/src/run.rs#L613-L688>.
 [^2]: Zamburak policy migration work:
     <https://github.com/leynos/zamburak/pull/8>
     and

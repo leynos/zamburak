@@ -193,8 +193,9 @@ completion criteria so the work can be sequenced and assessed without ambiguity.
       "Two-track execution model",
     - `docs/verification-targets.md` row "IFC propagation".
   - Dependencies: Task 0.5.1.
-  - In scope: generic events for value creation, operation results,
-    external-call request and return, and control-flow predicates.
+  - In scope: canonical observer events `ValueCreated`, `OpResult`,
+    `ExternalCallRequested`, `ExternalCallReturned`, and `ControlCondition`,
+    matching the ADR Track A minimum event set.
   - Out of scope: policy decision types in observer payloads.
   - Completion criteria: observer events are emitted with no behavioural drift
     and no-op observers preserve baseline semantics.
@@ -235,7 +236,7 @@ completion criteria so the work can be sequenced and assessed without ambiguity.
       requests",
     - `docs/zamburak-design-document.md` sections "Architecture overview" and
       "Policy evaluation semantics",
-    - `docs/repository-layout.md` section `crates/zamburak-interpreter`.
+    - `docs/repository-layout.md` section `crates/zamburak-monty`.
   - Dependencies: Tasks 0.5.2 and 0.1.1.
   - In scope: `full-monty` integration, observer installation, and one governed
     run entrypoint.
