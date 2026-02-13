@@ -117,13 +117,19 @@ fn migration_audit_records_step_count(world: &LoaderWorld, steps: usize) {
     );
 }
 
+#[expect(
+    clippy::expect_used,
+    reason = "Requested by review feedback to use chained expect calls in this helper"
+)]
 fn successful_load_outcome(world: &LoaderWorld) -> &PolicyEngineLoadOutcome {
-    let Some(load_result) = world.load_result.as_ref() else {
-        panic!("load step must run before assertion");
-    };
+    let load_result = world
+        .load_result
+        .as_ref()
+        .expect("load step must run before assertion");
+
     load_result
         .as_ref()
-        .unwrap_or_else(|load_error| panic!("expected successful load result, got: {load_error:?}"))
+        .expect("expected successful load result")
 }
 
 #[scenario(

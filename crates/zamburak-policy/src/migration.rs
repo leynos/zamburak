@@ -287,16 +287,13 @@ mod tests {
     };
     use crate::policy_def::{PolicyDefinition, SchemaVersion};
 
-    fn parse_policy_v0(policy_yaml: &str) -> PolicyDefinitionV0 {
-        serde_yaml::from_str(policy_yaml).expect("test fixture should deserialize as schema v0")
-    }
-
     #[fixture]
     fn legacy_policy_v0() -> PolicyDefinitionV0 {
-        parse_policy_v0(include_str!(concat!(
+        serde_yaml::from_str(include_str!(concat!(
             env!("CARGO_MANIFEST_DIR"),
             "/../../tests/test_utils/policy-v0.yaml"
         )))
+        .expect("test fixture should deserialize as schema v0")
     }
 
     #[rstest]
@@ -411,7 +408,8 @@ mod tests {
             "/../../tests/test_utils/policy-v0.yaml"
         ))
         .replace("personal_assistant_default", "different_policy_name");
-        let changed_policy = parse_policy_v0(&changed_policy_yaml);
+        let changed_policy = serde_yaml::from_str::<PolicyDefinitionV0>(&changed_policy_yaml)
+            .expect("test fixture should deserialize as schema v0");
 
         let baseline_result =
             migrate_schema_v0_to_v1(baseline_policy).expect("baseline migration should succeed");

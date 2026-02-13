@@ -136,9 +136,11 @@ macro_rules! define_loader_with_migration_audit {
         format: $format:literal,
         parser_module: $parser:ident,
         canonical_parser: $canonical_parser:ident,
-        error_variant: $error_variant:ident
+        error_variant: $error_variant:ident,
+        example: $example:literal
     ) => {
         #[doc = concat!("Parse and validate a policy document from ", $format, " with migration evidence.")]
+        #[doc = concat!("\n\n# Examples\n\n```rust\n", $example, "\n```")]
         pub fn $fn_name(
             $param_name: &str,
         ) -> Result<PolicyLoadOutcome, PolicyLoadError> {
@@ -198,7 +200,30 @@ impl PolicyDefinition {
         format: "YAML",
         parser_module: serde_yaml,
         canonical_parser: parse_canonical_yaml_policy,
-        error_variant: InvalidYaml
+        error_variant: InvalidYaml,
+        example: r###"use zamburak_policy::{PolicyDefinition, PolicyLoadError};
+
+let policy_yaml = r#"
+schema_version: 1
+policy_name: minimal_policy
+default_action: Deny
+strict_mode: true
+budgets:
+  max_values: 1
+  max_parents_per_value: 1
+  max_closure_steps: 1
+  max_witness_depth: 1
+tools: []
+"#;
+
+let load_outcome = PolicyDefinition::from_yaml_str_with_migration_audit(policy_yaml)?;
+assert!(!load_outcome.migration_audit().was_migrated());
+
+let (policy_definition, migration_audit) = load_outcome.into_parts();
+assert_eq!(policy_definition.schema_version.as_u64(), 1);
+assert_eq!(migration_audit.target_schema_version.as_u64(), 1);
+
+Ok::<(), PolicyLoadError>(())"###
     }
 
     /// Parse and validate a policy document from JSON.
@@ -241,7 +266,31 @@ impl PolicyDefinition {
         format: "JSON",
         parser_module: serde_json,
         canonical_parser: parse_canonical_json_policy,
-        error_variant: InvalidJson
+        error_variant: InvalidJson,
+        example: r###"use zamburak_policy::{PolicyDefinition, PolicyLoadError};
+
+let policy_json = r#"{
+  "schema_version": 1,
+  "policy_name": "minimal_policy",
+  "default_action": "Deny",
+  "strict_mode": true,
+  "budgets": {
+    "max_values": 1,
+    "max_parents_per_value": 1,
+    "max_closure_steps": 1,
+    "max_witness_depth": 1
+  },
+  "tools": []
+}"#;
+
+let load_outcome = PolicyDefinition::from_json_str_with_migration_audit(policy_json)?;
+assert!(!load_outcome.migration_audit().was_migrated());
+
+let (policy_definition, migration_audit) = load_outcome.into_parts();
+assert_eq!(policy_definition.schema_version.as_u64(), 1);
+assert_eq!(migration_audit.target_schema_version.as_u64(), 1);
+
+Ok::<(), PolicyLoadError>(())"###
     }
 
     fn ensure_canonical_schema_version(self) -> Result<Self, PolicyLoadError> {
