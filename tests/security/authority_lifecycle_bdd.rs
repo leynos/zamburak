@@ -115,6 +115,30 @@ fn require_boundary_result(world: &LifecycleWorld) -> &AuthorityBoundaryValidati
     result
 }
 
+/// Generic assertion for mint result error variants.
+fn assert_mint_error<F>(world: &LifecycleWorld, predicate: F, error_desc: &str)
+where
+    F: Fn(&AuthorityLifecycleError) -> bool,
+{
+    let result = require_mint_result(world);
+    match result {
+        Err(err) if predicate(err) => {} // success
+        _ => panic!("expected {error_desc}, got: {result:?}"),
+    }
+}
+
+/// Generic assertion for delegation result error variants.
+fn assert_delegation_error<F>(world: &LifecycleWorld, predicate: F, error_desc: &str)
+where
+    F: Fn(&AuthorityLifecycleError) -> bool,
+{
+    let result = require_delegation_result(world);
+    match result {
+        Err(err) if predicate(err) => {} // success
+        _ => panic!("expected {error_desc}, got: {result:?}"),
+    }
+}
+
 // ── Given: minting ─────────────────────────────────────────────────
 
 #[given("a host-trusted minting request for subject {subject} with capability {capability}")]
@@ -180,22 +204,19 @@ fn mint_succeeds(world: &LifecycleWorld) {
 
 #[then("the mint is rejected as untrusted")]
 fn mint_rejected_untrusted(world: &LifecycleWorld) {
-    let result = require_mint_result(world);
-    assert!(
-        matches!(result, Err(AuthorityLifecycleError::UntrustedMinter { .. })),
-        "expected UntrustedMinter, got: {result:?}"
+    assert_mint_error(
+        world,
+        |err| matches!(err, AuthorityLifecycleError::UntrustedMinter { .. }),
+        "UntrustedMinter",
     );
 }
 
 #[then("the mint is rejected for invalid lifetime")]
 fn mint_rejected_lifetime(world: &LifecycleWorld) {
-    let result = require_mint_result(world);
-    assert!(
-        matches!(
-            result,
-            Err(AuthorityLifecycleError::InvalidTokenLifetime { .. })
-        ),
-        "expected InvalidTokenLifetime, got: {result:?}"
+    assert_mint_error(
+        world,
+        |err| matches!(err, AuthorityLifecycleError::InvalidTokenLifetime { .. }),
+        "InvalidTokenLifetime",
     );
 }
 
@@ -240,6 +261,17 @@ fn narrowed_delegation(world: &mut LifecycleWorld, res: String, expires_at: u64)
     });
 }
 
+fn create_delegation_request(world: &mut LifecycleWorld, resources: &[&str], expires_at: u64) {
+    world.delegation_request = Some(DelegationRequest {
+        token_id: make_token_id("child"),
+        delegated_by: "policy-host".to_owned(),
+        subject: make_subject("assistant"),
+        scope: make_scope(resources),
+        delegated_at: TokenTimestamp::new(20),
+        expires_at: TokenTimestamp::new(expires_at),
+    });
+}
+
 /// Scope widening delegation step.
 ///
 /// The feature file passes three resource names plus an expiry time. The
@@ -259,14 +291,7 @@ fn widened_delegation(
     c: String,
     expires_at: u64,
 ) {
-    world.delegation_request = Some(DelegationRequest {
-        token_id: make_token_id("child"),
-        delegated_by: "policy-host".to_owned(),
-        subject: make_subject("assistant"),
-        scope: make_scope(&[&a, &b, &c]),
-        delegated_at: TokenTimestamp::new(20),
-        expires_at: TokenTimestamp::new(expires_at),
-    });
+    create_delegation_request(world, &[&a, &b, &c], expires_at);
 }
 
 #[given("a delegation request with equal scope {a} and {b} expiring at {expires_at:u64}")]
@@ -354,55 +379,58 @@ fn delegation_lineage(world: &LifecycleWorld) {
 
 #[then("the delegation is rejected for non-strict scope")]
 fn delegation_rejected_scope(world: &LifecycleWorld) {
-    let result = require_delegation_result(world);
-    assert!(
-        matches!(
-            result,
-            Err(AuthorityLifecycleError::DelegationScopeNotStrictSubset)
-        ),
-        "expected DelegationScopeNotStrictSubset, got: {result:?}"
+    assert_delegation_error(
+        world,
+        |err| matches!(err, AuthorityLifecycleError::DelegationScopeNotStrictSubset),
+        "DelegationScopeNotStrictSubset",
     );
 }
 
 #[then("the delegation is rejected for non-strict lifetime")]
 fn delegation_rejected_lifetime(world: &LifecycleWorld) {
-    let result = require_delegation_result(world);
-    assert!(
-        matches!(
-            result,
-            Err(AuthorityLifecycleError::DelegationLifetimeNotStrictSubset { .. })
-        ),
-        "expected DelegationLifetimeNotStrictSubset, got: {result:?}"
+    assert_delegation_error(
+        world,
+        |err| {
+            matches!(
+                err,
+                AuthorityLifecycleError::DelegationLifetimeNotStrictSubset { .. }
+            )
+        },
+        "DelegationLifetimeNotStrictSubset",
     );
 }
 
 #[then("the delegation is rejected because the parent is revoked")]
 fn delegation_rejected_revoked_parent(world: &LifecycleWorld) {
-    let result = require_delegation_result(world);
-    assert!(
-        matches!(
-            result,
-            Err(AuthorityLifecycleError::InvalidParentToken {
-                reason: InvalidAuthorityReason::Revoked,
-                ..
-            })
-        ),
-        "expected InvalidParentToken(Revoked), got: {result:?}"
+    assert_delegation_error(
+        world,
+        |err| {
+            matches!(
+                err,
+                AuthorityLifecycleError::InvalidParentToken {
+                    reason: InvalidAuthorityReason::Revoked,
+                    ..
+                }
+            )
+        },
+        "InvalidParentToken(Revoked)",
     );
 }
 
 #[then("the delegation is rejected because the parent is expired")]
 fn delegation_rejected_expired_parent(world: &LifecycleWorld) {
-    let result = require_delegation_result(world);
-    assert!(
-        matches!(
-            result,
-            Err(AuthorityLifecycleError::InvalidParentToken {
-                reason: InvalidAuthorityReason::Expired,
-                ..
-            })
-        ),
-        "expected InvalidParentToken(Expired), got: {result:?}"
+    assert_delegation_error(
+        world,
+        |err| {
+            matches!(
+                err,
+                AuthorityLifecycleError::InvalidParentToken {
+                    reason: InvalidAuthorityReason::Expired,
+                    ..
+                }
+            )
+        },
+        "InvalidParentToken(Expired)",
     );
 }
 
