@@ -4,10 +4,11 @@ version = "0.1.0"
 edition = "2024"
 
 [workspace]
-members = ["crates/zamburak-policy"]
+members = ["crates/zamburak-core", "crates/zamburak-policy"]
 resolver = "3"
 
 [dependencies]
+zamburak-core = { path = "crates/zamburak-core" }
 zamburak-policy = { path = "crates/zamburak-policy" }
 
 [dev-dependencies]
