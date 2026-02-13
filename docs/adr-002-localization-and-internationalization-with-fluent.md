@@ -24,7 +24,7 @@ and one design note:
 
 - <https://github.com/leynos/rstest-bdd>
 - <https://github.com/leynos/ortho-config>
-- [Localisable Rust libraries with Fluent](localizable-rust-libraries-with-fluent.md)
+- [Localizable Rust libraries with Fluent](localizable-rust-libraries-with-fluent.md)
 
 ## Review findings
 
@@ -146,7 +146,7 @@ The project will implement an injection-first localization architecture with:
 - `zamburak::i18n::Localizer`:
   lookup interface for message IDs and optional formatting arguments.
 - `zamburak::i18n::NoOpLocalizer`:
-  intentionally declines all lookups so caller-provided fallback text is used.
+  intentionally declines all lookups, so caller-provided fallback text is used.
 - `zamburak::i18n::Localizations`:
   embedded Fluent assets (`RustEmbed`) for host loading into a shared Fluent
   loader.

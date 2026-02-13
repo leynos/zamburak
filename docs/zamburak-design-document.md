@@ -580,6 +580,34 @@ Migration rules are:
 - migration conformance tests are mandatory before adoption in the default
   profile.
 
+Implementation decision (2026-02-10): runtime loading now supports one explicit
+legacy migration path, `schema_version: 0` to `schema_version: 1`, before
+canonical validation.
+
+The v0-to-v1 transform maps legacy policy fields into canonical names:
+
+- tool `name` to `tool`,
+- tool `side_effect` to `side_effect_class`,
+- tool `authority` to `required_authority`,
+- tool rule `args[].name` to `arg`,
+- tool rule `args[].forbid_confidentiality` to
+  `forbids_confidentiality`,
+- tool `context` to `context_rules`.
+
+Unknown schema families remain fail-closed and return
+`UnsupportedSchemaVersion`.
+
+Migration audit metadata includes deterministic canonicalized SHA-256 hashes
+for source and target documents, plus per-step hash evidence and transform
+identifier (`policy_schema_v0_to_v1`).
+
+Audit-bearing loader entrypoints are:
+
+- `PolicyDefinition::from_yaml_str_with_migration_audit`,
+- `PolicyDefinition::from_json_str_with_migration_audit`,
+- `PolicyEngine::from_yaml_str_with_migration_audit`,
+- `PolicyEngine::from_json_str_with_migration_audit`.
+
 ## Localization and user-facing diagnostics
 
 Zamburak adopts the localization model defined in
