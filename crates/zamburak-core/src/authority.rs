@@ -34,6 +34,12 @@ impl AuthorityTokenId {
     }
 }
 
+impl std::fmt::Display for AuthorityTokenId {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        formatter.write_str(&self.0)
+    }
+}
+
 impl TryFrom<&str> for AuthorityTokenId {
     type Error = AuthorityLifecycleError;
 
@@ -114,7 +120,9 @@ pub struct AuthorityScope {
 
 impl AuthorityScope {
     /// Build a scope from resources, rejecting empty sets.
-    pub fn new(resources: impl IntoIterator<Item = ScopeResource>) -> Result<Self, AuthorityLifecycleError> {
+    pub fn new(
+        resources: impl IntoIterator<Item = ScopeResource>,
+    ) -> Result<Self, AuthorityLifecycleError> {
         let scope = Self {
             resources: resources.into_iter().collect(),
         };
@@ -473,7 +481,9 @@ pub enum AuthorityLifecycleError {
         field: &'static str,
     },
     /// Token lifetime does not progress forward in time.
-    #[error("token lifetime is invalid: issued_at `{issued_at}` must be before expires_at `{expires_at}`")]
+    #[error(
+        "token lifetime is invalid: issued_at `{issued_at}` must be before expires_at `{expires_at}`"
+    )]
     InvalidTokenLifetime {
         /// Token issuance timestamp.
         issued_at: u64,
@@ -490,7 +500,9 @@ pub enum AuthorityLifecycleError {
     #[error("delegated scope must be a strict subset of parent scope")]
     DelegationScopeNotStrictSubset,
     /// Delegated lifetime does not narrow the parent lifetime.
-    #[error("delegated expiry `{delegated_expires_at}` must be before parent expiry `{parent_expires_at}`")]
+    #[error(
+        "delegated expiry `{delegated_expires_at}` must be before parent expiry `{parent_expires_at}`"
+    )]
     DelegationLifetimeNotStrictSubset {
         /// Delegated token expiry timestamp.
         delegated_expires_at: u64,

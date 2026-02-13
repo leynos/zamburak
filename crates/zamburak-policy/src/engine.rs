@@ -3,6 +3,10 @@
 use crate::load_outcome::LoadOutcome;
 use crate::migration::MigrationAuditRecord;
 use crate::policy_def::{PolicyDefinition, PolicyLoadError, PolicyLoadOutcome};
+use zamburak_core::authority::{
+    AuthorityBoundaryValidation, AuthorityToken, RevocationIndex, TokenTimestamp,
+    validate_tokens_at_policy_boundary,
+};
 
 /// Runtime policy engine backed by a validated policy definition.
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -147,6 +151,60 @@ impl PolicyEngine {
     #[must_use]
     pub const fn policy_definition(&self) -> &PolicyDefinition {
         &self.policy_definition
+    }
+
+    /// Validate authority tokens at a policy-evaluation boundary.
+    ///
+    /// Tokens that are revoked or expired at `evaluation_time` are stripped
+    /// from the effective authority set and recorded as invalid. The
+    /// remaining effective tokens represent the authority available for
+    /// downstream policy checks.
+    ///
+    /// This method delegates to the canonical lifecycle validation in
+    /// `zamburak-core` so the policy engine consumes lifecycle verdicts
+    /// rather than duplicating transition logic.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use zamburak_core::{
+    ///     AuthorityToken, IssuerTrust, MintRequest, RevocationIndex,
+    ///     TokenTimestamp,
+    /// };
+    /// use zamburak_policy::{PolicyEngine, PolicyLoadError};
+    ///
+    /// let policy_yaml = r#"
+    /// schema_version: 1
+    /// policy_name: minimal_policy
+    /// default_action: Deny
+    /// strict_mode: true
+    /// budgets:
+    ///   max_values: 1
+    ///   max_parents_per_value: 1
+    ///   max_closure_steps: 1
+    ///   max_witness_depth: 1
+    /// tools: []
+    /// "#;
+    ///
+    /// let engine = PolicyEngine::from_yaml_str(policy_yaml)?;
+    /// let revocation_index = RevocationIndex::default();
+    /// let validation = engine.validate_authority_tokens(
+    ///     &[],
+    ///     &revocation_index,
+    ///     TokenTimestamp::new(100),
+    /// );
+    /// assert!(validation.effective_tokens().is_empty());
+    ///
+    /// Ok::<(), PolicyLoadError>(())
+    /// ```
+    #[must_use]
+    pub fn validate_authority_tokens(
+        &self,
+        tokens: &[AuthorityToken],
+        revocation_index: &RevocationIndex,
+        evaluation_time: TokenTimestamp,
+    ) -> AuthorityBoundaryValidation {
+        validate_tokens_at_policy_boundary(tokens, revocation_index, evaluation_time)
     }
 }
 

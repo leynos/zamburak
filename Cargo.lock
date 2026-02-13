@@ -1353,7 +1353,16 @@ dependencies = [
  "rstest",
  "rstest-bdd",
  "rstest-bdd-macros",
+ "zamburak-core",
  "zamburak-policy",
+]
+
+[[package]]
+name = "zamburak-core"
+version = "0.1.0"
+dependencies = [
+ "rstest",
+ "thiserror 2.0.18",
 ]
 
 [[package]]
@@ -1366,6 +1375,7 @@ dependencies = [
  "serde_yaml",
  "sha2",
  "thiserror 2.0.18",
+ "zamburak-core",
 ]
 
 [[package]]

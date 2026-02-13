@@ -395,6 +395,29 @@ normative:
   state; invalid tokens are stripped and any dependent effect request is denied
   or confirmation-gated conservatively.
 
+Implementation decision (2026-02-13): authority token lifecycle semantics are
+implemented in `crates/zamburak-core/src/authority.rs` as a self-contained
+domain module. Key design choices:
+
+- `TokenTimestamp` wraps `u64` and is injected by callers so all expiry
+  evaluation is deterministic and testable without wall-clock dependencies.
+- `AuthorityScope` uses `BTreeSet<ScopeResource>` for deterministic ordering
+  and O(log n) subset checking; delegation requires strict (proper) subset
+  narrowing, not merely non-widening.
+- `RevocationIndex` is a simple `HashSet<AuthorityTokenId>` managed by the
+  host; revocation is immediate at policy-evaluation boundaries and during
+  delegation attempts.
+- `AuthorityBoundaryValidation` partitions a token set into effective and
+  invalid subsets with reasons, used both at policy boundaries and on snapshot
+  restore (the two code paths share the same core validation to prevent
+  divergence).
+- `PolicyEngine::validate_authority_tokens` delegates to the canonical
+  lifecycle validation in `zamburak-core` so the policy engine consumes
+  lifecycle verdicts rather than duplicating transition logic.
+- Delegation from a revoked or expired parent is rejected with
+  `InvalidParentToken` before scope or lifetime narrowing checks run
+  (fail-closed ordering).
+
 ### Verification, endorsement, and declassification
 
 Verification, endorsement, and declassification are separate:

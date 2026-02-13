@@ -1,10 +1,10 @@
 //! Unit tests for authority token lifecycle semantics.
 
 use super::{
-    revalidate_tokens_on_restore, validate_tokens_at_policy_boundary, AuthorityCapability,
-    AuthorityLifecycleError, AuthorityScope, AuthoritySubject, AuthorityToken, AuthorityTokenId,
-    DelegationRequest, InvalidAuthorityReason, IssuerTrust, MintRequest, RevocationIndex,
-    ScopeResource, TokenTimestamp,
+    AuthorityCapability, AuthorityLifecycleError, AuthorityScope, AuthoritySubject, AuthorityToken,
+    AuthorityTokenId, DelegationRequest, InvalidAuthorityReason, IssuerTrust, MintRequest,
+    RevocationIndex, ScopeResource, TokenTimestamp, revalidate_tokens_on_restore,
+    validate_tokens_at_policy_boundary,
 };
 use rstest::rstest;
 
@@ -195,8 +195,11 @@ fn restore_revalidation_matches_policy_boundary_validation() {
         &revocation_index,
         TokenTimestamp::new(120),
     );
-    let restored =
-        revalidate_tokens_on_restore(std::slice::from_ref(&token), &revocation_index, TokenTimestamp::new(120));
+    let restored = revalidate_tokens_on_restore(
+        std::slice::from_ref(&token),
+        &revocation_index,
+        TokenTimestamp::new(120),
+    );
 
     assert_eq!(restored, boundary);
 }

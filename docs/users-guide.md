@@ -86,3 +86,108 @@ A policy document using an unsupported schema version such as
 
 This fail-closed behaviour is intentional and required by the security
 contracts.
+
+## Authority token lifecycle
+
+Authority tokens are stateful security objects managed through `zamburak-core`.
+Lifecycle operations are:
+
+### Minting
+
+Only host-trusted issuers may mint tokens. Each minted token encodes a subject,
+capability, scope, and expiry. Minting from untrusted issuers is rejected with
+`AuthorityLifecycleError::UntrustedMinter`.
+
+```rust
+use zamburak_core::{
+    AuthorityToken, IssuerTrust, MintRequest, AuthorityTokenId,
+    AuthoritySubject, AuthorityCapability, AuthorityScope,
+    ScopeResource, TokenTimestamp,
+};
+
+let token = AuthorityToken::mint(MintRequest {
+    token_id: AuthorityTokenId::try_from("tok-1")?,
+    issuer: "policy-host".to_owned(),
+    issuer_trust: IssuerTrust::HostTrusted,
+    subject: AuthoritySubject::try_from("assistant")?,
+    capability: AuthorityCapability::try_from("EmailSendCap")?,
+    scope: AuthorityScope::new(vec![
+        ScopeResource::try_from("send_email")?,
+    ])?,
+    issued_at: TokenTimestamp::new(100),
+    expires_at: TokenTimestamp::new(500),
+})?;
+```
+
+### Delegation
+
+Delegated tokens must narrow both scope (strict subset) and lifetime (strict
+subset). Parent lineage is retained for audit. Delegation from revoked or
+expired parents is rejected before scope checks run.
+
+```rust
+use zamburak_core::{DelegationRequest, RevocationIndex};
+
+let revocation_index = RevocationIndex::default();
+let child = AuthorityToken::delegate(
+    &parent_token,
+    DelegationRequest {
+        token_id: AuthorityTokenId::try_from("tok-child")?,
+        delegated_by: "policy-host".to_owned(),
+        subject: AuthoritySubject::try_from("assistant")?,
+        scope: AuthorityScope::new(vec![
+            ScopeResource::try_from("send_email")?,
+        ])?,
+        delegated_at: TokenTimestamp::new(200),
+        expires_at: TokenTimestamp::new(400),
+    },
+    &revocation_index,
+)?;
+```
+
+### Revocation
+
+The host manages a `RevocationIndex`. Revoked tokens are stripped at
+policy-evaluation boundaries.
+
+```rust
+let mut revocation_index = RevocationIndex::default();
+revocation_index.revoke(token.token_id().clone());
+```
+
+### Policy boundary validation
+
+`PolicyEngine::validate_authority_tokens` partitions tokens into effective and
+invalid sets at a given evaluation time. Revoked and expired tokens are
+stripped from the effective set.
+
+```rust
+let validation = engine.validate_authority_tokens(
+    &tokens,
+    &revocation_index,
+    TokenTimestamp::new(now),
+);
+let effective = validation.effective_tokens();
+let invalid = validation.invalid_tokens();
+```
+
+### Snapshot restore
+
+`revalidate_tokens_on_restore` applies the same validation as policy-boundary
+checks. On restore, any previously-valid tokens that have since been revoked or
+expired are conservatively stripped.
+
+### Error handling
+
+All lifecycle operations return `Result<_, AuthorityLifecycleError>`:
+
+- `EmptyField` — a required text field was empty,
+- `InvalidTokenLifetime` — issued_at is not before expires_at,
+- `UntrustedMinter` — issuer trust level is not `HostTrusted`,
+- `DelegationScopeNotStrictSubset` — delegated scope is not a proper subset,
+- `DelegationLifetimeNotStrictSubset` — delegated expiry is not before parent
+  expiry,
+- `InvalidParentToken` — parent is revoked or expired at delegation time.
+
+All timestamps are injected via `TokenTimestamp` to ensure deterministic
+evaluation without wall-clock dependencies.

@@ -4,7 +4,7 @@ This ExecPlan is a living document. The sections `Constraints`, `Tolerances`,
 `Risks`, `Progress`, `Surprises & Discoveries`, `Decision Log`, and
 `Outcomes & Retrospective` must be kept up to date as work proceeds.
 
-Status: DRAFT
+Status: DONE
 
 `PLANS.md` is not present in this repository at draft time, so this document is
 the governing execution plan for this task.
@@ -112,16 +112,28 @@ marked done.
   repository presently contains `zamburak-policy` only.
 - [x] (2026-02-13 18:53Z) Drafted this ExecPlan with lifecycle scope,
   implementation stages, and quality-gate requirements.
-- [ ] Implement `zamburak-core` authority lifecycle domain model and validator.
-- [ ] Add lifecycle transition unit tests for valid and invalid transitions.
-- [ ] Add lifecycle behavioural/security suites using `rstest-bdd` where
-  applicable.
-- [ ] Integrate lifecycle checks into `zamburak-policy` authority decision
-  paths required by traceability.
-- [ ] Update `docs/zamburak-design-document.md` with final lifecycle design
-  decisions.
-- [ ] Update `docs/users-guide.md` with authority lifecycle API and behaviour.
-- [ ] Mark roadmap Task 0.1.3 as done and run all required gates.
+- [x] (2026-02-13) Implemented `zamburak-core` authority lifecycle domain model
+  and validator (previous session).
+- [x] (2026-02-13) Added 8 lifecycle transition unit tests (previous session).
+- [x] (2026-02-13) Fixed `Display` impl for `AuthorityTokenId` (required by
+  `thiserror` format strings).
+- [x] (2026-02-13) Fixed `Makefile` test target to include `--workspace` flag
+  so all crate members are tested.
+- [x] (2026-02-13) Added 13 `rstest-bdd` behavioural lifecycle scenarios in
+  `tests/security/features/authority_lifecycle.feature` with step definitions
+  in `tests/security/authority_lifecycle_bdd.rs`.
+- [x] (2026-02-13) Integrated lifecycle checks into `zamburak-policy` via
+  `PolicyEngine::validate_authority_tokens` delegating to `zamburak-core`.
+- [x] (2026-02-13) Updated `docs/zamburak-design-document.md` with lifecycle
+  implementation decision block.
+- [x] (2026-02-13) Updated `docs/users-guide.md` with authority lifecycle API
+  section covering mint, delegation, revocation, boundary validation, restore,
+  and error handling.
+- [x] (2026-02-13) Updated `docs/repository-layout.md` with `authority.rs`
+  entry and refined crate responsibility description.
+- [x] (2026-02-13) Marked roadmap Task 0.1.3 as done.
+- [x] (2026-02-13) All required quality gates pass (`make check-fmt`,
+  `make lint`, `make test`).
 
 ## Surprises & discoveries
 
@@ -161,17 +173,71 @@ marked done.
   lifecycle transition fixtures and integration/security evidence. Date/Author:
   2026-02-13 / Codex
 
+- Decision: use `BTreeSet<ScopeResource>` for `AuthorityScope` to guarantee
+  deterministic ordering and O(log n) subset checks. `is_strict_subset_of`
+  requires proper subset (not equal). Rationale: deterministic ordering avoids
+  hash-iteration non-determinism in security checks; strict subset prevents
+  lateral delegation (same scope, just relabelled). Date/Author: 2026-02-13
+
+- Decision: `PolicyEngine::validate_authority_tokens` delegates to
+  `zamburak-core::validate_tokens_at_policy_boundary` rather than duplicating
+  logic. Rationale: single source of truth for lifecycle verdicts prevents
+  divergence between engine and core validation paths. Date/Author: 2026-02-13
+
+- Decision: delegation from revoked or expired parent checks run before scope
+  and lifetime narrowing checks. Rationale: fail-closed ordering — a revoked or
+  expired parent should be rejected as early as possible regardless of whether
+  the delegation request is otherwise well-formed. Date/Author: 2026-02-13
+
+- Decision: fixed Makefile `test` target to include `--workspace` flag.
+  Rationale: without `--workspace`, `cargo test` only tests the root package,
+  omitting `zamburak-core` and `zamburak-policy` unit tests from CI gating.
+  Date/Author: 2026-02-13
+
+- Decision: BDD step definitions avoid `expect()` in favour of `let...else`
+  with `panic!()` to satisfy the workspace `clippy::expect_used` deny lint.
+  Helper functions (`require_mint_result`, `require_delegation_result`,
+  `require_boundary_result`) centralise option unwrapping. Rationale:
+  consistency with existing compatibility BDD tests and workspace lint rules.
+  Date/Author: 2026-02-13
+
 ## Outcomes & retrospective
 
-This section will be completed during and after implementation. Expected
-outcomes are:
+All expected outcomes are met:
 
-- authority lifecycle transition checks implemented and fail-closed,
-- conformance evidence from unit and behavioural/security suites,
-- policy-engine authority path wired to lifecycle validation,
-- design and user documentation updated,
-- roadmap Task 0.1.3 marked done,
-- required quality and documentation gates passing.
+- Authority lifecycle transition checks implemented and fail-closed in
+  `crates/zamburak-core/src/authority.rs`.
+- 8 unit tests in `zamburak-core` covering valid/invalid mint, delegation
+  scope narrowing, delegation lifetime narrowing, revocation, expiry, policy
+  boundary validation, and restore revalidation.
+- 13 BDD scenarios in `tests/security/features/authority_lifecycle.feature`
+  covering mint (trusted/untrusted/invalid-lifetime), delegation (narrowed,
+  widened, equal-scope, non-narrowed-lifetime, revoked-parent, expired-parent),
+  boundary validation (revoked/expired stripping), and snapshot restore
+  (conservative revalidation, all-expired stripping).
+- `PolicyEngine::validate_authority_tokens` wires policy-engine authority
+  checks to `zamburak-core` lifecycle validation.
+- Design document updated with implementation decision block.
+- User's guide updated with authority lifecycle API section.
+- Repository layout updated with `authority.rs` entry.
+- Roadmap Task 0.1.3 marked `[x]`.
+- 46 total tests pass across workspace: 8 core + 17 policy + 4 compatibility +
+  17 security.
+- `make check-fmt`, `make lint`, `make test` all pass.
+
+Retrospective notes:
+
+- The previous session created `zamburak-core` but left a compilation error
+  (`AuthorityTokenId` missing `Display` impl for `thiserror` format strings).
+  This was caught immediately by running quality gates first.
+- The Makefile `test` target was missing `--workspace`, causing `zamburak-core`
+  unit tests to be silently excluded from `make test`. Fixed as part of this
+  task.
+- BDD step parameter capture includes literal quotes from Gherkin text;
+  removing quotes from the feature file is cleaner than stripping in code.
+- The `too_many_arguments` clippy lint fires on BDD step functions with many
+  Gherkin parameters; a tightly-scoped `#[expect]` annotation is the correct
+  response since the parameter count is driven by the scenario text.
 
 ## Context and orientation
 
