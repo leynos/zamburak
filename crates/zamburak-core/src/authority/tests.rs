@@ -46,45 +46,99 @@ fn mint_authority_token(
     .expect("mint fixtures are valid")
 }
 
+/// Helper to assert that a mint request fails with a specific error predicate.
+fn assert_mint_fails<F>(request: MintRequest, predicate: F, error_desc: &str)
+where
+    F: Fn(&AuthorityLifecycleError) -> bool,
+{
+    let result = AuthorityToken::mint(request);
+    match result {
+        Err(ref err) if predicate(err) => {} // success
+        _ => panic!("expected mint to fail with {error_desc}, got: {result:?}"),
+    }
+}
+
+/// Helper to create a delegation request for testing.
+fn delegation_request(
+    child_name: &str,
+    scope_resources: &[&str],
+    delegated_at: u64,
+    expires_at: u64,
+) -> DelegationRequest {
+    DelegationRequest {
+        token_id: token_id(child_name),
+        delegated_by: "policy-host".to_owned(),
+        subject: subject("assistant"),
+        scope: scope(scope_resources),
+        delegated_at: TokenTimestamp::new(delegated_at),
+        expires_at: TokenTimestamp::new(expires_at),
+    }
+}
+
+/// Helper to assert that a delegation request fails with a specific error predicate.
+fn assert_delegation_fails<F>(
+    parent: &AuthorityToken,
+    request: DelegationRequest,
+    revocation_index: &RevocationIndex,
+    predicate: F,
+    error_desc: &str,
+) where
+    F: Fn(&AuthorityLifecycleError) -> bool,
+{
+    let result = AuthorityToken::delegate(parent, request, revocation_index);
+    match result {
+        Err(ref err) if predicate(err) => {} // success
+        _ => panic!("expected delegation to fail with {error_desc}, got: {result:?}"),
+    }
+}
+
 #[test]
 fn mint_rejects_untrusted_issuer() {
-    let result = AuthorityToken::mint(MintRequest {
-        token_id: token_id("mint-untrusted"),
-        issuer: "remote-agent".to_owned(),
-        issuer_trust: IssuerTrust::Untrusted,
-        subject: subject("assistant"),
-        capability: capability("EmailSendCap"),
-        scope: scope(&["send_email"]),
-        issued_at: TokenTimestamp::new(10),
-        expires_at: TokenTimestamp::new(20),
-    });
-
-    assert!(matches!(
-        result,
-        Err(AuthorityLifecycleError::UntrustedMinter { issuer }) if issuer == "remote-agent"
-    ));
+    assert_mint_fails(
+        MintRequest {
+            token_id: token_id("mint-untrusted"),
+            issuer: "remote-agent".to_owned(),
+            issuer_trust: IssuerTrust::Untrusted,
+            subject: subject("assistant"),
+            capability: capability("EmailSendCap"),
+            scope: scope(&["send_email"]),
+            issued_at: TokenTimestamp::new(10),
+            expires_at: TokenTimestamp::new(20),
+        },
+        |err| {
+            matches!(
+                err,
+                AuthorityLifecycleError::UntrustedMinter { issuer } if issuer == "remote-agent"
+            )
+        },
+        "UntrustedMinter",
+    );
 }
 
 #[test]
 fn mint_rejects_non_forward_lifetime() {
-    let result = AuthorityToken::mint(MintRequest {
-        token_id: token_id("mint-invalid-lifetime"),
-        issuer: "policy-host".to_owned(),
-        issuer_trust: IssuerTrust::HostTrusted,
-        subject: subject("assistant"),
-        capability: capability("EmailSendCap"),
-        scope: scope(&["send_email"]),
-        issued_at: TokenTimestamp::new(15),
-        expires_at: TokenTimestamp::new(15),
-    });
-
-    assert!(matches!(
-        result,
-        Err(AuthorityLifecycleError::InvalidTokenLifetime {
-            issued_at: 15,
-            expires_at: 15,
-        })
-    ));
+    assert_mint_fails(
+        MintRequest {
+            token_id: token_id("mint-invalid-lifetime"),
+            issuer: "policy-host".to_owned(),
+            issuer_trust: IssuerTrust::HostTrusted,
+            subject: subject("assistant"),
+            capability: capability("EmailSendCap"),
+            scope: scope(&["send_email"]),
+            issued_at: TokenTimestamp::new(15),
+            expires_at: TokenTimestamp::new(15),
+        },
+        |err| {
+            matches!(
+                err,
+                AuthorityLifecycleError::InvalidTokenLifetime {
+                    issued_at: 15,
+                    expires_at: 15,
+                }
+            )
+        },
+        "InvalidTokenLifetime",
+    );
 }
 
 #[test]
@@ -93,14 +147,7 @@ fn delegation_accepts_strict_scope_and_lifetime_narrowing() {
 
     let delegated = AuthorityToken::delegate(
         &parent,
-        DelegationRequest {
-            token_id: token_id("child"),
-            delegated_by: "policy-host".to_owned(),
-            subject: subject("assistant"),
-            scope: scope(&["send_email"]),
-            delegated_at: TokenTimestamp::new(20),
-            expires_at: TokenTimestamp::new(120),
-        },
+        delegation_request("child", &["send_email"], 20, 120),
         &RevocationIndex::default(),
     )
     .expect("strictly narrowed delegations should succeed");
@@ -138,26 +185,21 @@ fn delegation_rejects_non_strict_scope_subset(#[case] delegated_scope: Authority
 fn delegation_rejects_non_strict_lifetime_subset() {
     let parent = mint_authority_token("parent", &["send_email", "send_email_draft"], 10, 200);
 
-    let result = AuthorityToken::delegate(
+    assert_delegation_fails(
         &parent,
-        DelegationRequest {
-            token_id: token_id("child"),
-            delegated_by: "policy-host".to_owned(),
-            subject: subject("assistant"),
-            scope: scope(&["send_email"]),
-            delegated_at: TokenTimestamp::new(20),
-            expires_at: TokenTimestamp::new(200),
-        },
+        delegation_request("child", &["send_email"], 20, 200),
         &RevocationIndex::default(),
+        |err| {
+            matches!(
+                err,
+                AuthorityLifecycleError::DelegationLifetimeNotStrictSubset {
+                    delegated_expires_at: 200,
+                    parent_expires_at: 200,
+                }
+            )
+        },
+        "DelegationLifetimeNotStrictSubset",
     );
-
-    assert!(matches!(
-        result,
-        Err(AuthorityLifecycleError::DelegationLifetimeNotStrictSubset {
-            delegated_expires_at: 200,
-            parent_expires_at: 200,
-        })
-    ));
 }
 
 #[test]
