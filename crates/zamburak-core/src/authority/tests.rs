@@ -14,6 +14,17 @@ const TEST_SUBJECT: &str = "assistant";
 const TEST_CAPABILITY: &str = "EmailSendCap";
 const TEST_DELEGATED_BY: &str = "policy-host";
 
+// Pre-built domain type constants to reduce string parameter usage.
+lazy_static::lazy_static! {
+    static ref TOKEN_ID_PARENT: AuthorityTokenId = token_id("parent");
+    static ref TOKEN_ID_CHILD: AuthorityTokenId = token_id("child");
+    static ref TOKEN_ID_VALID: AuthorityTokenId = token_id("valid");
+    static ref TOKEN_ID_REVOKED: AuthorityTokenId = token_id("revoked");
+    static ref TOKEN_ID_EXPIRED: AuthorityTokenId = token_id("expired");
+    static ref SCOPE_SEND_EMAIL: AuthorityScope = scope(&["send_email"]);
+    static ref SCOPE_EMAIL_AND_DRAFT: AuthorityScope = scope(&["send_email", "send_email_draft"]);
+}
+
 /// Builder for mint requests with sensible test defaults.
 struct MintRequestBuilder {
     token_name: String,
@@ -135,6 +146,23 @@ fn delegation_request(
     }
 }
 
+/// Helper to create a delegation request for testing with pre-built domain types.
+fn delegation_request_with_scope(
+    child_id: &AuthorityTokenId,
+    scope: &AuthorityScope,
+    delegated_at: u64,
+    expires_at: u64,
+) -> DelegationRequest {
+    DelegationRequest {
+        token_id: child_id.clone(),
+        delegated_by: TEST_DELEGATED_BY.to_owned(),
+        subject: subject(TEST_SUBJECT),
+        scope: scope.clone(),
+        delegated_at: TokenTimestamp::new(delegated_at),
+        expires_at: TokenTimestamp::new(expires_at),
+    }
+}
+
 /// Helper to assert that a delegation request fails with a specific error predicate.
 fn assert_delegation_fails<F>(
     parent: &AuthorityToken,
@@ -194,7 +222,7 @@ fn delegation_accepts_strict_scope_and_lifetime_narrowing() {
 
     let delegated = AuthorityToken::delegate(
         &parent,
-        delegation_request("child", &["send_email"], 20, 120),
+        delegation_request_with_scope(&TOKEN_ID_CHILD, &SCOPE_SEND_EMAIL, 20, 120),
         &RevocationIndex::default(),
     )
     .expect("strictly narrowed delegations should succeed");
@@ -256,7 +284,7 @@ fn policy_boundary_validation_strips_revoked_and_expired_tokens() {
     let expired = mint_authority_token("expired", &["send_email"], 10, 100);
 
     let mut revocation_index = RevocationIndex::default();
-    revocation_index.revoke(revoked.token_id().clone());
+    revocation_index.revoke(TOKEN_ID_REVOKED.clone());
 
     let validation = validate_tokens_at_policy_boundary(
         &[valid.clone(), revoked.clone(), expired.clone()],
@@ -267,10 +295,10 @@ fn policy_boundary_validation_strips_revoked_and_expired_tokens() {
     assert_eq!(validation.effective_tokens(), &[valid]);
     assert_eq!(validation.invalid_tokens().len(), 2);
     assert!(validation.invalid_tokens().iter().any(|token| {
-        token.token_id() == revoked.token_id() && token.reason() == InvalidAuthorityReason::Revoked
+        token.token_id() == &*TOKEN_ID_REVOKED && token.reason() == InvalidAuthorityReason::Revoked
     }));
     assert!(validation.invalid_tokens().iter().any(|token| {
-        token.token_id() == expired.token_id() && token.reason() == InvalidAuthorityReason::Expired
+        token.token_id() == &*TOKEN_ID_EXPIRED && token.reason() == InvalidAuthorityReason::Expired
     }));
 }
 
