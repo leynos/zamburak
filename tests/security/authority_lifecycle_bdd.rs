@@ -251,23 +251,27 @@ fn minted_parent(world: &mut LifecycleWorld, res_a: String, res_b: String, expir
 
 #[given("a delegation request narrowing scope to {res} expiring at {expires_at:u64}")]
 fn narrowed_delegation(world: &mut LifecycleWorld, res: String, expires_at: u64) {
-    world.delegation_request = Some(DelegationRequest {
-        token_id: make_token_id("child"),
-        delegated_by: "policy-host".to_owned(),
-        subject: make_subject("assistant"),
-        scope: make_scope(&[&res]),
-        delegated_at: TokenTimestamp::new(20),
-        expires_at: TokenTimestamp::new(expires_at),
-    });
+    create_delegation_request(world, &[&res], expires_at);
 }
 
+/// Helper to create a delegation request with given scope resources.
 fn create_delegation_request(world: &mut LifecycleWorld, resources: &[&str], expires_at: u64) {
+    create_delegation_request_at(world, resources, 20, expires_at);
+}
+
+/// Helper to create a delegation request with custom delegation time.
+fn create_delegation_request_at(
+    world: &mut LifecycleWorld,
+    resources: &[&str],
+    delegated_at: u64,
+    expires_at: u64,
+) {
     world.delegation_request = Some(DelegationRequest {
         token_id: make_token_id("child"),
         delegated_by: "policy-host".to_owned(),
         subject: make_subject("assistant"),
         scope: make_scope(resources),
-        delegated_at: TokenTimestamp::new(20),
+        delegated_at: TokenTimestamp::new(delegated_at),
         expires_at: TokenTimestamp::new(expires_at),
     });
 }
@@ -296,14 +300,7 @@ fn widened_delegation(
 
 #[given("a delegation request with equal scope {a} and {b} expiring at {expires_at:u64}")]
 fn equal_scope_delegation(world: &mut LifecycleWorld, a: String, b: String, expires_at: u64) {
-    world.delegation_request = Some(DelegationRequest {
-        token_id: make_token_id("child"),
-        delegated_by: "policy-host".to_owned(),
-        subject: make_subject("assistant"),
-        scope: make_scope(&[&a, &b]),
-        delegated_at: TokenTimestamp::new(20),
-        expires_at: TokenTimestamp::new(expires_at),
-    });
+    create_delegation_request(world, &[&a, &b], expires_at);
 }
 
 #[given(
@@ -315,14 +312,7 @@ fn narrowed_delegation_late(
     expires_at: u64,
     delegated_at: u64,
 ) {
-    world.delegation_request = Some(DelegationRequest {
-        token_id: make_token_id("child"),
-        delegated_by: "policy-host".to_owned(),
-        subject: make_subject("assistant"),
-        scope: make_scope(&[&res]),
-        delegated_at: TokenTimestamp::new(delegated_at),
-        expires_at: TokenTimestamp::new(expires_at),
-    });
+    create_delegation_request_at(world, &[&res], delegated_at, expires_at);
 }
 
 #[given("the parent token is revoked")]
