@@ -8,6 +8,70 @@ use super::{
 };
 use rstest::rstest;
 
+// Test fixture constants to reduce string parameter repetition.
+const TEST_ISSUER: &str = "policy-host";
+const TEST_SUBJECT: &str = "assistant";
+const TEST_CAPABILITY: &str = "EmailSendCap";
+const TEST_DELEGATED_BY: &str = "policy-host";
+
+/// Builder for mint requests with sensible test defaults.
+struct MintRequestBuilder {
+    token_name: String,
+    issuer: String,
+    issuer_trust: IssuerTrust,
+    subject_name: String,
+    capability_name: String,
+    scope_resources: Vec<String>,
+    issued_at: u64,
+    expires_at: u64,
+}
+
+impl MintRequestBuilder {
+    fn new(token_name: &str) -> Self {
+        Self {
+            token_name: token_name.to_owned(),
+            issuer: TEST_ISSUER.to_owned(),
+            issuer_trust: IssuerTrust::HostTrusted,
+            subject_name: TEST_SUBJECT.to_owned(),
+            capability_name: TEST_CAPABILITY.to_owned(),
+            scope_resources: vec!["send_email".to_owned()],
+            issued_at: 0,
+            expires_at: 100,
+        }
+    }
+
+    fn issuer(mut self, issuer: &str, trust: IssuerTrust) -> Self {
+        self.issuer = issuer.to_owned();
+        self.issuer_trust = trust;
+        self
+    }
+
+    fn scope(mut self, resources: &[&str]) -> Self {
+        self.scope_resources = resources.iter().map(|s| (*s).to_owned()).collect();
+        self
+    }
+
+    fn lifetime(mut self, issued_at: u64, expires_at: u64) -> Self {
+        self.issued_at = issued_at;
+        self.expires_at = expires_at;
+        self
+    }
+
+    fn build(self) -> MintRequest {
+        let scope_refs: Vec<&str> = self.scope_resources.iter().map(String::as_str).collect();
+        MintRequest {
+            token_id: token_id(&self.token_name),
+            issuer: self.issuer,
+            issuer_trust: self.issuer_trust,
+            subject: subject(&self.subject_name),
+            capability: capability(&self.capability_name),
+            scope: scope(&scope_refs),
+            issued_at: TokenTimestamp::new(self.issued_at),
+            expires_at: TokenTimestamp::new(self.expires_at),
+        }
+    }
+}
+
 fn token_id(value: &str) -> AuthorityTokenId {
     AuthorityTokenId::try_from(value).expect("token ids used in tests are valid")
 }
@@ -33,16 +97,12 @@ fn mint_authority_token(
     issued_at: u64,
     expires_at: u64,
 ) -> AuthorityToken {
-    AuthorityToken::mint(MintRequest {
-        token_id: token_id(token_name),
-        issuer: "policy-host".to_owned(),
-        issuer_trust: IssuerTrust::HostTrusted,
-        subject: subject("assistant"),
-        capability: capability("EmailSendCap"),
-        scope: scope(scope_resources),
-        issued_at: TokenTimestamp::new(issued_at),
-        expires_at: TokenTimestamp::new(expires_at),
-    })
+    AuthorityToken::mint(
+        MintRequestBuilder::new(token_name)
+            .scope(scope_resources)
+            .lifetime(issued_at, expires_at)
+            .build(),
+    )
     .expect("mint fixtures are valid")
 }
 
@@ -67,8 +127,8 @@ fn delegation_request(
 ) -> DelegationRequest {
     DelegationRequest {
         token_id: token_id(child_name),
-        delegated_by: "policy-host".to_owned(),
-        subject: subject("assistant"),
+        delegated_by: TEST_DELEGATED_BY.to_owned(),
+        subject: subject(TEST_SUBJECT),
         scope: scope(scope_resources),
         delegated_at: TokenTimestamp::new(delegated_at),
         expires_at: TokenTimestamp::new(expires_at),
@@ -95,16 +155,10 @@ fn assert_delegation_fails<F>(
 #[test]
 fn mint_rejects_untrusted_issuer() {
     assert_mint_fails(
-        MintRequest {
-            token_id: token_id("mint-untrusted"),
-            issuer: "remote-agent".to_owned(),
-            issuer_trust: IssuerTrust::Untrusted,
-            subject: subject("assistant"),
-            capability: capability("EmailSendCap"),
-            scope: scope(&["send_email"]),
-            issued_at: TokenTimestamp::new(10),
-            expires_at: TokenTimestamp::new(20),
-        },
+        MintRequestBuilder::new("mint-untrusted")
+            .issuer("remote-agent", IssuerTrust::Untrusted)
+            .lifetime(10, 20)
+            .build(),
         |err| {
             matches!(
                 err,
@@ -118,16 +172,9 @@ fn mint_rejects_untrusted_issuer() {
 #[test]
 fn mint_rejects_non_forward_lifetime() {
     assert_mint_fails(
-        MintRequest {
-            token_id: token_id("mint-invalid-lifetime"),
-            issuer: "policy-host".to_owned(),
-            issuer_trust: IssuerTrust::HostTrusted,
-            subject: subject("assistant"),
-            capability: capability("EmailSendCap"),
-            scope: scope(&["send_email"]),
-            issued_at: TokenTimestamp::new(15),
-            expires_at: TokenTimestamp::new(15),
-        },
+        MintRequestBuilder::new("mint-invalid-lifetime")
+            .lifetime(15, 15)
+            .build(),
         |err| {
             matches!(
                 err,
