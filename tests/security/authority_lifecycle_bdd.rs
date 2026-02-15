@@ -160,22 +160,44 @@ fn assert_invalid_token_stripped(
     );
 }
 
+/// Configuration for the issuer of a mint request.
+#[derive(Clone, Copy)]
+enum IssuerConfig {
+    /// Host-trusted issuer (policy-host).
+    HostTrusted,
+    /// Untrusted issuer (remote-agent).
+    Untrusted,
+}
+
+impl IssuerConfig {
+    /// Returns the issuer name for this configuration.
+    const fn issuer(self) -> &'static str {
+        match self {
+            Self::HostTrusted => "policy-host",
+            Self::Untrusted => "remote-agent",
+        }
+    }
+
+    /// Returns the issuer trust level for this configuration.
+    const fn issuer_trust(self) -> IssuerTrust {
+        match self {
+            Self::HostTrusted => IssuerTrust::HostTrusted,
+            Self::Untrusted => IssuerTrust::Untrusted,
+        }
+    }
+}
+
 /// Helper to create a mint request with configurable issuer trust.
-#[expect(
-    clippy::too_many_arguments,
-    reason = "each parameter is a distinct domain field of the mint request"
-)]
 fn create_mint_request(
     world: &mut LifecycleWorld,
     subject: &str,
     capability: &str,
-    issuer: &str,
-    issuer_trust: IssuerTrust,
+    issuer_config: IssuerConfig,
 ) {
     world.mint_request = Some(MintRequest {
         token_id: make_token_id("mint-token"),
-        issuer: issuer.to_owned(),
-        issuer_trust,
+        issuer: issuer_config.issuer().to_owned(),
+        issuer_trust: issuer_config.issuer_trust(),
         subject: make_subject(subject),
         capability: make_capability(capability),
         scope: make_scope(&["placeholder"]),
@@ -184,53 +206,38 @@ fn create_mint_request(
     });
 }
 
-/// Helper to create a token set with one valid and one invalid token.
-#[expect(
-    clippy::too_many_arguments,
-    reason = "each parameter controls a distinct axis of the token-set fixture"
-)]
-fn create_token_set_with_invalid(
-    world: &mut LifecycleWorld,
-    valid_name: &str,
-    invalid_name: &str,
-    valid_expires: u64,
-    invalid_expires: u64,
-    revoke_invalid: bool,
-) {
-    let valid = mint_fixture(valid_name, &["send_email"], 10, valid_expires);
-    let invalid = mint_fixture(invalid_name, &["send_email"], 10, invalid_expires);
+/// Helper to create a token set with one valid and one revoked token.
+fn create_token_set_with_revoked(world: &mut LifecycleWorld) {
+    let valid = mint_fixture("valid-tok", &["send_email"], 10, 1000);
+    let revoked = mint_fixture("revoked-tok", &["send_email"], 10, 1000);
 
-    if revoke_invalid {
-        world.revocation_index.revoke(invalid.token_id().clone());
-    }
+    world.revocation_index.revoke(revoked.token_id().clone());
 
     world.expected_valid_id = Some(valid.token_id().clone());
-    world.expected_invalid_id = Some(invalid.token_id().clone());
-    world.token_set = vec![valid, invalid];
+    world.expected_invalid_id = Some(revoked.token_id().clone());
+    world.token_set = vec![valid, revoked];
+}
+
+/// Helper to create a token set with one valid and one expired token.
+fn create_token_set_with_expired(world: &mut LifecycleWorld) {
+    let valid = mint_fixture("valid-tok", &["send_email"], 10, 1000);
+    let expired = mint_fixture("expired-tok", &["send_email"], 10, 100);
+
+    world.expected_valid_id = Some(valid.token_id().clone());
+    world.expected_invalid_id = Some(expired.token_id().clone());
+    world.token_set = vec![valid, expired];
 }
 
 // ── Given: minting ─────────────────────────────────────────────────
 
 #[given("a host-trusted minting request for subject {subject} with capability {capability}")]
 fn host_trusted_mint_request(world: &mut LifecycleWorld, subject: String, capability: String) {
-    create_mint_request(
-        world,
-        &subject,
-        &capability,
-        "policy-host",
-        IssuerTrust::HostTrusted,
-    );
+    create_mint_request(world, &subject, &capability, IssuerConfig::HostTrusted);
 }
 
 #[given("an untrusted minting request for subject {subject} with capability {capability}")]
 fn untrusted_mint_request(world: &mut LifecycleWorld, subject: String, capability: String) {
-    create_mint_request(
-        world,
-        &subject,
-        &capability,
-        "remote-agent",
-        IssuerTrust::Untrusted,
-    );
+    create_mint_request(world, &subject, &capability, IssuerConfig::Untrusted);
 }
 
 #[given("the mint scope includes {res_a} and {res_b}")]
@@ -492,12 +499,12 @@ fn delegation_rejected_expired_parent(world: &LifecycleWorld) {
 
 #[given("a set of authority tokens including a revoked token")]
 fn token_set_with_revoked(world: &mut LifecycleWorld) {
-    create_token_set_with_invalid(world, "valid-tok", "revoked-tok", 1000, 1000, true);
+    create_token_set_with_revoked(world);
 }
 
 #[given("a set of authority tokens including an expired token")]
 fn token_set_with_expired(world: &mut LifecycleWorld) {
-    create_token_set_with_invalid(world, "valid-tok", "expired-tok", 1000, 100, false);
+    create_token_set_with_expired(world);
 }
 
 #[given("a set of authority tokens that are all expired before time 200")]
