@@ -21,8 +21,10 @@ lazy_static::lazy_static! {
     static ref TOKEN_ID_VALID: AuthorityTokenId = token_id("valid");
     static ref TOKEN_ID_REVOKED: AuthorityTokenId = token_id("revoked");
     static ref TOKEN_ID_EXPIRED: AuthorityTokenId = token_id("expired");
+    static ref TOKEN_ID_TOKEN: AuthorityTokenId = token_id("token");
     static ref SCOPE_SEND_EMAIL: AuthorityScope = scope(&["send_email"]);
     static ref SCOPE_EMAIL_AND_DRAFT: AuthorityScope = scope(&["send_email", "send_email_draft"]);
+    static ref SUBJECT_ASSISTANT: AuthoritySubject = subject("assistant");
 }
 
 /// Builder for mint requests with sensible test defaults.
@@ -129,23 +131,6 @@ where
     }
 }
 
-/// Helper to create a delegation request for testing.
-fn delegation_request(
-    child_name: &str,
-    scope_resources: &[&str],
-    delegated_at: u64,
-    expires_at: u64,
-) -> DelegationRequest {
-    DelegationRequest {
-        token_id: token_id(child_name),
-        delegated_by: TEST_DELEGATED_BY.to_owned(),
-        subject: subject(TEST_SUBJECT),
-        scope: scope(scope_resources),
-        delegated_at: TokenTimestamp::new(delegated_at),
-        expires_at: TokenTimestamp::new(expires_at),
-    }
-}
-
 /// Helper to create a delegation request for testing with pre-built domain types.
 fn delegation_request_with_scope(
     child_id: &AuthorityTokenId,
@@ -156,7 +141,7 @@ fn delegation_request_with_scope(
     DelegationRequest {
         token_id: child_id.clone(),
         delegated_by: TEST_DELEGATED_BY.to_owned(),
-        subject: subject(TEST_SUBJECT),
+        subject: SUBJECT_ASSISTANT.clone(),
         scope: scope.clone(),
         delegated_at: TokenTimestamp::new(delegated_at),
         expires_at: TokenTimestamp::new(expires_at),
@@ -232,7 +217,7 @@ fn delegation_accepts_strict_scope_and_lifetime_narrowing() {
 }
 
 #[rstest]
-#[case::equal_scope(scope(&["send_email", "send_email_draft"]))]
+#[case::equal_scope(SCOPE_EMAIL_AND_DRAFT.clone())]
 #[case::widened_scope(scope(&["send_email", "send_email_draft", "calendar_write"]))]
 fn delegation_rejects_non_strict_scope_subset(#[case] delegated_scope: AuthorityScope) {
     let parent = mint_authority_token("parent", &["send_email", "send_email_draft"], 10, 200);
@@ -240,9 +225,9 @@ fn delegation_rejects_non_strict_scope_subset(#[case] delegated_scope: Authority
     let result = AuthorityToken::delegate(
         &parent,
         DelegationRequest {
-            token_id: token_id("child"),
-            delegated_by: "policy-host".to_owned(),
-            subject: subject("assistant"),
+            token_id: TOKEN_ID_CHILD.clone(),
+            delegated_by: TEST_DELEGATED_BY.to_owned(),
+            subject: SUBJECT_ASSISTANT.clone(),
             scope: delegated_scope,
             delegated_at: TokenTimestamp::new(20),
             expires_at: TokenTimestamp::new(120),
@@ -262,7 +247,7 @@ fn delegation_rejects_non_strict_lifetime_subset() {
 
     assert_delegation_fails(
         &parent,
-        delegation_request("child", &["send_email"], 20, 200),
+        delegation_request_with_scope(&TOKEN_ID_CHILD, &SCOPE_SEND_EMAIL, 20, 200),
         &RevocationIndex::default(),
         |err| {
             matches!(
