@@ -19,6 +19,11 @@
   transforms, migration conformance tests, and audit evidence delivery.
 - [Policy examples](policy-examples.md) - Worked examples of simple and
   complex Zamburak policy configurations with Mermaid diagrams.
+  - [Financial services policy
+    scenarios](policy-examples-financial-services-scenarios.md) - Happy
+    and unhappy path traces through the financial services policy,
+    illustrating taint tracking, mechanistic denial, and human-gated
+    confirmation.
 - [Reliable testing with dependency injection](reliable-testing-in-rust-via-dependency-injection.md)
   - Patterns for deterministic and parallel-safe Rust tests by isolating
   external dependencies.
