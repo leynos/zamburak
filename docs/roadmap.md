@@ -708,7 +708,7 @@ completion criteria so the work can be sequenced and assessed without ambiguity.
     - `docs/repository-layout.md` section "Root and operational files"
       (`scripts/`).
   - Dependencies: Task 0.1.1, Task 5.3.1, and Task 5.3.2.
-  - In scope: Rust binary or script that reads a canonical v1 policy
+  - In scope: Rust binary that reads a canonical v1 policy
     YAML file and emits one Mermaid `flowchart TD` per tool plus a
     global summary diagram; rendering of emitted Mermaid text to SVG
     and PNG via mmdr; CI integration so that diagram generation runs

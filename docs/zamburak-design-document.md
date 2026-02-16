@@ -993,8 +993,9 @@ effect class (`ExternalRead` vs `ExternalWrite`) with their default decisions.
 Mermaid text is rendered to SVG or PNG using
 [mmdr](https://github.com/1jehuang/mermaid-rs-renderer), a native Rust Mermaid
 renderer. mmdr eliminates the browser dependency of the official `mermaid-cli`
-and renders diagrams 500–1000x faster (circa 3 ms per diagram versus 3000 ms),
-making batch rendering of all policies in a repository practical as a CI step.
+and renders diagrams ~100–1400x faster than mermaid-cli (circa 3 ms per diagram
+versus 2–3 s), making batch rendering of all policies in a repository practical
+as a CI step.
 
 The generation pipeline is:
 

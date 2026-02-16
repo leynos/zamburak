@@ -7,7 +7,7 @@ into the policy evaluation cascade, and whether the outcome can be decided
 mechanistically (by the policy engine alone) or requires a human in the loop.
 
 For the full policy definition, evaluation cascade diagram, and schema
-reference, see Example 4: Financial services[^1].
+reference, see Example 4: financial services[^1].
 
 ## Scenario index
 
@@ -337,7 +337,7 @@ terminates at the confidentiality check.*
 
 ______________________________________________________________________
 
-[^1]: [Policy examples: Example 4: Financial
+[^1]: [Policy examples: Example 4: financial
     services](policy-examples.md#example-4-financial-services) — parent
     document containing the financial services policy definition and all
     other examples.

@@ -15,7 +15,7 @@ user's guide[^3], and the default policy[^4].
 
 ## Simple examples
 
-### Example 1: Read-only weather lookup
+### Example 1: read-only weather lookup
 
 A minimal agent that can only retrieve weather data. No writes, no authority
 tokens, no argument rules. The `default_action` is `Deny`, ensuring that any
@@ -68,7 +68,7 @@ flowchart TD
 
 _Figure 1: Policy evaluation flow for the read-only weather lookup policy._
 
-### Example 2: Calendar management with write access
+### Example 2: calendar management with write access
 
 An agent that can read calendar events and create new ones. Reading is allowed
 unconditionally; writing requires the `CalendarWriteCap` authority token and
@@ -132,7 +132,7 @@ flowchart TD
 _Figure 2: Policy evaluation flow for calendar management with read and write
 tools._
 
-### Example 3: Permissive internal tooling
+### Example 3: permissive internal tooling
 
 An internal development environment where all tools are trusted. The
 `default_action` is `Allow` so unlisted tools are permitted. `strict_mode` is
@@ -194,7 +194,7 @@ _Figure 3: Policy evaluation flow for the permissive internal tooling policy._
 
 ## Complex examples
 
-### Example 4: Financial services
+### Example 4: financial services
 
 A financial services agent that can look up account balances, initiate
 transfers, and send transaction notifications. This policy uses strict mode,
@@ -298,7 +298,7 @@ For worked happy-path and unhappy-path scenarios illustrating how taint
 tracking interacts with this policy, see the
 [financial services policy scenarios](policy-examples-financial-services-scenarios.md).
 
-### Example 5: Content moderation and publishing pipeline
+### Example 5: content moderation and publishing pipeline
 
 A content publishing agent with a three-stage workflow: draft creation,
 moderation review, and final publication. Drafts are created using
@@ -415,7 +415,7 @@ flowchart TD
 _Figure 5: Content publishing pipeline workflow from draft through moderation
 to confirmed publication._
 
-### Example 6: Multi-tool personal assistant
+### Example 6: multi-tool personal assistant
 
 A full-featured personal assistant that can read emails, send emails, search
 the web, look up contacts, query a remote Large Language Model (LLM), and
