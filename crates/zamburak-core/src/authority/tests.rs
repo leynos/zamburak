@@ -25,6 +25,18 @@ lazy_static::lazy_static! {
     static ref SCOPE_SEND_EMAIL: AuthorityScope = scope(&["send_email"]);
     static ref SCOPE_EMAIL_AND_DRAFT: AuthorityScope = scope(&["send_email", "send_email_draft"]);
     static ref SUBJECT_ASSISTANT: AuthoritySubject = subject("assistant");
+
+    // Pre-built test tokens to reduce string parameter usage.
+    static ref TOKEN_PARENT: AuthorityToken =
+        mint_authority_token("parent", &["send_email", "send_email_draft"], 10, 200);
+    static ref TOKEN_VALID: AuthorityToken =
+        mint_authority_token("valid", &["send_email"], 10, 300);
+    static ref TOKEN_REVOKED: AuthorityToken =
+        mint_authority_token("revoked", &["send_email"], 10, 300);
+    static ref TOKEN_EXPIRED: AuthorityToken =
+        mint_authority_token("expired", &["send_email"], 10, 100);
+    static ref TOKEN_FOR_RESTORE: AuthorityToken =
+        mint_authority_token("token", &["send_email"], 10, 100);
 }
 
 /// Builder for mint requests with sensible test defaults.
@@ -203,27 +215,23 @@ fn mint_rejects_non_forward_lifetime() {
 
 #[test]
 fn delegation_accepts_strict_scope_and_lifetime_narrowing() {
-    let parent = mint_authority_token("parent", &["send_email", "send_email_draft"], 10, 200);
-
     let delegated = AuthorityToken::delegate(
-        &parent,
+        &TOKEN_PARENT,
         delegation_request_with_scope(&TOKEN_ID_CHILD, &SCOPE_SEND_EMAIL, 20, 120),
         &RevocationIndex::default(),
     )
     .expect("strictly narrowed delegations should succeed");
 
-    assert_eq!(delegated.parent_token_id(), Some(parent.token_id()));
-    assert_eq!(delegated.capability(), parent.capability());
+    assert_eq!(delegated.parent_token_id(), Some(TOKEN_PARENT.token_id()));
+    assert_eq!(delegated.capability(), TOKEN_PARENT.capability());
 }
 
 #[rstest]
 #[case::equal_scope(SCOPE_EMAIL_AND_DRAFT.clone())]
 #[case::widened_scope(scope(&["send_email", "send_email_draft", "calendar_write"]))]
 fn delegation_rejects_non_strict_scope_subset(#[case] delegated_scope: AuthorityScope) {
-    let parent = mint_authority_token("parent", &["send_email", "send_email_draft"], 10, 200);
-
     let result = AuthorityToken::delegate(
-        &parent,
+        &TOKEN_PARENT,
         DelegationRequest {
             token_id: TOKEN_ID_CHILD.clone(),
             delegated_by: TEST_DELEGATED_BY.to_owned(),
@@ -243,10 +251,8 @@ fn delegation_rejects_non_strict_scope_subset(#[case] delegated_scope: Authority
 
 #[test]
 fn delegation_rejects_non_strict_lifetime_subset() {
-    let parent = mint_authority_token("parent", &["send_email", "send_email_draft"], 10, 200);
-
     assert_delegation_fails(
-        &parent,
+        &TOKEN_PARENT,
         delegation_request_with_scope(&TOKEN_ID_CHILD, &SCOPE_SEND_EMAIL, 20, 200),
         &RevocationIndex::default(),
         |err| {
@@ -264,20 +270,20 @@ fn delegation_rejects_non_strict_lifetime_subset() {
 
 #[test]
 fn policy_boundary_validation_strips_revoked_and_expired_tokens() {
-    let valid = mint_authority_token("valid", &["send_email"], 10, 300);
-    let revoked = mint_authority_token("revoked", &["send_email"], 10, 300);
-    let expired = mint_authority_token("expired", &["send_email"], 10, 100);
-
     let mut revocation_index = RevocationIndex::default();
     revocation_index.revoke(TOKEN_ID_REVOKED.clone());
 
     let validation = validate_tokens_at_policy_boundary(
-        &[valid.clone(), revoked.clone(), expired.clone()],
+        &[
+            TOKEN_VALID.clone(),
+            TOKEN_REVOKED.clone(),
+            TOKEN_EXPIRED.clone(),
+        ],
         &revocation_index,
         TokenTimestamp::new(150),
     );
 
-    assert_eq!(validation.effective_tokens(), &[valid]);
+    assert_eq!(validation.effective_tokens(), &[TOKEN_VALID.clone()]);
     assert_eq!(validation.invalid_tokens().len(), 2);
     assert!(validation.invalid_tokens().iter().any(|token| {
         token.token_id() == &*TOKEN_ID_REVOKED && token.reason() == InvalidAuthorityReason::Revoked
@@ -289,16 +295,15 @@ fn policy_boundary_validation_strips_revoked_and_expired_tokens() {
 
 #[test]
 fn restore_revalidation_matches_policy_boundary_validation() {
-    let token = mint_authority_token("token", &["send_email"], 10, 100);
     let revocation_index = RevocationIndex::default();
 
     let boundary = validate_tokens_at_policy_boundary(
-        std::slice::from_ref(&token),
+        std::slice::from_ref(&*TOKEN_FOR_RESTORE),
         &revocation_index,
         TokenTimestamp::new(120),
     );
     let restored = revalidate_tokens_on_restore(
-        std::slice::from_ref(&token),
+        std::slice::from_ref(&*TOKEN_FOR_RESTORE),
         &revocation_index,
         TokenTimestamp::new(120),
     );
