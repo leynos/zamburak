@@ -1,15 +1,13 @@
 # Financial services policy: worked scenarios
 
 This document traces five concrete data flows — two happy paths and three
-unhappy paths — through the financial services policy defined in the
-[policy examples](policy-examples.md#example-4-financial-services). Each
-scenario shows how runtime taint tracking feeds labels into the policy
-evaluation cascade, and whether the outcome can be decided mechanistically (by
-the policy engine alone) or requires a human in the loop.
+unhappy paths — through the financial services policy defined in the policy
+examples[^1]. Each scenario shows how runtime taint tracking[^2] feeds labels
+into the policy evaluation cascade, and whether the outcome can be decided
+mechanistically (by the policy engine alone) or requires a human in the loop.
 
 For the full policy definition, evaluation cascade diagram, and schema
-reference, see
-[Example 4: Financial services](policy-examples.md#example-4-financial-services).
+reference, see Example 4: Financial services[^1].
 
 ## Scenario index
 
@@ -182,9 +180,9 @@ transitive dependency summary reveals the forbidden `AUTH_SECRET` label.
 ```
 
 The denial is mechanistic. The policy engine proved via transitive dependency
-summarisation that the `body` argument carries `AUTH_SECRET`, which the
+summarization that the `body` argument carries `AUTH_SECRET`, which the
 `forbids_confidentiality` rule forbids. The witness graph shows the full
-provenance chain from the original email read through the summarisation step to
+provenance chain from the original email read through the summarization step to
 the notification argument, without revealing the secret content itself — values
 are referenced by ID, and untrusted text is redacted.
 
@@ -251,7 +249,7 @@ class of violation; the integrity requirement is a hard constraint.
 
 ## Mechanistic and human-gated decisions compared
 
-The table below summarises the approval mode for each scenario.
+The table below summarizes the approval mode for each scenario.
 
 | Scenario                         | Outcome             | Decided by                  | Rationale                                                                          |
 | -------------------------------- | ------------------- | --------------------------- | ---------------------------------------------------------------------------------- |
@@ -337,10 +335,13 @@ flowchart TD
 evaluation cascade. Happy path B reaches the confirmation gate. Unhappy path B
 terminates at the confidentiality check.*
 
-## References
+______________________________________________________________________
 
-- [Policy examples](policy-examples.md) — parent document containing
-  the financial services policy definition and all other examples
-- [System design](zamburak-design-document.md) — authoritative
-  reference for taint tracking, label propagation, and policy evaluation
-  semantics
+[^1]: [Policy examples: Example 4: Financial
+    services](policy-examples.md#example-4-financial-services) — parent
+    document containing the financial services policy definition and all
+    other examples.
+
+[^2]: [System design](zamburak-design-document.md) — authoritative
+    reference for taint tracking, label propagation, and policy
+    evaluation semantics.

@@ -10,8 +10,8 @@ Each example includes a scenario description, a complete YAML policy
 definition, and a Mermaid flowchart illustrating the policy evaluation flow for
 that specific configuration.
 
-For schema reference, see the [system design](zamburak-design-document.md) and
-the JSON schema at `policies/schema.json`.
+For schema reference, see the system design[^1], the JSON schema[^2], the
+user's guide[^3], and the default policy[^4].
 
 ## Simple examples
 
@@ -26,7 +26,7 @@ is no write path to protect. The single tool, `get_weather`, is an
 This example demonstrates:
 
 - a minimal tool list (one tool),
-- the `ExternalRead` side-effect class,
+- the `ExternalRead` side effect class,
 - `Allow` as the default decision on a read-only tool,
 - the global `Deny` default action for unlisted tools, and
 - relaxed `strict_mode: false` since there are no write effects.
@@ -171,7 +171,7 @@ tools:
 For screen readers: the following flowchart shows policy evaluation for the
 permissive internal tooling policy. All tool call requests are allowed
 regardless of whether they match a listed tool. Listed tools provide documented
-side-effect classification. The global default action is `Allow`.
+side effect classification. The global default action is `Allow`.
 
 ```mermaid
 flowchart TD
@@ -204,7 +204,7 @@ decision levels across tools.
 
 This example demonstrates:
 
-- three tools with different side-effect classes and decisions,
+- three tools with different side effect classes and decisions,
 - `strict_mode: true` with `context_rules` on write tools,
 - `required_authority` tokens (`PaymentInitiateCap`, `EmailSendCap`),
 - `arg_rules` with both `forbids_confidentiality` and
@@ -304,7 +304,7 @@ A content publishing agent with a three-stage workflow: draft creation,
 moderation review, and final publication. Drafts are created using
 `RequireDraft`, moderation is a read operation to check content status, and
 publishing requires confirmation plus authority. This demonstrates the
-draft-to-commit workflow pattern described in the system design.
+draft-to-commit workflow pattern described in the system design[^1].
 
 This example demonstrates:
 
@@ -422,12 +422,12 @@ the web, look up contacts, query a remote Large Language Model (LLM), and
 manage files. This policy demonstrates the widest range of schema features:
 mixed read and write tools, multiple distinct authority tokens, argument rules
 with both integrity and confidentiality constraints, context rules on sensitive
-write tools, and LLM calls treated as exfiltration sinks with their own
-confidentiality restrictions.
+write tools, and LLM calls treated as exfiltration sinks with confidentiality
+restrictions.
 
 This example demonstrates:
 
-- six tools spanning the full range of side-effect classes and decision
+- six tools spanning the full range of side effect classes and decision
   types,
 - multiple authority tokens: `EmailSendCap`, `LlmRemotePromptCap`,
   `FileWriteCap`,
@@ -496,7 +496,7 @@ tools:
 ```
 
 For screen readers: the following flowchart shows the full personal assistant
-policy architecture. Tool call requests are first classified by side-effect
+policy architecture. Tool call requests are first classified by side effect
 class. Read tools (`get_last_email`, `web_search`, `lookup_contact`) are
 allowed directly. Write tools (`send_email`, `query_remote_llm`, `write_file`)
 pass through a shared evaluation cascade: context integrity check, authority
@@ -563,10 +563,13 @@ flowchart TD
 _Figure 6: Full personal assistant policy architecture showing read and write
 tool evaluation paths._
 
-## References
+______________________________________________________________________
 
-- [System design: canonical policy schema
-  v1](zamburak-design-document.md)
-- [User's guide: policy loader contract](users-guide.md)
-- [JSON schema](../policies/schema.json)
-- [Default policy](../policies/default.yaml)
+[^1]: [System design: canonical policy schema
+    v1](zamburak-design-document.md)
+
+[^2]: [JSON schema](../policies/schema.json)
+
+[^3]: [User's guide: policy loader contract](users-guide.md)
+
+[^4]: [Default policy](../policies/default.yaml)
