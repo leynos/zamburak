@@ -43,8 +43,8 @@ marked done.
   preserving the three-axis model from the design document.
 - Add unit tests and behavioural tests covering happy and unhappy paths plus
   edge cases.
-- Use `rstest-bdd` v0.5.0 for behavioural suites where lifecycle scenarios are
-  expressed as user-observable transitions.
+- Use `rstest-bdd` v0.5.0 for behaviour-driven development (BDD) suites where
+  lifecycle scenarios are expressed as user-observable transitions.
 - Record concrete lifecycle design decisions in
   `docs/zamburak-design-document.md`.
 - Update `docs/users-guide.md` with any new authority lifecycle API or

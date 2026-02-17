@@ -1,6 +1,6 @@
 //! Authority token lifecycle domain model and validation utilities.
 
-use std::collections::BTreeSet;
+use std::collections::{BTreeSet, HashSet};
 
 use thiserror::Error;
 
@@ -238,8 +238,10 @@ impl AuthorityToken {
         revocation_index: &RevocationIndex,
     ) -> Result<Self, AuthorityLifecycleError> {
         non_empty(&request.delegated_by, "delegated_by")?;
-        validate_lifetime(request.delegated_at, request.expires_at)?;
 
+        // Reject invalid parent tokens before inspecting the delegation request
+        // itself so that revoked or expired parents fail closed regardless of
+        // whether the request carries well-formed timestamps or scope.
         if revocation_index.is_revoked(parent.token_id()) {
             return Err(AuthorityLifecycleError::InvalidParentToken {
                 token_id: parent.token_id().clone(),
@@ -253,6 +255,8 @@ impl AuthorityToken {
                 reason: InvalidAuthorityReason::Expired,
             });
         }
+
+        validate_lifetime(request.delegated_at, request.expires_at)?;
 
         if !request.scope.is_strict_subset_of(parent.scope()) {
             return Err(AuthorityLifecycleError::DelegationScopeNotStrictSubset);
@@ -348,7 +352,7 @@ impl AuthorityToken {
 /// Host-managed revocation index for authority tokens.
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct RevocationIndex {
-    revoked_tokens: BTreeSet<AuthorityTokenId>,
+    revoked_tokens: HashSet<AuthorityTokenId>,
 }
 
 impl RevocationIndex {

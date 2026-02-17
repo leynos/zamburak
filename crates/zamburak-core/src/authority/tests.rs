@@ -8,13 +8,11 @@ use super::{
 };
 use rstest::rstest;
 
-// Test fixture constants to reduce string parameter repetition.
 const TEST_ISSUER: &str = "policy-host";
 const TEST_SUBJECT: &str = "assistant";
 const TEST_CAPABILITY: &str = "EmailSendCap";
 const TEST_DELEGATED_BY: &str = "policy-host";
 
-// Token name constants to reduce string literal usage.
 const TOKEN_NAME_PARENT: &str = "parent";
 const TOKEN_NAME_CHILD: &str = "child";
 const TOKEN_NAME_VALID: &str = "valid";
@@ -24,7 +22,6 @@ const TOKEN_NAME_TOKEN: &str = "token";
 const TOKEN_NAME_MINT_UNTRUSTED: &str = "mint-untrusted";
 const TOKEN_NAME_MINT_INVALID: &str = "mint-invalid-lifetime";
 
-// Pre-built domain type constants to reduce string parameter usage.
 lazy_static::lazy_static! {
     static ref TOKEN_ID_PARENT: AuthorityTokenId = token_id(TOKEN_NAME_PARENT);
     static ref TOKEN_ID_CHILD: AuthorityTokenId = token_id(TOKEN_NAME_CHILD);
@@ -317,4 +314,87 @@ fn restore_revalidation_matches_policy_boundary_validation() {
     );
 
     assert_eq!(restored, boundary);
+}
+
+#[test]
+fn domain_types_reject_empty_fields() {
+    let cases: Vec<(&str, Result<(), AuthorityLifecycleError>)> = vec![
+        ("token_id", AuthorityTokenId::try_from("").map(|_| ())),
+        ("subject", AuthoritySubject::try_from("").map(|_| ())),
+        ("capability", AuthorityCapability::try_from("").map(|_| ())),
+        ("scope_resource", ScopeResource::try_from("").map(|_| ())),
+    ];
+    for (expected_field, result) in cases {
+        assert!(
+            matches!(&result, Err(AuthorityLifecycleError::EmptyField { field }) if *field == expected_field),
+            "expected EmptyField({expected_field}), got: {result:?}"
+        );
+    }
+}
+
+#[test]
+fn mint_rejects_empty_issuer() {
+    assert_mint_fails(
+        MintRequestBuilder::new(TOKEN_NAME_MINT_UNTRUSTED)
+            .issuer("", IssuerTrust::HostTrusted)
+            .lifetime(10, 20)
+            .build(),
+        |err| matches!(err, AuthorityLifecycleError::EmptyField { field } if *field == "issuer"),
+    );
+}
+
+#[test]
+fn delegation_rejects_empty_delegated_by() {
+    let mut req = delegation_request_with_scope(&TOKEN_ID_CHILD, &SCOPE_SEND_EMAIL, 20, 120);
+    req.delegated_by = String::new();
+
+    let result = AuthorityToken::delegate(&TOKEN_PARENT, req, &RevocationIndex::default());
+    assert!(matches!(
+        result,
+        Err(AuthorityLifecycleError::EmptyField { field }) if field == "delegated_by"
+    ));
+}
+
+#[rstest]
+#[case::equal(100, 100)]
+#[case::reversed(120, 100)]
+fn delegation_rejects_invalid_request_lifetime(#[case] delegated_at: u64, #[case] expires_at: u64) {
+    assert_delegation_fails(
+        &TOKEN_PARENT,
+        delegation_request_with_scope(&TOKEN_ID_CHILD, &SCOPE_SEND_EMAIL, delegated_at, expires_at),
+        &RevocationIndex::default(),
+        |err| {
+            matches!(
+                err,
+                AuthorityLifecycleError::InvalidTokenLifetime { issued_at, .. }
+                    if *issued_at == delegated_at
+            )
+        },
+    );
+}
+
+#[rstest]
+#[case::before_expiry(299, false)]
+#[case::at_expiry(300, true)]
+#[case::after_expiry(301, true)]
+fn is_expired_at_boundary_conditions(#[case] time: u64, #[case] expected_expired: bool) {
+    // TOKEN_VALID expires at 300.
+    assert_eq!(
+        TOKEN_VALID.is_expired_at(TokenTimestamp::new(time)),
+        expected_expired
+    );
+}
+
+#[test]
+fn grants_respects_subject_capability_and_scope() {
+    let subj = TOKEN_VALID.subject().clone();
+    let cap = TOKEN_VALID.capability().clone();
+    let res = ScopeResource::try_from("send_email").expect("valid resource");
+
+    assert!(TOKEN_VALID.grants(&subj, &cap, &res));
+    assert!(!TOKEN_VALID.grants(&subject("other"), &cap, &res));
+    assert!(!TOKEN_VALID.grants(&subj, &capability("OtherCap"), &res));
+
+    let out = ScopeResource::try_from("calendar_write").expect("valid resource");
+    assert!(!TOKEN_VALID.grants(&subj, &cap, &out));
 }
