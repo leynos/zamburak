@@ -417,6 +417,12 @@ domain module. Key design choices:
 - Delegation from a revoked or expired parent is rejected with
   `InvalidParentToken` before scope or lifetime narrowing checks run
   (fail-closed ordering).
+- Delegation is rejected with `DelegationBeforeParentIssuance` if the
+  delegation start time precedes the parent issuance time, preventing child
+  tokens from granting authority before the parent became valid.
+- Boundary validation treats pre-issuance tokens (evaluation time before
+  `issued_at`) as invalid with reason `PreIssuance`, so future-dated tokens
+  cannot be exercised early.
 
 ### Verification, endorsement, and declassification
 

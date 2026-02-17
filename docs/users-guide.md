@@ -123,7 +123,8 @@ let token = AuthorityToken::mint(MintRequest {
 
 Delegated tokens must narrow both scope (strict subset) and lifetime (strict
 subset). Parent lineage is retained for audit. Delegation from revoked or
-expired parents is rejected before scope checks run.
+expired parents is rejected before scope checks run. The delegation start time
+must also be on or after the parent issuance time.
 
 ```rust
 use zamburak_core::{DelegationRequest, RevocationIndex};
@@ -158,8 +159,9 @@ revocation_index.revoke(token.token_id().clone());
 ### Policy boundary validation
 
 `PolicyEngine::validate_authority_tokens` partitions tokens into effective and
-invalid sets at a given evaluation time. Revoked and expired tokens are
-stripped from the effective set.
+invalid sets at a given evaluation time. Revoked, expired, and pre-issuance
+tokens (evaluation time before `issued_at`) are stripped from the effective
+set.
 
 ```rust
 let validation = engine.validate_authority_tokens(
@@ -174,7 +176,7 @@ let invalid = validation.invalid_tokens();
 ### Snapshot restore
 
 `revalidate_tokens_on_restore` applies the same validation as policy-boundary
-checks. On restore, any previously-valid tokens that have since been revoked or
+checks. On restore, any previously valid tokens that have since been revoked or
 expired are conservatively stripped.
 
 ### Error handling
@@ -187,7 +189,70 @@ All lifecycle operations return `Result<_, AuthorityLifecycleError>`:
 - `DelegationScopeNotStrictSubset` — delegated scope is not a proper subset,
 - `DelegationLifetimeNotStrictSubset` — delegated expiry is not before parent
   expiry,
-- `InvalidParentToken` — parent is revoked or expired at delegation time.
+- `InvalidParentToken` — parent is revoked or expired at delegation time,
+- `DelegationBeforeParentIssuance` — delegation start is before parent
+  issuance.
 
 All timestamps are injected via `TokenTimestamp` to ensure deterministic
 evaluation without wall-clock dependencies.
+
+## Consumer integration: localized diagnostics
+
+Zamburak uses injection-first localization. The host application owns locale
+negotiation and loader lifecycle; Zamburak never reads process locale
+environment variables or maintains mutable global state.
+
+### Host-owned loader setup
+
+Create a `FluentLanguageLoader` in the host application and pass it through
+a `FluentLocalizerAdapter` that implements the `Localizer` trait:
+
+```rust
+use zamburak_core::i18n::{FluentLocalizerAdapter, Localizer};
+use i18n_embed::fluent::FluentLanguageLoader;
+
+let loader: FluentLanguageLoader = /* host-configured loader */;
+let localizer: Box<dyn Localizer> = Box::new(
+    FluentLocalizerAdapter::new(loader),
+);
+```
+
+When no localization backend is configured, use the deterministic fallback:
+
+```rust
+use zamburak_core::i18n::NoOpLocalizer;
+
+let localizer = NoOpLocalizer;
+```
+
+### Loading Zamburak embedded assets
+
+Zamburak publishes embedded `.ftl` translation assets via `Localizations`.
+Load them into the host-owned loader so Zamburak messages are available:
+
+```rust
+use zamburak_core::i18n::Localizations;
+
+loader.load_assets(&Localizations, &requested_locales);
+```
+
+Resolution order is:
+
+1. host application catalogue entries,
+2. Zamburak bundled entries for the requested locale,
+3. Zamburak bundled `en-US` entries,
+4. caller-provided fallback text.
+
+### Rendering localized diagnostics
+
+Zamburak diagnostics expose a `render_localized` method that accepts an
+injected `&dyn Localizer` plus caller fallback copy:
+
+```rust
+let message = diagnostic.render_localized(&localizer, "fallback text");
+```
+
+Formatting failures and missing translations fall through the resolution
+chain and always produce deterministic output. See
+`adr-002-localization-and-internationalization-with-fluent.md` for the full
+design rationale.

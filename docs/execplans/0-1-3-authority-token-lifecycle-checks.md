@@ -197,7 +197,7 @@ marked done.
 - Decision: BDD step definitions avoid `expect()` in favour of `let...else`
   with `panic!()` to satisfy the workspace `clippy::expect_used` deny lint.
   Helper functions (`require_mint_result`, `require_delegation_result`,
-  `require_boundary_result`) centralise option unwrapping. Rationale:
+  `require_boundary_result`) centralize option unwrapping. Rationale:
   consistency with existing compatibility BDD tests and workspace lint rules.
   Date/Author: 2026-02-13
 

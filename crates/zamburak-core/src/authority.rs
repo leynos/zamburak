@@ -1,198 +1,21 @@
 //! Authority token lifecycle domain model and validation utilities.
 
-use std::collections::{BTreeSet, HashSet};
+mod errors;
+mod types;
+mod validation;
 
-use thiserror::Error;
+use std::collections::HashSet;
 
-/// Monotonic timestamp used for lifecycle evaluation boundaries.
-#[derive(Clone, Copy, Debug, Eq, Ord, PartialEq, PartialOrd)]
-pub struct TokenTimestamp(u64);
-
-impl TokenTimestamp {
-    /// Create a timestamp from seconds in the runtime clock domain.
-    #[must_use]
-    pub const fn new(seconds: u64) -> Self {
-        Self(seconds)
-    }
-
-    /// Return the wrapped timestamp value.
-    #[must_use]
-    pub const fn as_u64(&self) -> u64 {
-        self.0
-    }
-}
-
-/// Stable identifier for an authority token.
-#[derive(Clone, Debug, Eq, Ord, PartialEq, PartialOrd, Hash)]
-pub struct AuthorityTokenId(String);
-
-impl AuthorityTokenId {
-    /// Return the identifier as a string slice.
-    #[must_use]
-    pub fn as_str(&self) -> &str {
-        &self.0
-    }
-}
-
-impl std::fmt::Display for AuthorityTokenId {
-    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        formatter.write_str(&self.0)
-    }
-}
-
-impl TryFrom<&str> for AuthorityTokenId {
-    type Error = AuthorityLifecycleError;
-
-    fn try_from(value: &str) -> Result<Self, Self::Error> {
-        non_empty(value, "token_id")?;
-        Ok(Self(value.to_owned()))
-    }
-}
-
-/// Subject for whom authority is granted.
-#[derive(Clone, Debug, Eq, Ord, PartialEq, PartialOrd, Hash)]
-pub struct AuthoritySubject(String);
-
-impl AuthoritySubject {
-    /// Return the subject as a string slice.
-    #[must_use]
-    pub fn as_str(&self) -> &str {
-        &self.0
-    }
-}
-
-impl TryFrom<&str> for AuthoritySubject {
-    type Error = AuthorityLifecycleError;
-
-    fn try_from(value: &str) -> Result<Self, Self::Error> {
-        non_empty(value, "subject")?;
-        Ok(Self(value.to_owned()))
-    }
-}
-
-/// Capability encoded by an authority token.
-#[derive(Clone, Debug, Eq, Ord, PartialEq, PartialOrd, Hash)]
-pub struct AuthorityCapability(String);
-
-impl AuthorityCapability {
-    /// Return the capability as a string slice.
-    #[must_use]
-    pub fn as_str(&self) -> &str {
-        &self.0
-    }
-}
-
-impl TryFrom<&str> for AuthorityCapability {
-    type Error = AuthorityLifecycleError;
-
-    fn try_from(value: &str) -> Result<Self, Self::Error> {
-        non_empty(value, "capability")?;
-        Ok(Self(value.to_owned()))
-    }
-}
-
-/// Scope entry that an authority token may permit.
-#[derive(Clone, Debug, Eq, Ord, PartialEq, PartialOrd, Hash)]
-pub struct ScopeResource(String);
-
-impl ScopeResource {
-    /// Return the scope resource as a string slice.
-    #[must_use]
-    pub fn as_str(&self) -> &str {
-        &self.0
-    }
-}
-
-impl TryFrom<&str> for ScopeResource {
-    type Error = AuthorityLifecycleError;
-
-    fn try_from(value: &str) -> Result<Self, Self::Error> {
-        non_empty(value, "scope_resource")?;
-        Ok(Self(value.to_owned()))
-    }
-}
-
-/// Set of scope resources permitted by a token.
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub struct AuthorityScope {
-    resources: BTreeSet<ScopeResource>,
-}
-
-impl AuthorityScope {
-    /// Build a scope from resources, rejecting empty sets.
-    pub fn new(
-        resources: impl IntoIterator<Item = ScopeResource>,
-    ) -> Result<Self, AuthorityLifecycleError> {
-        let scope = Self {
-            resources: resources.into_iter().collect(),
-        };
-
-        if scope.resources.is_empty() {
-            return Err(AuthorityLifecycleError::EmptyField { field: "scope" });
-        }
-
-        Ok(scope)
-    }
-
-    /// Return whether this scope strictly narrows another scope.
-    #[must_use]
-    pub fn is_strict_subset_of(&self, parent: &Self) -> bool {
-        self.resources.is_subset(&parent.resources) && self.resources != parent.resources
-    }
-
-    /// Return whether the scope includes a specific resource.
-    #[must_use]
-    pub fn contains(&self, resource: &ScopeResource) -> bool {
-        self.resources.contains(resource)
-    }
-}
-
-/// Trust class of the minting issuer.
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub enum IssuerTrust {
-    /// Trusted host-side minting authority.
-    HostTrusted,
-    /// Untrusted minting source.
-    Untrusted,
-}
-
-/// Parameters for minting an authority token.
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub struct MintRequest {
-    /// New token identifier.
-    pub token_id: AuthorityTokenId,
-    /// Minting issuer name for audit provenance.
-    pub issuer: String,
-    /// Minting issuer trust class.
-    pub issuer_trust: IssuerTrust,
-    /// Subject receiving authority.
-    pub subject: AuthoritySubject,
-    /// Capability encoded into the token.
-    pub capability: AuthorityCapability,
-    /// Scope resources the token permits.
-    pub scope: AuthorityScope,
-    /// Token issue time.
-    pub issued_at: TokenTimestamp,
-    /// Token expiry time.
-    pub expires_at: TokenTimestamp,
-}
-
-/// Parameters for delegating an existing authority token.
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub struct DelegationRequest {
-    /// New delegated token identifier.
-    pub token_id: AuthorityTokenId,
-    /// Delegating issuer name for lineage.
-    pub delegated_by: String,
-    /// Delegated subject.
-    pub subject: AuthoritySubject,
-    /// Delegated scope.
-    pub scope: AuthorityScope,
-    /// Delegation time.
-    pub delegated_at: TokenTimestamp,
-    /// Delegated token expiry.
-    pub expires_at: TokenTimestamp,
-}
+pub use errors::AuthorityLifecycleError;
+use errors::{non_empty, validate_lifetime};
+pub use types::{
+    AuthorityCapability, AuthorityScope, AuthoritySubject, AuthorityTokenId, DelegationRequest,
+    InvalidAuthorityReason, IssuerTrust, MintRequest, ScopeResource, TokenTimestamp,
+};
+pub use validation::{
+    AuthorityBoundaryValidation, InvalidAuthorityToken, revalidate_tokens_on_restore,
+    validate_tokens_at_policy_boundary,
+};
 
 /// Host-minted authority token with lineage and lifecycle fields.
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -256,6 +79,13 @@ impl AuthorityToken {
             });
         }
 
+        if request.delegated_at < parent.issued_at() {
+            return Err(AuthorityLifecycleError::DelegationBeforeParentIssuance {
+                delegated_at: request.delegated_at.as_u64(),
+                parent_issued_at: parent.issued_at().as_u64(),
+            });
+        }
+
         validate_lifetime(request.delegated_at, request.expires_at)?;
 
         if !request.scope.is_strict_subset_of(parent.scope()) {
@@ -298,6 +128,12 @@ impl AuthorityToken {
     #[must_use]
     pub fn is_expired_at(&self, evaluation_time: TokenTimestamp) -> bool {
         evaluation_time >= self.expires_at
+    }
+
+    /// Return whether the token has not yet reached its issuance time.
+    #[must_use]
+    pub fn is_pre_issuance_at(&self, evaluation_time: TokenTimestamp) -> bool {
+        evaluation_time < self.issued_at
     }
 
     /// Return the token identifier.
@@ -368,182 +204,7 @@ impl RevocationIndex {
     }
 }
 
-/// Invalidity reason recorded for stripped authority tokens.
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub enum InvalidAuthorityReason {
-    /// Token was revoked in the revocation index.
-    Revoked,
-    /// Token expired at evaluation time.
-    Expired,
-}
-
-impl std::fmt::Display for InvalidAuthorityReason {
-    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let reason = match self {
-            Self::Revoked => "revoked",
-            Self::Expired => "expired",
-        };
-        formatter.write_str(reason)
-    }
-}
-
-/// Record describing a token stripped during lifecycle validation.
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub struct InvalidAuthorityToken {
-    token_id: AuthorityTokenId,
-    reason: InvalidAuthorityReason,
-}
-
-impl InvalidAuthorityToken {
-    /// Return the stripped token identifier.
-    #[must_use]
-    pub const fn token_id(&self) -> &AuthorityTokenId {
-        &self.token_id
-    }
-
-    /// Return the invalidation reason.
-    #[must_use]
-    pub const fn reason(&self) -> InvalidAuthorityReason {
-        self.reason
-    }
-}
-
-/// Result of authority lifecycle validation at a policy boundary.
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub struct AuthorityBoundaryValidation {
-    effective_tokens: Vec<AuthorityToken>,
-    invalid_tokens: Vec<InvalidAuthorityToken>,
-}
-
-impl AuthorityBoundaryValidation {
-    /// Return tokens that remain valid after lifecycle checks.
-    #[must_use]
-    pub fn effective_tokens(&self) -> &[AuthorityToken] {
-        &self.effective_tokens
-    }
-
-    /// Return tokens stripped during lifecycle checks.
-    #[must_use]
-    pub fn invalid_tokens(&self) -> &[InvalidAuthorityToken] {
-        &self.invalid_tokens
-    }
-}
-
-/// Validate authority tokens at a policy-evaluation boundary.
-#[must_use]
-pub fn validate_tokens_at_policy_boundary(
-    tokens: &[AuthorityToken],
-    revocation_index: &RevocationIndex,
-    evaluation_time: TokenTimestamp,
-) -> AuthorityBoundaryValidation {
-    let mut effective_tokens = Vec::new();
-    let mut invalid_tokens = Vec::new();
-
-    for token in tokens {
-        if revocation_index.is_revoked(token.token_id()) {
-            invalid_tokens.push(InvalidAuthorityToken {
-                token_id: token.token_id().clone(),
-                reason: InvalidAuthorityReason::Revoked,
-            });
-            continue;
-        }
-
-        if token.is_expired_at(evaluation_time) {
-            invalid_tokens.push(InvalidAuthorityToken {
-                token_id: token.token_id().clone(),
-                reason: InvalidAuthorityReason::Expired,
-            });
-            continue;
-        }
-
-        effective_tokens.push(token.clone());
-    }
-
-    AuthorityBoundaryValidation {
-        effective_tokens,
-        invalid_tokens,
-    }
-}
-
-/// Revalidate authority tokens on snapshot restore.
-#[must_use]
-pub fn revalidate_tokens_on_restore(
-    tokens: &[AuthorityToken],
-    revocation_index: &RevocationIndex,
-    restore_time: TokenTimestamp,
-) -> AuthorityBoundaryValidation {
-    validate_tokens_at_policy_boundary(tokens, revocation_index, restore_time)
-}
-
-/// Authority lifecycle validation errors.
-#[derive(Clone, Debug, Error, Eq, PartialEq)]
-pub enum AuthorityLifecycleError {
-    /// Required text field is empty.
-    #[error("authority field `{field}` cannot be empty")]
-    EmptyField {
-        /// Empty field name.
-        field: &'static str,
-    },
-    /// Token lifetime does not progress forward in time.
-    #[error(
-        "token lifetime is invalid: issued_at `{issued_at}` must be before expires_at `{expires_at}`"
-    )]
-    InvalidTokenLifetime {
-        /// Token issuance timestamp.
-        issued_at: u64,
-        /// Token expiry timestamp.
-        expires_at: u64,
-    },
-    /// Issuer is not trusted for minting.
-    #[error("issuer `{issuer}` is not trusted to mint authority tokens")]
-    UntrustedMinter {
-        /// Untrusted issuer name.
-        issuer: String,
-    },
-    /// Delegated scope does not narrow the parent scope.
-    #[error("delegated scope must be a strict subset of parent scope")]
-    DelegationScopeNotStrictSubset,
-    /// Delegated lifetime does not narrow the parent lifetime.
-    #[error(
-        "delegated expiry `{delegated_expires_at}` must be before parent expiry `{parent_expires_at}`"
-    )]
-    DelegationLifetimeNotStrictSubset {
-        /// Delegated token expiry timestamp.
-        delegated_expires_at: u64,
-        /// Parent token expiry timestamp.
-        parent_expires_at: u64,
-    },
-    /// Parent token cannot be delegated due to lifecycle invalidity.
-    #[error("parent token `{token_id}` cannot be delegated because it is {reason}")]
-    InvalidParentToken {
-        /// Parent token identifier.
-        token_id: AuthorityTokenId,
-        /// Parent invalidity reason.
-        reason: InvalidAuthorityReason,
-    },
-}
-
-fn non_empty(value: &str, field: &'static str) -> Result<(), AuthorityLifecycleError> {
-    if value.trim().is_empty() {
-        return Err(AuthorityLifecycleError::EmptyField { field });
-    }
-
-    Ok(())
-}
-
-fn validate_lifetime(
-    issued_at: TokenTimestamp,
-    expires_at: TokenTimestamp,
-) -> Result<(), AuthorityLifecycleError> {
-    if expires_at <= issued_at {
-        return Err(AuthorityLifecycleError::InvalidTokenLifetime {
-            issued_at: issued_at.as_u64(),
-            expires_at: expires_at.as_u64(),
-        });
-    }
-
-    Ok(())
-}
-
+#[cfg(test)]
+mod test_helpers;
 #[cfg(test)]
 mod tests;

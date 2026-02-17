@@ -167,10 +167,7 @@ impl PolicyEngine {
     /// # Examples
     ///
     /// ```rust
-    /// use zamburak_core::{
-    ///     AuthorityToken, IssuerTrust, MintRequest, RevocationIndex,
-    ///     TokenTimestamp,
-    /// };
+    /// use zamburak_core::{RevocationIndex, TokenTimestamp};
     /// use zamburak_policy::{PolicyEngine, PolicyLoadError};
     ///
     /// let policy_yaml = r#"
