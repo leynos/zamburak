@@ -2,10 +2,9 @@
 
 When building a reusable Rust library (a crate), providing localized text for
 elements such as error messages and user interface (UI) components presents a
-unique challenge.
-The library itself cannot and should not make assumptions about the end user's
-language preference. The final application that consumes the library is the
-sole authority on the current locale.
+unique challenge. The library itself cannot and should not make assumptions
+about the end user's language preference. The final application that consumes
+the library is the sole authority on the current locale.
 
 The solution is a robust architectural pattern based on a clear separation of
 concerns and dependency injection. In this model, the library provides the

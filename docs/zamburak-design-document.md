@@ -954,6 +954,77 @@ Audit persistence requires:
 - configurable retention by age and size,
 - controlled export path with explicit re-redaction checks.
 
+## Policy visualization
+
+### Motivation
+
+Policy definitions are declarative YAML structures. As policies grow in
+complexity — multiple tools, layered authority requirements, argument rules
+with integrity and confidentiality constraints, and context rules — the
+evaluation cascade becomes difficult to review by reading YAML alone. Automatic
+generation of Mermaid flowchart diagrams from policy files provides a visual
+representation of the decision flow for each tool, making policy review, audit,
+and debugging faster and less error-prone.
+
+### Generation approach
+
+A code generator reads a canonical schema v1 policy definition and emits a
+Mermaid `flowchart TD` diagram for each tool entry. The generated diagram
+follows the same evaluation order documented in "Policy evaluation semantics"
+above:
+
+1. context rules (`deny_if_pc_integrity_contains`),
+2. authority token requirements (`required_authority`),
+3. integrity requirements (`requires_integrity` on each argument),
+4. confidentiality restrictions (`forbids_confidentiality` on each
+   argument),
+5. default decision (`Allow`, `Deny`, `RequireConfirmation`, or
+   `RequireDraft`).
+
+Each stage that is present in the tool's policy produces a decision node in the
+diagram. Stages that are absent (because the tool has no `context_rules`, for
+example) are omitted, keeping the output concise.
+
+A global summary diagram is also generated showing all tools organized by side
+effect class (`ExternalRead` vs `ExternalWrite`) with their default decisions.
+
+### Rendering with mmdr
+
+Mermaid text is rendered to SVG or PNG using
+[mmdr](https://github.com/1jehuang/mermaid-rs-renderer), a native Rust Mermaid
+renderer. mmdr eliminates the browser dependency of the official `mermaid-cli`
+and renders diagrams ~100–1400x faster than mermaid-cli (circa 3 ms per diagram
+versus 2–3 s), making batch rendering of all policies in a repository practical
+as a CI step.
+
+The generation pipeline is:
+
+1. parse policy YAML to `PolicyDefinition`,
+2. emit Mermaid text per tool and per policy,
+3. render via mmdr to SVG or PNG.
+
+### Output artefacts
+
+Generated diagrams are written to a configurable output directory. Suggested
+defaults:
+
+- `docs/generated/` for committed reference diagrams,
+- CI artefacts for ephemeral per-run outputs.
+
+Generated files must not be hand-edited. A header comment in each Mermaid
+source file indicates that it was auto-generated and names the source policy
+file.
+
+### Integration points
+
+- **CI**: diagram generation runs on every policy file change;
+  rendering failures are merge-blocking.
+- **Documentation**: the [policy examples](policy-examples.md)
+  document demonstrates the style of diagram that the generator produces.
+- **Audit**: generated diagrams can be attached to audit evidence
+  packages to provide visual confirmation of the policy that was active during
+  an audited execution.
+
 ## Verification and evaluation strategy
 
 ### Mechanistic correctness requirements
@@ -1087,7 +1158,8 @@ This design covers:
 - LLM sink governance,
 - audit semantics,
 - localization contracts for user-facing diagnostics in library deployments,
-- evaluation requirements.
+- evaluation requirements,
+- policy visualization approach and tooling.
 
 ### Out of scope for this document
 
@@ -1121,3 +1193,5 @@ Technology baseline and verification target expectations are tracked in
 - Dromedary project: <https://github.com/microsoft/dromedary>
 - [ADR 002 localization architecture](adr-002-localization-and-internationalization-with-fluent.md)
 - Pydantic AI: <https://github.com/pydantic/pydantic-ai>
+- mmdr (mermaid-rs-renderer):
+  <https://github.com/1jehuang/mermaid-rs-renderer>

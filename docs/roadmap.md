@@ -696,6 +696,31 @@ completion criteria so the work can be sequenced and assessed without ambiguity.
   - Out of scope: non-deterministic external-call test execution in CI.
   - Completion criteria: script tests pass in CI with deterministic fixtures,
     and script failures are merge-blocking.
+- [ ] Task 5.3.3: Implement automatic Mermaid diagram generation from
+      Zamburak policy files with mmdr rendering.
+  - Requirement signposts:
+    - `docs/zamburak-design-document.md` section "Policy visualization",
+    - `docs/zamburak-design-document.md` section
+      "Policy evaluation semantics",
+    - `docs/scripting-standards.md` sections
+      "Cyclopts CLI pattern (environment-first)" and
+      "Plumbum: command calling and pipelines",
+    - `docs/repository-layout.md` section "Root and operational files"
+      (`scripts/`).
+  - Dependencies: Task 0.1.1, Task 5.3.1, and Task 5.3.2.
+  - In scope: Rust binary that reads a canonical v1 policy
+    YAML file and emits one Mermaid `flowchart TD` per tool plus a
+    global summary diagram; rendering of emitted Mermaid text to SVG
+    and PNG via mmdr; CI integration so that diagram generation runs
+    on policy file changes and rendering failures are merge-blocking.
+  - Out of scope: interactive policy editors, real-time dashboard
+    rendering, diagram generation for schema v0 without prior
+    migration.
+  - Completion criteria: running the generator against
+    `policies/default.yaml` produces valid Mermaid text that passes
+    nixie validation, rendered SVG and PNG artefacts are written to
+    `docs/generated/`, and CI wiring blocks merges when generation or
+    rendering fails.
 
 ## Phase 6: Localization and user-facing diagnostics
 
@@ -818,6 +843,7 @@ when the task is complete.
 | 5.2.2 | `tests/benchmarks/`, `scripts/`, `.github/workflows/`                                                                                     | Model-in-loop adversarial benchmark trends are produced in CI.         |
 | 5.3.1 | `scripts/`, `scripts/tests/`                                                                                                              | New scripts comply with Cyclopts, Plumbum, and Pathlib standards.      |
 | 5.3.2 | `scripts/tests/`, `.github/workflows/`, `docs/scripting-standards.md`                                                                     | Script tests and CI wiring are deterministic and enforced.             |
+| 5.3.3 | `scripts/`, `scripts/tests/`, `docs/generated/`, `.github/workflows/`                                                                     | Policy diagrams are auto-generated via mmdr and CI-enforced.           |
 | 6.1.1 | `crates/zamburak-core/src/i18n/mod.rs`, `crates/zamburak-core/src/i18n/localizer.rs`, `tests/integration/`                                | Core localization contracts enforce explicit localizer injection.      |
 | 6.1.2 | `crates/zamburak-core/src/i18n/fluent_adapter.rs`, `crates/zamburak-core/src/i18n/localizations.rs`, `locales/`                           | Fluent adapters compose with host loaders and bundled resources.       |
 | 6.2.1 | `crates/zamburak-policy/src/diagnostics.rs`, `crates/zamburak-agent/src/confirmation.rs`, `crates/zamburak-tools/src/`                    | User-facing diagnostics expose explicit localized rendering paths.     |
