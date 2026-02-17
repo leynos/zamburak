@@ -1,15 +1,24 @@
 //! Behavioural tests validating authority token lifecycle conformance.
 
+mod helpers;
+
 use rstest::fixture;
 use rstest_bdd_macros::{given, scenario, then, when};
 use zamburak_core::{
-    AuthorityBoundaryValidation, AuthorityCapability, AuthorityIssuer, AuthorityLifecycleError,
-    AuthorityScope, AuthoritySubject, AuthorityToken, AuthorityTokenId, DelegationRequest,
-    InvalidAuthorityReason, IssuerTrust, MintRequest, RevocationIndex, ScopeResource,
-    TokenTimestamp, revalidate_tokens_on_restore, validate_tokens_at_policy_boundary,
+    AuthorityBoundaryValidation, AuthorityLifecycleError, AuthorityToken, AuthorityTokenId,
+    DelegationRequest, InvalidAuthorityReason, MintRequest, RevocationIndex, TokenTimestamp,
+    revalidate_tokens_on_restore, validate_tokens_at_policy_boundary,
 };
 
-// ── World ──────────────────────────────────────────────────────────
+use helpers::{
+    IssuerConfig, assert_delegation_rejected_expired_parent, assert_delegation_rejected_lifetime,
+    assert_delegation_rejected_revoked_parent, assert_delegation_rejected_scope,
+    assert_invalid_token_stripped, assert_mint_rejected_lifetime, assert_mint_rejected_untrusted,
+    assert_no_effective_tokens, assert_valid_token_remains, create_delegation_request,
+    create_delegation_request_at, create_mint_request, create_token_set_with_expired,
+    create_token_set_with_revoked, make_scope, mint_fixture, require_delegation_result,
+    require_mint_result,
+};
 
 #[derive(Default)]
 struct LifecycleWorld {
@@ -31,211 +40,6 @@ struct LifecycleWorld {
 fn world() -> LifecycleWorld {
     LifecycleWorld::default()
 }
-
-// ── Helpers ────────────────────────────────────────────────────────
-
-fn make_token_id(name: &str) -> AuthorityTokenId {
-    let Ok(id) = AuthorityTokenId::try_from(name) else {
-        panic!("test token id '{name}' is invalid");
-    };
-    id
-}
-
-fn make_issuer(name: &str) -> AuthorityIssuer {
-    let Ok(issuer) = AuthorityIssuer::try_from(name) else {
-        panic!("test issuer '{name}' is invalid");
-    };
-    issuer
-}
-
-fn make_subject(name: &str) -> AuthoritySubject {
-    let Ok(subject) = AuthoritySubject::try_from(name) else {
-        panic!("test subject '{name}' is invalid");
-    };
-    subject
-}
-
-fn make_capability(name: &str) -> AuthorityCapability {
-    let Ok(capability) = AuthorityCapability::try_from(name) else {
-        panic!("test capability '{name}' is invalid");
-    };
-    capability
-}
-
-fn make_scope(resources: &[&str]) -> AuthorityScope {
-    let parsed: Vec<ScopeResource> = resources
-        .iter()
-        .map(|r| {
-            let Ok(resource) = ScopeResource::try_from(*r) else {
-                panic!("test scope resource '{r}' is invalid");
-            };
-            resource
-        })
-        .collect();
-    let Ok(scope) = AuthorityScope::new(parsed) else {
-        panic!("test scope is invalid");
-    };
-    scope
-}
-
-fn mint_fixture(
-    token_name: &str,
-    scope_resources: &[&str],
-    issued_at: u64,
-    expires_at: u64,
-) -> AuthorityToken {
-    let Ok(token) = AuthorityToken::mint(MintRequest {
-        token_id: make_token_id(token_name),
-        issuer: make_issuer("policy-host"),
-        issuer_trust: IssuerTrust::HostTrusted,
-        subject: make_subject("assistant"),
-        capability: make_capability("EmailSendCap"),
-        scope: make_scope(scope_resources),
-        issued_at: TokenTimestamp::new(issued_at),
-        expires_at: TokenTimestamp::new(expires_at),
-    }) else {
-        panic!("mint fixture '{token_name}' is invalid");
-    };
-    token
-}
-
-fn require_mint_result(world: &LifecycleWorld) -> &Result<AuthorityToken, AuthorityLifecycleError> {
-    let Some(result) = world.mint_result.as_ref() else {
-        panic!("mint step must run before assertion");
-    };
-    result
-}
-
-fn require_delegation_result(
-    world: &LifecycleWorld,
-) -> &Result<AuthorityToken, AuthorityLifecycleError> {
-    let Some(result) = world.delegation_result.as_ref() else {
-        panic!("delegation step must run before assertion");
-    };
-    result
-}
-
-fn require_boundary_result(world: &LifecycleWorld) -> &AuthorityBoundaryValidation {
-    let Some(result) = world.boundary_result.as_ref() else {
-        panic!("boundary validation step must run before assertion");
-    };
-    result
-}
-
-/// Generic assertion for mint result error variants.
-fn assert_mint_error<F>(world: &LifecycleWorld, predicate: F, error_desc: &str)
-where
-    F: Fn(&AuthorityLifecycleError) -> bool,
-{
-    let result = require_mint_result(world);
-    match result {
-        Err(err) if predicate(err) => {} // success
-        _ => panic!("expected {error_desc}, got: {result:?}"),
-    }
-}
-
-/// Generic assertion for delegation result error variants.
-fn assert_delegation_error<F>(world: &LifecycleWorld, predicate: F, error_desc: &str)
-where
-    F: Fn(&AuthorityLifecycleError) -> bool,
-{
-    let result = require_delegation_result(world);
-    match result {
-        Err(err) if predicate(err) => {} // success
-        _ => panic!("expected {error_desc}, got: {result:?}"),
-    }
-}
-
-/// Helper to assert that a token with the expected invalid ID is present in the
-/// invalid tokens list with the specified reason.
-fn assert_invalid_token_stripped(
-    world: &LifecycleWorld,
-    expected_reason: InvalidAuthorityReason,
-    reason_desc: &str,
-) {
-    let validation = require_boundary_result(world);
-    let Some(invalid_id) = world.expected_invalid_id.as_ref() else {
-        panic!("expected invalid id must be set");
-    };
-
-    assert!(
-        validation
-            .invalid_tokens()
-            .iter()
-            .any(|t| t.token_id() == invalid_id && t.reason() == expected_reason),
-        "expected {reason_desc} token to be stripped"
-    );
-}
-
-/// Configuration for the issuer of a mint request.
-#[derive(Clone, Copy)]
-enum IssuerConfig {
-    /// Host-trusted issuer (policy-host).
-    HostTrusted,
-    /// Untrusted issuer (remote-agent).
-    Untrusted,
-}
-
-impl IssuerConfig {
-    /// Returns the issuer identity for this configuration.
-    fn issuer(self) -> AuthorityIssuer {
-        make_issuer(match self {
-            Self::HostTrusted => "policy-host",
-            Self::Untrusted => "remote-agent",
-        })
-    }
-
-    /// Returns the issuer trust level for this configuration.
-    const fn issuer_trust(self) -> IssuerTrust {
-        match self {
-            Self::HostTrusted => IssuerTrust::HostTrusted,
-            Self::Untrusted => IssuerTrust::Untrusted,
-        }
-    }
-}
-
-/// Helper to create a mint request with configurable issuer trust.
-fn create_mint_request(
-    world: &mut LifecycleWorld,
-    subject: &str,
-    capability: &str,
-    issuer_config: IssuerConfig,
-) {
-    world.mint_request = Some(MintRequest {
-        token_id: make_token_id("mint-token"),
-        issuer: issuer_config.issuer(),
-        issuer_trust: issuer_config.issuer_trust(),
-        subject: make_subject(subject),
-        capability: make_capability(capability),
-        scope: make_scope(&["placeholder"]),
-        issued_at: TokenTimestamp::new(0),
-        expires_at: TokenTimestamp::new(1),
-    });
-}
-
-/// Helper to create a token set with one valid and one revoked token.
-fn create_token_set_with_revoked(world: &mut LifecycleWorld) {
-    let valid = mint_fixture("valid-tok", &["send_email"], 10, 1000);
-    let revoked = mint_fixture("revoked-tok", &["send_email"], 10, 1000);
-
-    world.revocation_index.revoke(revoked.token_id().clone());
-
-    world.expected_valid_id = Some(valid.token_id().clone());
-    world.expected_invalid_id = Some(revoked.token_id().clone());
-    world.token_set = vec![valid, revoked];
-}
-
-/// Helper to create a token set with one valid and one expired token.
-fn create_token_set_with_expired(world: &mut LifecycleWorld) {
-    let valid = mint_fixture("valid-tok", &["send_email"], 10, 1000);
-    let expired = mint_fixture("expired-tok", &["send_email"], 10, 100);
-
-    world.expected_valid_id = Some(valid.token_id().clone());
-    world.expected_invalid_id = Some(expired.token_id().clone());
-    world.token_set = vec![valid, expired];
-}
-
-// ── Given: minting ─────────────────────────────────────────────────
 
 #[given("a host-trusted minting request for subject {subject} with capability {capability}")]
 fn host_trusted_mint_request(world: &mut LifecycleWorld, subject: String, capability: String) {
@@ -262,8 +66,6 @@ fn set_mint_lifetime(world: &mut LifecycleWorld, issued_at: u64, expires_at: u64
     }
 }
 
-// ── When: minting ──────────────────────────────────────────────────
-
 #[when("the host mints the authority token")]
 fn do_mint(world: &mut LifecycleWorld) {
     let Some(request) = world.mint_request.take() else {
@@ -271,8 +73,6 @@ fn do_mint(world: &mut LifecycleWorld) {
     };
     world.mint_result = Some(AuthorityToken::mint(request));
 }
-
-// ── Then: minting ──────────────────────────────────────────────────
 
 #[then("the mint succeeds")]
 fn mint_succeeds(world: &LifecycleWorld) {
@@ -282,20 +82,12 @@ fn mint_succeeds(world: &LifecycleWorld) {
 
 #[then("the mint is rejected as untrusted")]
 fn mint_rejected_untrusted(world: &LifecycleWorld) {
-    assert_mint_error(
-        world,
-        |err| matches!(err, AuthorityLifecycleError::UntrustedMinter { .. }),
-        "UntrustedMinter",
-    );
+    assert_mint_rejected_untrusted(world);
 }
 
 #[then("the mint is rejected for invalid lifetime")]
 fn mint_rejected_lifetime(world: &LifecycleWorld) {
-    assert_mint_error(
-        world,
-        |err| matches!(err, AuthorityLifecycleError::InvalidTokenLifetime { .. }),
-        "InvalidTokenLifetime",
-    );
+    assert_mint_rejected_lifetime(world);
 }
 
 #[then("the minted token encodes the declared subject and capability")]
@@ -320,8 +112,6 @@ fn minted_no_parent(world: &LifecycleWorld) {
     );
 }
 
-// ── Given: delegation ──────────────────────────────────────────────
-
 #[given("a minted parent token with scope {res_a} and {res_b} expiring at {expires_at:u64}")]
 fn minted_parent(world: &mut LifecycleWorld, res_a: String, res_b: String, expires_at: u64) {
     world.parent_token = Some(mint_fixture("parent", &[&res_a, &res_b], 10, expires_at));
@@ -332,35 +122,6 @@ fn narrowed_delegation(world: &mut LifecycleWorld, res: String, expires_at: u64)
     create_delegation_request(world, &[&res], expires_at);
 }
 
-/// Helper to create a delegation request with given scope resources.
-fn create_delegation_request(world: &mut LifecycleWorld, resources: &[&str], expires_at: u64) {
-    create_delegation_request_at(world, resources, 20, expires_at);
-}
-
-/// Helper to create a delegation request with custom delegation time.
-fn create_delegation_request_at(
-    world: &mut LifecycleWorld,
-    resources: &[&str],
-    delegated_at: u64,
-    expires_at: u64,
-) {
-    world.delegation_request = Some(DelegationRequest {
-        token_id: make_token_id("child"),
-        delegated_by: make_issuer("policy-host"),
-        subject: make_subject("assistant"),
-        scope: make_scope(resources),
-        delegated_at: TokenTimestamp::new(delegated_at),
-        expires_at: TokenTimestamp::new(expires_at),
-    });
-}
-
-/// Scope widening delegation step.
-///
-/// The feature file passes three resource names plus an expiry time. The
-/// macro expands this into five parameters (world + 4 captures) which
-/// exceeds the default Clippy argument limit. A tightly-scoped suppression
-/// is appropriate here because the parameter count is driven by the Gherkin
-/// step text, not by poor decomposition.
 #[expect(
     clippy::too_many_arguments,
     reason = "parameter count driven by Gherkin step captures"
@@ -401,8 +162,6 @@ fn revoke_parent(world: &mut LifecycleWorld) {
     world.revocation_index.revoke(parent.token_id().clone());
 }
 
-// ── When: delegation ───────────────────────────────────────────────
-
 #[when("the delegation is attempted")]
 fn do_delegate(world: &mut LifecycleWorld) {
     let Some(parent) = world.parent_token.as_ref() else {
@@ -417,8 +176,6 @@ fn do_delegate(world: &mut LifecycleWorld) {
         &world.revocation_index,
     ));
 }
-
-// ── Then: delegation ───────────────────────────────────────────────
 
 #[then("the delegation succeeds")]
 fn delegation_succeeds(world: &LifecycleWorld) {
@@ -447,62 +204,23 @@ fn delegation_lineage(world: &LifecycleWorld) {
 
 #[then("the delegation is rejected for non-strict scope")]
 fn delegation_rejected_scope(world: &LifecycleWorld) {
-    assert_delegation_error(
-        world,
-        |err| matches!(err, AuthorityLifecycleError::DelegationScopeNotStrictSubset),
-        "DelegationScopeNotStrictSubset",
-    );
+    assert_delegation_rejected_scope(world);
 }
 
 #[then("the delegation is rejected for non-strict lifetime")]
 fn delegation_rejected_lifetime(world: &LifecycleWorld) {
-    assert_delegation_error(
-        world,
-        |err| {
-            matches!(
-                err,
-                AuthorityLifecycleError::DelegationLifetimeNotStrictSubset { .. }
-            )
-        },
-        "DelegationLifetimeNotStrictSubset",
-    );
+    assert_delegation_rejected_lifetime(world);
 }
 
 #[then("the delegation is rejected because the parent is revoked")]
 fn delegation_rejected_revoked_parent(world: &LifecycleWorld) {
-    assert_delegation_error(
-        world,
-        |err| {
-            matches!(
-                err,
-                AuthorityLifecycleError::InvalidParentToken {
-                    reason: InvalidAuthorityReason::Revoked,
-                    ..
-                }
-            )
-        },
-        "InvalidParentToken(Revoked)",
-    );
+    assert_delegation_rejected_revoked_parent(world);
 }
 
 #[then("the delegation is rejected because the parent is expired")]
 fn delegation_rejected_expired_parent(world: &LifecycleWorld) {
-    assert_delegation_error(
-        world,
-        |err| {
-            matches!(
-                err,
-                AuthorityLifecycleError::InvalidParentToken {
-                    reason: InvalidAuthorityReason::Expired,
-                    ..
-                }
-            )
-        },
-        "InvalidParentToken(Expired)",
-    );
+    assert_delegation_rejected_expired_parent(world);
 }
-
-// ── Given: boundary / restore ──────────────────────────────────────
 
 #[given("a set of authority tokens including a revoked token")]
 fn token_set_with_revoked(world: &mut LifecycleWorld) {
@@ -520,8 +238,6 @@ fn token_set_all_expired(world: &mut LifecycleWorld) {
     let late = mint_fixture("late-tok", &["send_email"], 10, 150);
     world.token_set = vec![early, late];
 }
-
-// ── When: boundary / restore ───────────────────────────────────────
 
 #[when("the tokens are validated at a policy boundary at time {eval_time:u64}")]
 fn validate_at_boundary(world: &mut LifecycleWorld, eval_time: u64) {
@@ -541,8 +257,6 @@ fn revalidate_on_restore(world: &mut LifecycleWorld, restore_time: u64) {
     ));
 }
 
-// ── Then: boundary / restore ───────────────────────────────────────
-
 #[then("the revoked token is stripped from the effective set")]
 fn revoked_stripped(world: &LifecycleWorld) {
     assert_invalid_token_stripped(world, InvalidAuthorityReason::Revoked, "revoked");
@@ -555,31 +269,13 @@ fn expired_stripped(world: &LifecycleWorld) {
 
 #[then("the valid tokens remain in the effective set")]
 fn valid_tokens_remain(world: &LifecycleWorld) {
-    let validation = require_boundary_result(world);
-    let Some(valid_id) = world.expected_valid_id.as_ref() else {
-        panic!("expected valid id must be set");
-    };
-
-    assert!(
-        validation
-            .effective_tokens()
-            .iter()
-            .any(|t| t.token_id() == valid_id),
-        "expected valid token to remain in effective set"
-    );
+    assert_valid_token_remains(world);
 }
 
 #[then("no tokens remain in the effective set")]
 fn no_effective_tokens(world: &LifecycleWorld) {
-    let validation = require_boundary_result(world);
-    assert!(
-        validation.effective_tokens().is_empty(),
-        "expected no effective tokens, found: {:?}",
-        validation.effective_tokens()
-    );
+    assert_no_effective_tokens(world);
 }
-
-// ── Scenarios ──────────────────────────────────────────────────────
 
 #[scenario(
     path = "tests/security/features/authority_lifecycle.feature",

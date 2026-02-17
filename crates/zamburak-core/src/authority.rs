@@ -278,7 +278,8 @@ impl AuthorityToken {
 /// use zamburak_core::{RevocationIndex, AuthorityTokenId};
 ///
 /// let mut index = RevocationIndex::default();
-/// let id = AuthorityTokenId::try_from("tok-1").unwrap();
+/// let id = AuthorityTokenId::try_from("tok-1")
+///     .expect("invalid AuthorityTokenId in doctest");
 /// assert!(!index.is_revoked(&id));
 ///
 /// index.revoke(id.clone());

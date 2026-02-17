@@ -24,22 +24,38 @@ pub const TOKEN_NAME_MINT_INVALID: &str = "mint-invalid-lifetime";
 
 // ── Fallible constructors ──────────────────────────────────────────
 
+/// Parse a `&str` into an [`AuthorityTokenId`].
+///
+/// Returns `Err(AuthorityLifecycleError)` when the value is empty.
 pub fn token_id(value: &str) -> Result<AuthorityTokenId, AuthorityLifecycleError> {
     AuthorityTokenId::try_from(value)
 }
 
+/// Parse a `&str` into an [`AuthorityIssuer`].
+///
+/// Returns `Err(AuthorityLifecycleError)` when the value is empty.
 pub fn issuer(value: &str) -> Result<AuthorityIssuer, AuthorityLifecycleError> {
     AuthorityIssuer::try_from(value)
 }
 
+/// Parse a `&str` into an [`AuthoritySubject`].
+///
+/// Returns `Err(AuthorityLifecycleError)` when the value is empty.
 pub fn subject(value: &str) -> Result<AuthoritySubject, AuthorityLifecycleError> {
     AuthoritySubject::try_from(value)
 }
 
+/// Parse a `&str` into an [`AuthorityCapability`].
+///
+/// Returns `Err(AuthorityLifecycleError)` when the value is empty.
 pub fn capability(value: &str) -> Result<AuthorityCapability, AuthorityLifecycleError> {
     AuthorityCapability::try_from(value)
 }
 
+/// Parse a slice of resource strings into an [`AuthorityScope`].
+///
+/// Returns `Err(AuthorityLifecycleError)` if any individual resource
+/// string fails to parse or the resulting scope is empty.
 pub fn scope(resources: &[&str]) -> Result<AuthorityScope, AuthorityLifecycleError> {
     let parsed: Result<Vec<_>, _> = resources
         .iter()
@@ -48,6 +64,11 @@ pub fn scope(resources: &[&str]) -> Result<AuthorityScope, AuthorityLifecycleErr
     AuthorityScope::new(parsed?)
 }
 
+/// Mint an [`AuthorityToken`] with host-trusted defaults for a given
+/// id, scope, and lifetime.
+///
+/// Returns `Err(AuthorityLifecycleError)` on any minting validation
+/// failure (e.g. invalid lifetime).
 pub fn mint_token(
     id: AuthorityTokenId,
     scope: AuthorityScope,
@@ -202,6 +223,9 @@ impl MintRequestBuilder {
 
 // ── Assertion helpers ──────────────────────────────────────────────
 
+/// Assert that [`AuthorityToken::mint`] fails and the returned error
+/// satisfies `predicate`. Panics if minting succeeds or returns an
+/// unexpected error variant.
 pub fn assert_mint_fails<F: Fn(&AuthorityLifecycleError) -> bool>(
     request: MintRequest,
     predicate: F,
@@ -213,6 +237,11 @@ pub fn assert_mint_fails<F: Fn(&AuthorityLifecycleError) -> bool>(
     }
 }
 
+/// Build a [`DelegationRequest`] for the given child token id, scope,
+/// and timing. Uses the default test issuer and subject.
+///
+/// Returns `Err(AuthorityLifecycleError)` if the issuer or subject
+/// string parsing fails.
 pub fn delegation_request_with_scope(
     child_id: &AuthorityTokenId,
     scope: &AuthorityScope,
@@ -228,6 +257,9 @@ pub fn delegation_request_with_scope(
     })
 }
 
+/// Assert that [`AuthorityToken::delegate`] fails and the returned
+/// error satisfies `predicate`. Panics if delegation succeeds or
+/// returns an unexpected error variant.
 pub fn assert_delegation_fails<F: Fn(&AuthorityLifecycleError) -> bool>(
     parent: &AuthorityToken,
     request: DelegationRequest,

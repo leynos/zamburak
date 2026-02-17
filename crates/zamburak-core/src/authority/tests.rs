@@ -105,6 +105,10 @@ fn delegation_rejects_non_strict_scope_subset(
     Ok(())
 }
 
+#[expect(
+    clippy::too_many_arguments,
+    reason = "parameter count driven by rstest case captures and fixtures"
+)]
 #[rstest]
 #[case::non_strict_lifetime(20, 200, |err: &AuthorityLifecycleError| {
     matches!(
