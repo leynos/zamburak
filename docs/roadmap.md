@@ -60,7 +60,7 @@ completion criteria so the work can be sequenced and assessed without ambiguity.
   - Out of scope: compatibility with unknown major schema families.
   - Completion criteria: migration tests prove restrictive-equivalent outcomes
     and produce auditable migration records.
-- [ ] Task 0.1.3: Implement authority token lifecycle conformance checks.
+- [x] Task 0.1.3: Implement authority token lifecycle conformance checks.
   - Requirement signposts:
     - `docs/zamburak-design-document.md` section
       "Authority token lifecycle semantics",

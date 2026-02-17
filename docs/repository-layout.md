@@ -63,7 +63,7 @@ The repository layout is designed to:
 
 | Crate                  | Primary responsibility                                  | Security-critical invariants                             |
 | ---------------------- | ------------------------------------------------------- | -------------------------------------------------------- |
-| `zamburak-core`        | Value tagging, dependency graph, propagation, summaries | Complete IFC propagation and monotonic dependencies      |
+| `zamburak-core`        | Value tagging, graphs, propagation, authority lifecycle | Complete IFC propagation, fail-closed authority          |
 | `zamburak-monty`       | `full-monty` adapter and observer-driven execution glue | Every governed run traverses observer instrumentation    |
 | `zamburak-interpreter` | Monty integration and opcode hook execution             | No effect path bypasses policy interception              |
 | `zamburak-policy`      | Policy definitions, evaluation, and decisions           | Unknown states fail closed                               |
@@ -83,6 +83,7 @@ The paths below are the intended locations for core implementation units.
 | Path                                           | Purpose                                              |
 | ---------------------------------------------- | ---------------------------------------------------- |
 | `crates/zamburak-core/src/lib.rs`              | Public exports for core runtime types and interfaces |
+| `crates/zamburak-core/src/authority.rs`        | Authority token lifecycle: mint, delegation, revoke  |
 | `crates/zamburak-core/src/tagged_value.rs`     | `TaggedValue` model with value identity and labels   |
 | `crates/zamburak-core/src/value_id.rs`         | Stable `ValueId` generation and handling             |
 | `crates/zamburak-core/src/dependency_graph.rs` | Graph state and edge insertion semantics             |
