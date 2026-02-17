@@ -100,14 +100,14 @@ capability, scope, and expiry. Minting from untrusted issuers is rejected with
 
 ```rust
 use zamburak_core::{
-    AuthorityToken, IssuerTrust, MintRequest, AuthorityTokenId,
-    AuthoritySubject, AuthorityCapability, AuthorityScope,
-    ScopeResource, TokenTimestamp,
+    AuthorityToken, AuthorityIssuer, IssuerTrust, MintRequest,
+    AuthorityTokenId, AuthoritySubject, AuthorityCapability,
+    AuthorityScope, ScopeResource, TokenTimestamp,
 };
 
 let token = AuthorityToken::mint(MintRequest {
     token_id: AuthorityTokenId::try_from("tok-1")?,
-    issuer: "policy-host".to_owned(),
+    issuer: AuthorityIssuer::try_from("policy-host")?,
     issuer_trust: IssuerTrust::HostTrusted,
     subject: AuthoritySubject::try_from("assistant")?,
     capability: AuthorityCapability::try_from("EmailSendCap")?,
@@ -117,6 +117,7 @@ let token = AuthorityToken::mint(MintRequest {
     issued_at: TokenTimestamp::new(100),
     expires_at: TokenTimestamp::new(500),
 })?;
+# Ok::<(), zamburak_core::AuthorityLifecycleError>(())
 ```
 
 ### Delegation
@@ -127,14 +128,34 @@ expired parents is rejected before scope checks run. The delegation start time
 must also be on or after the parent issuance time.
 
 ```rust
-use zamburak_core::{DelegationRequest, RevocationIndex};
+use zamburak_core::{
+    AuthorityToken, AuthorityIssuer, AuthorityTokenId, AuthoritySubject,
+    AuthorityCapability, AuthorityScope, ScopeResource, IssuerTrust,
+    MintRequest, DelegationRequest, RevocationIndex, TokenTimestamp,
+};
 
+// Mint a parent token with two scope resources.
+let parent_token = AuthorityToken::mint(MintRequest {
+    token_id: AuthorityTokenId::try_from("tok-parent")?,
+    issuer: AuthorityIssuer::try_from("policy-host")?,
+    issuer_trust: IssuerTrust::HostTrusted,
+    subject: AuthoritySubject::try_from("assistant")?,
+    capability: AuthorityCapability::try_from("EmailSendCap")?,
+    scope: AuthorityScope::new(vec![
+        ScopeResource::try_from("send_email")?,
+        ScopeResource::try_from("draft_email")?,
+    ])?,
+    issued_at: TokenTimestamp::new(100),
+    expires_at: TokenTimestamp::new(500),
+})?;
+
+// Delegate with strictly narrowed scope and lifetime.
 let revocation_index = RevocationIndex::default();
 let child = AuthorityToken::delegate(
     &parent_token,
     DelegationRequest {
         token_id: AuthorityTokenId::try_from("tok-child")?,
-        delegated_by: "policy-host".to_owned(),
+        delegated_by: AuthorityIssuer::try_from("policy-host")?,
         subject: AuthoritySubject::try_from("assistant")?,
         scope: AuthorityScope::new(vec![
             ScopeResource::try_from("send_email")?,
@@ -144,6 +165,7 @@ let child = AuthorityToken::delegate(
     },
     &revocation_index,
 )?;
+# Ok::<(), zamburak_core::AuthorityLifecycleError>(())
 ```
 
 ### Revocation

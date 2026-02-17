@@ -241,11 +241,12 @@ Retrospective notes:
 
 ## Context and orientation
 
-Current repository state relevant to Task 0.1.3:
+Repository state at the start of Task 0.1.3:
 
-- Workspace currently contains `crates/zamburak-policy` only.
-- `crates/zamburak-policy/src/engine.rs` currently handles policy loading but
-  does not yet enforce authority-token lifecycle transitions.
+- Workspace contained `crates/zamburak-policy` only; `crates/zamburak-core` was
+  added as part of this task.
+- `crates/zamburak-policy/src/engine.rs` handled policy loading but did not yet
+  enforce authority-token lifecycle transitions.
 - Existing behavioural tests cover policy schema and migration contracts in
   `tests/compatibility/`.
 - Existing security tests cover migration fail-closed behaviour in
@@ -342,59 +343,77 @@ Run commands from repository root: `/home/user/project`.
 
 1. Baseline orientation.
 
-       git status --short
-       rg --files crates tests docs | sort
+   ```bash
+   git status --short
+   rg --files crates tests docs | sort
+   ```
 
 2. Scaffold and wire `zamburak-core`.
 
-       mkdir -p crates/zamburak-core/src
-       # Edit workspace Cargo manifests and add:
-       # - crates/zamburak-core/Cargo.toml
-       # - crates/zamburak-core/src/lib.rs
-       # - crates/zamburak-core/src/authority.rs
+   ```bash
+   mkdir -p crates/zamburak-core/src
+   # Edit workspace Cargo manifests and add:
+   # - crates/zamburak-core/Cargo.toml
+   # - crates/zamburak-core/src/lib.rs
+   # - crates/zamburak-core/src/authority.rs
+   ```
 
 3. Add lifecycle tests before implementation.
 
-       mkdir -p tests/security/features
-       # Edit/add:
-       # - crates/zamburak-core/src/authority.rs (unit tests)
-       # - tests/security/features/authority_lifecycle.feature
-       # - tests/security/authority_lifecycle_bdd.rs
-       # - tests/security/main.rs
+   ```bash
+   mkdir -p tests/security/features
+   # Edit/add:
+   # - crates/zamburak-core/src/authority.rs (unit tests)
+   # - tests/security/features/authority_lifecycle.feature
+   # - tests/security/authority_lifecycle_bdd.rs
+   # - tests/security/main.rs
+   ```
 
 4. Run targeted suites during implementation loops.
 
-       set -o pipefail && cargo test -p zamburak-core authority | tee /tmp/test-0-1-3-authority-unit.out
-       set -o pipefail && cargo test --test security authority_lifecycle | tee /tmp/test-0-1-3-authority-security.out
+   ```bash
+   set -o pipefail && cargo test -p zamburak-core authority \
+     | tee /tmp/test-0-1-3-authority-unit.out
+   set -o pipefail && cargo test --test security authority_lifecycle \
+     | tee /tmp/test-0-1-3-authority-security.out
+   ```
 
 5. Implement lifecycle checks and integrate policy-engine usage.
 
-       # Edit/add:
-       # - crates/zamburak-core/src/authority.rs
-       # - crates/zamburak-core/src/lib.rs
-       # - crates/zamburak-policy/src/engine.rs
-       # - crates/zamburak-policy/src/lib.rs
-       # - src/lib.rs
+   ```plaintext
+   Edit/add:
+   - crates/zamburak-core/src/authority.rs
+   - crates/zamburak-core/src/lib.rs
+   - crates/zamburak-policy/src/engine.rs
+   - crates/zamburak-policy/src/lib.rs
+   - src/lib.rs
+   ```
 
 6. Update design, guide, and roadmap artefacts.
 
-       # Edit:
-       # - docs/zamburak-design-document.md
-       # - docs/users-guide.md
-       # - docs/roadmap.md
-       # - docs/repository-layout.md (if path mapping changed)
+   ```plaintext
+   Edit:
+   - docs/zamburak-design-document.md
+   - docs/users-guide.md
+   - docs/roadmap.md
+   - docs/repository-layout.md (if path mapping changed)
+   ```
 
 7. Run mandatory quality gates with logs.
 
-       set -o pipefail && make check-fmt | tee /tmp/check-fmt-0-1-3.out
-       set -o pipefail && make lint | tee /tmp/lint-0-1-3.out
-       set -o pipefail && make test | tee /tmp/test-0-1-3.out
+   ```bash
+   set -o pipefail && make check-fmt | tee /tmp/check-fmt-0-1-3.out
+   set -o pipefail && make lint | tee /tmp/lint-0-1-3.out
+   set -o pipefail && make test | tee /tmp/test-0-1-3.out
+   ```
 
 8. Run docs gates because Markdown is modified.
 
-       set -o pipefail && make markdownlint | tee /tmp/markdownlint-0-1-3.out
-       set -o pipefail && make nixie | tee /tmp/nixie-0-1-3.out
-       set -o pipefail && make fmt | tee /tmp/fmt-0-1-3.out
+   ```bash
+   set -o pipefail && make markdownlint | tee /tmp/markdownlint-0-1-3.out
+   set -o pipefail && make nixie | tee /tmp/nixie-0-1-3.out
+   set -o pipefail && make fmt | tee /tmp/fmt-0-1-3.out
+   ```
 
 ## Validation and acceptance
 

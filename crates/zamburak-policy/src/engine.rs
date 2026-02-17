@@ -155,10 +155,10 @@ impl PolicyEngine {
 
     /// Validate authority tokens at a policy-evaluation boundary.
     ///
-    /// Tokens that are revoked or expired at `evaluation_time` are stripped
-    /// from the effective authority set and recorded as invalid. The
-    /// remaining effective tokens represent the authority available for
-    /// downstream policy checks.
+    /// Tokens that are revoked, expired, or pre-issuance at
+    /// `evaluation_time` are stripped from the effective authority set and
+    /// recorded as invalid. The remaining effective tokens represent the
+    /// authority available for downstream policy checks.
     ///
     /// This method delegates to the canonical lifecycle validation in
     /// `zamburak-core` so the policy engine consumes lifecycle verdicts

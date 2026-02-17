@@ -1,9 +1,11 @@
 //! Shared constants, fixtures, and assertion helpers for authority tests.
 
+use rstest::fixture;
+
 use super::{
-    AuthorityCapability, AuthorityLifecycleError, AuthorityScope, AuthoritySubject, AuthorityToken,
-    AuthorityTokenId, DelegationRequest, IssuerTrust, MintRequest, RevocationIndex, ScopeResource,
-    TokenTimestamp,
+    AuthorityCapability, AuthorityIssuer, AuthorityLifecycleError, AuthorityScope,
+    AuthoritySubject, AuthorityToken, AuthorityTokenId, DelegationRequest, IssuerTrust,
+    MintRequest, RevocationIndex, ScopeResource, TokenTimestamp,
 };
 
 pub const TEST_ISSUER: &str = "policy-host";
@@ -20,36 +22,127 @@ pub const TOKEN_NAME_FUTURE: &str = "future";
 pub const TOKEN_NAME_MINT_UNTRUSTED: &str = "mint-untrusted";
 pub const TOKEN_NAME_MINT_INVALID: &str = "mint-invalid-lifetime";
 
-lazy_static::lazy_static! {
-    pub static ref TOKEN_ID_PARENT: AuthorityTokenId = token_id(TOKEN_NAME_PARENT);
-    pub static ref TOKEN_ID_CHILD: AuthorityTokenId = token_id(TOKEN_NAME_CHILD);
-    pub static ref TOKEN_ID_VALID: AuthorityTokenId = token_id(TOKEN_NAME_VALID);
-    pub static ref TOKEN_ID_REVOKED: AuthorityTokenId = token_id(TOKEN_NAME_REVOKED);
-    pub static ref TOKEN_ID_EXPIRED: AuthorityTokenId = token_id(TOKEN_NAME_EXPIRED);
-    pub static ref TOKEN_ID_TOKEN: AuthorityTokenId = token_id(TOKEN_NAME_TOKEN);
-    pub static ref TOKEN_ID_FUTURE: AuthorityTokenId = token_id(TOKEN_NAME_FUTURE);
-    pub static ref SCOPE_SEND_EMAIL: AuthorityScope = scope(&["send_email"]);
-    pub static ref SCOPE_EMAIL_AND_DRAFT: AuthorityScope = scope(&["send_email", "send_email_draft"]);
-    pub static ref SUBJECT_ASSISTANT: AuthoritySubject = subject(TEST_SUBJECT);
-    pub static ref SCOPE_WIDENED: AuthorityScope =
-        scope(&["send_email", "send_email_draft", "calendar_write"]);
-    pub static ref TOKEN_PARENT: AuthorityToken =
-        mint_token(TOKEN_ID_PARENT.clone(), SCOPE_EMAIL_AND_DRAFT.clone(), 10, 200);
-    pub static ref TOKEN_VALID: AuthorityToken =
-        mint_token(TOKEN_ID_VALID.clone(), SCOPE_SEND_EMAIL.clone(), 10, 300);
-    pub static ref TOKEN_REVOKED: AuthorityToken =
-        mint_token(TOKEN_ID_REVOKED.clone(), SCOPE_SEND_EMAIL.clone(), 10, 300);
-    pub static ref TOKEN_EXPIRED: AuthorityToken =
-        mint_token(TOKEN_ID_EXPIRED.clone(), SCOPE_SEND_EMAIL.clone(), 10, 100);
-    pub static ref TOKEN_FOR_RESTORE: AuthorityToken =
-        mint_token(TOKEN_ID_TOKEN.clone(), SCOPE_SEND_EMAIL.clone(), 10, 100);
-    pub static ref TOKEN_FUTURE: AuthorityToken =
-        mint_token(TOKEN_ID_FUTURE.clone(), SCOPE_SEND_EMAIL.clone(), 500, 900);
+// ── Fallible constructors ──────────────────────────────────────────
+
+pub fn token_id(value: &str) -> Result<AuthorityTokenId, AuthorityLifecycleError> {
+    AuthorityTokenId::try_from(value)
 }
 
+pub fn issuer(value: &str) -> Result<AuthorityIssuer, AuthorityLifecycleError> {
+    AuthorityIssuer::try_from(value)
+}
+
+pub fn subject(value: &str) -> Result<AuthoritySubject, AuthorityLifecycleError> {
+    AuthoritySubject::try_from(value)
+}
+
+pub fn capability(value: &str) -> Result<AuthorityCapability, AuthorityLifecycleError> {
+    AuthorityCapability::try_from(value)
+}
+
+pub fn scope(resources: &[&str]) -> Result<AuthorityScope, AuthorityLifecycleError> {
+    let parsed: Result<Vec<_>, _> = resources
+        .iter()
+        .map(|r| ScopeResource::try_from(*r))
+        .collect();
+    AuthorityScope::new(parsed?)
+}
+
+pub fn mint_token(
+    id: AuthorityTokenId,
+    scope: AuthorityScope,
+    issued_at: u64,
+    expires_at: u64,
+) -> Result<AuthorityToken, AuthorityLifecycleError> {
+    AuthorityToken::mint(MintRequest {
+        token_id: id,
+        issuer: issuer(TEST_ISSUER)?,
+        issuer_trust: IssuerTrust::HostTrusted,
+        subject: subject(TEST_SUBJECT)?,
+        capability: capability(TEST_CAPABILITY)?,
+        scope,
+        issued_at: TokenTimestamp::new(issued_at),
+        expires_at: TokenTimestamp::new(expires_at),
+    })
+}
+
+// ── Timing bundle ──────────────────────────────────────────────────
+
+/// Bundled delegation timing parameters.
+pub struct DelegationTiming {
+    /// Delegation start time.
+    pub delegated_at: u64,
+    /// Delegated token expiry time.
+    pub expires_at: u64,
+}
+
+// ── rstest fixtures ────────────────────────────────────────────────
+
+#[fixture]
+pub fn scope_send_email() -> Result<AuthorityScope, AuthorityLifecycleError> {
+    scope(&["send_email"])
+}
+
+#[fixture]
+pub fn scope_email_and_draft() -> Result<AuthorityScope, AuthorityLifecycleError> {
+    scope(&["send_email", "send_email_draft"])
+}
+
+#[fixture]
+pub fn scope_widened() -> Result<AuthorityScope, AuthorityLifecycleError> {
+    scope(&["send_email", "send_email_draft", "calendar_write"])
+}
+
+#[fixture]
+pub fn token_parent() -> Result<AuthorityToken, AuthorityLifecycleError> {
+    mint_token(
+        token_id(TOKEN_NAME_PARENT)?,
+        scope_email_and_draft()?,
+        10,
+        200,
+    )
+}
+
+#[fixture]
+pub fn token_valid() -> Result<AuthorityToken, AuthorityLifecycleError> {
+    mint_token(token_id(TOKEN_NAME_VALID)?, scope_send_email()?, 10, 300)
+}
+
+#[fixture]
+pub fn token_revoked() -> Result<AuthorityToken, AuthorityLifecycleError> {
+    mint_token(token_id(TOKEN_NAME_REVOKED)?, scope_send_email()?, 10, 300)
+}
+
+#[fixture]
+pub fn token_expired() -> Result<AuthorityToken, AuthorityLifecycleError> {
+    mint_token(token_id(TOKEN_NAME_EXPIRED)?, scope_send_email()?, 10, 100)
+}
+
+#[fixture]
+pub fn token_for_restore() -> Result<AuthorityToken, AuthorityLifecycleError> {
+    mint_token(token_id(TOKEN_NAME_TOKEN)?, scope_send_email()?, 10, 100)
+}
+
+#[fixture]
+pub fn token_future() -> Result<AuthorityToken, AuthorityLifecycleError> {
+    mint_token(token_id(TOKEN_NAME_FUTURE)?, scope_send_email()?, 500, 900)
+}
+
+// ── Builder ────────────────────────────────────────────────────────
+
+/// Builder for `MintRequest` with sensible defaults for test scenarios.
+///
+/// # Examples
+///
+/// ```rust,ignore
+/// let request = MintRequestBuilder::new("tok-1")?
+///     .issuer("remote-agent", IssuerTrust::Untrusted)?
+///     .lifetime(10, 20)
+///     .build()?;
+/// ```
 pub struct MintRequestBuilder {
     token_name: String,
-    issuer: String,
+    issuer: AuthorityIssuer,
     issuer_trust: IssuerTrust,
     subject_name: String,
     capability_name: String,
@@ -59,83 +152,55 @@ pub struct MintRequestBuilder {
 }
 
 impl MintRequestBuilder {
-    pub fn new(token_name: &str) -> Self {
-        Self {
+    /// Create a builder with host-trusted defaults for the given token name.
+    pub fn new(token_name: &str) -> Result<Self, AuthorityLifecycleError> {
+        Ok(Self {
             token_name: token_name.to_owned(),
-            issuer: TEST_ISSUER.to_owned(),
+            issuer: issuer(TEST_ISSUER)?,
             issuer_trust: IssuerTrust::HostTrusted,
             subject_name: TEST_SUBJECT.to_owned(),
             capability_name: TEST_CAPABILITY.to_owned(),
             scope_resources: vec!["send_email".to_owned()],
             issued_at: 0,
             expires_at: 100,
-        }
+        })
     }
 
-    pub fn issuer(mut self, issuer: &str, trust: IssuerTrust) -> Self {
-        self.issuer = issuer.to_owned();
+    /// Override the issuer identity and trust level.
+    pub fn issuer(
+        mut self,
+        issuer_name: &str,
+        trust: IssuerTrust,
+    ) -> Result<Self, AuthorityLifecycleError> {
+        self.issuer = issuer(issuer_name)?;
         self.issuer_trust = trust;
-        self
+        Ok(self)
     }
 
+    /// Override the token lifetime.
     pub fn lifetime(mut self, issued_at: u64, expires_at: u64) -> Self {
         self.issued_at = issued_at;
         self.expires_at = expires_at;
         self
     }
 
-    pub fn build(self) -> MintRequest {
+    /// Consume the builder and produce a `MintRequest`.
+    pub fn build(self) -> Result<MintRequest, AuthorityLifecycleError> {
         let scope_refs: Vec<&str> = self.scope_resources.iter().map(String::as_str).collect();
-        MintRequest {
-            token_id: token_id(&self.token_name),
+        Ok(MintRequest {
+            token_id: token_id(&self.token_name)?,
             issuer: self.issuer,
             issuer_trust: self.issuer_trust,
-            subject: subject(&self.subject_name),
-            capability: capability(&self.capability_name),
-            scope: scope(&scope_refs),
+            subject: subject(&self.subject_name)?,
+            capability: capability(&self.capability_name)?,
+            scope: scope(&scope_refs)?,
             issued_at: TokenTimestamp::new(self.issued_at),
             expires_at: TokenTimestamp::new(self.expires_at),
-        }
+        })
     }
 }
 
-pub fn token_id(value: &str) -> AuthorityTokenId {
-    AuthorityTokenId::try_from(value).expect("token ids used in tests are valid")
-}
-
-pub fn subject(value: &str) -> AuthoritySubject {
-    AuthoritySubject::try_from(value).expect("subjects used in tests are valid")
-}
-
-pub fn capability(value: &str) -> AuthorityCapability {
-    AuthorityCapability::try_from(value).expect("capabilities used in tests are valid")
-}
-
-pub fn scope(resources: &[&str]) -> AuthorityScope {
-    let parsed_resources = resources
-        .iter()
-        .map(|resource| ScopeResource::try_from(*resource).expect("scope resources are valid"));
-    AuthorityScope::new(parsed_resources).expect("scope fixtures are valid")
-}
-
-pub fn mint_token(
-    token_id: AuthorityTokenId,
-    scope: AuthorityScope,
-    issued_at: u64,
-    expires_at: u64,
-) -> AuthorityToken {
-    AuthorityToken::mint(MintRequest {
-        token_id,
-        issuer: TEST_ISSUER.to_owned(),
-        issuer_trust: IssuerTrust::HostTrusted,
-        subject: subject(TEST_SUBJECT),
-        capability: capability(TEST_CAPABILITY),
-        scope,
-        issued_at: TokenTimestamp::new(issued_at),
-        expires_at: TokenTimestamp::new(expires_at),
-    })
-    .expect("mint fixtures are valid")
-}
+// ── Assertion helpers ──────────────────────────────────────────────
 
 pub fn assert_mint_fails<F: Fn(&AuthorityLifecycleError) -> bool>(
     request: MintRequest,
@@ -151,17 +216,16 @@ pub fn assert_mint_fails<F: Fn(&AuthorityLifecycleError) -> bool>(
 pub fn delegation_request_with_scope(
     child_id: &AuthorityTokenId,
     scope: &AuthorityScope,
-    delegated_at: u64,
-    expires_at: u64,
-) -> DelegationRequest {
-    DelegationRequest {
+    timing: &DelegationTiming,
+) -> Result<DelegationRequest, AuthorityLifecycleError> {
+    Ok(DelegationRequest {
         token_id: child_id.clone(),
-        delegated_by: TEST_DELEGATED_BY.to_owned(),
-        subject: SUBJECT_ASSISTANT.clone(),
+        delegated_by: issuer(TEST_DELEGATED_BY)?,
+        subject: subject(TEST_SUBJECT)?,
         scope: scope.clone(),
-        delegated_at: TokenTimestamp::new(delegated_at),
-        expires_at: TokenTimestamp::new(expires_at),
-    }
+        delegated_at: TokenTimestamp::new(timing.delegated_at),
+        expires_at: TokenTimestamp::new(timing.expires_at),
+    })
 }
 
 pub fn assert_delegation_fails<F: Fn(&AuthorityLifecycleError) -> bool>(

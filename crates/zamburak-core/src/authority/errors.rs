@@ -26,8 +26,8 @@ pub enum AuthorityLifecycleError {
     /// Issuer is not trusted for minting.
     #[error("issuer `{issuer}` is not trusted to mint authority tokens")]
     UntrustedMinter {
-        /// Untrusted issuer name.
-        issuer: String,
+        /// Untrusted issuer identity.
+        issuer: super::types::AuthorityIssuer,
     },
     /// Delegated scope does not narrow the parent scope.
     #[error("delegated scope must be a strict subset of parent scope")]

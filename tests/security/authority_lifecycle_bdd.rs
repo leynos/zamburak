@@ -3,10 +3,10 @@
 use rstest::fixture;
 use rstest_bdd_macros::{given, scenario, then, when};
 use zamburak_core::{
-    AuthorityBoundaryValidation, AuthorityCapability, AuthorityLifecycleError, AuthorityScope,
-    AuthoritySubject, AuthorityToken, AuthorityTokenId, DelegationRequest, InvalidAuthorityReason,
-    IssuerTrust, MintRequest, RevocationIndex, ScopeResource, TokenTimestamp,
-    revalidate_tokens_on_restore, validate_tokens_at_policy_boundary,
+    AuthorityBoundaryValidation, AuthorityCapability, AuthorityIssuer, AuthorityLifecycleError,
+    AuthorityScope, AuthoritySubject, AuthorityToken, AuthorityTokenId, DelegationRequest,
+    InvalidAuthorityReason, IssuerTrust, MintRequest, RevocationIndex, ScopeResource,
+    TokenTimestamp, revalidate_tokens_on_restore, validate_tokens_at_policy_boundary,
 };
 
 // ── World ──────────────────────────────────────────────────────────
@@ -39,6 +39,13 @@ fn make_token_id(name: &str) -> AuthorityTokenId {
         panic!("test token id '{name}' is invalid");
     };
     id
+}
+
+fn make_issuer(name: &str) -> AuthorityIssuer {
+    let Ok(issuer) = AuthorityIssuer::try_from(name) else {
+        panic!("test issuer '{name}' is invalid");
+    };
+    issuer
 }
 
 fn make_subject(name: &str) -> AuthoritySubject {
@@ -79,7 +86,7 @@ fn mint_fixture(
 ) -> AuthorityToken {
     let Ok(token) = AuthorityToken::mint(MintRequest {
         token_id: make_token_id(token_name),
-        issuer: "policy-host".to_owned(),
+        issuer: make_issuer("policy-host"),
         issuer_trust: IssuerTrust::HostTrusted,
         subject: make_subject("assistant"),
         capability: make_capability("EmailSendCap"),
@@ -170,12 +177,12 @@ enum IssuerConfig {
 }
 
 impl IssuerConfig {
-    /// Returns the issuer name for this configuration.
-    const fn issuer(self) -> &'static str {
-        match self {
+    /// Returns the issuer identity for this configuration.
+    fn issuer(self) -> AuthorityIssuer {
+        make_issuer(match self {
             Self::HostTrusted => "policy-host",
             Self::Untrusted => "remote-agent",
-        }
+        })
     }
 
     /// Returns the issuer trust level for this configuration.
@@ -196,7 +203,7 @@ fn create_mint_request(
 ) {
     world.mint_request = Some(MintRequest {
         token_id: make_token_id("mint-token"),
-        issuer: issuer_config.issuer().to_owned(),
+        issuer: issuer_config.issuer(),
         issuer_trust: issuer_config.issuer_trust(),
         subject: make_subject(subject),
         capability: make_capability(capability),
@@ -339,7 +346,7 @@ fn create_delegation_request_at(
 ) {
     world.delegation_request = Some(DelegationRequest {
         token_id: make_token_id("child"),
-        delegated_by: "policy-host".to_owned(),
+        delegated_by: make_issuer("policy-host"),
         subject: make_subject("assistant"),
         scope: make_scope(resources),
         delegated_at: TokenTimestamp::new(delegated_at),

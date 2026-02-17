@@ -49,6 +49,33 @@ impl TryFrom<&str> for AuthorityTokenId {
     }
 }
 
+/// Validated issuer identity for minting and delegation provenance.
+#[derive(Clone, Debug, Eq, Ord, PartialEq, PartialOrd, Hash)]
+pub struct AuthorityIssuer(String);
+
+impl AuthorityIssuer {
+    /// Return the issuer as a string slice.
+    #[must_use]
+    pub fn as_str(&self) -> &str {
+        &self.0
+    }
+}
+
+impl std::fmt::Display for AuthorityIssuer {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        formatter.write_str(&self.0)
+    }
+}
+
+impl TryFrom<&str> for AuthorityIssuer {
+    type Error = AuthorityLifecycleError;
+
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
+        non_empty(value, "issuer")?;
+        Ok(Self(value.to_owned()))
+    }
+}
+
 /// Subject for whom authority is granted.
 #[derive(Clone, Debug, Eq, Ord, PartialEq, PartialOrd, Hash)]
 pub struct AuthoritySubject(String);
@@ -161,8 +188,8 @@ pub enum IssuerTrust {
 pub struct MintRequest {
     /// New token identifier.
     pub token_id: AuthorityTokenId,
-    /// Minting issuer name for audit provenance.
-    pub issuer: String,
+    /// Minting issuer identity for audit provenance.
+    pub issuer: AuthorityIssuer,
     /// Minting issuer trust class.
     pub issuer_trust: IssuerTrust,
     /// Subject receiving authority.
@@ -182,8 +209,8 @@ pub struct MintRequest {
 pub struct DelegationRequest {
     /// New delegated token identifier.
     pub token_id: AuthorityTokenId,
-    /// Delegating issuer name for lineage.
-    pub delegated_by: String,
+    /// Delegating issuer identity for lineage.
+    pub delegated_by: AuthorityIssuer,
     /// Delegated subject.
     pub subject: AuthoritySubject,
     /// Delegated scope.

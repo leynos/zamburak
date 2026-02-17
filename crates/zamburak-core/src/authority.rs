@@ -7,10 +7,11 @@ mod validation;
 use std::collections::HashSet;
 
 pub use errors::AuthorityLifecycleError;
-use errors::{non_empty, validate_lifetime};
+use errors::validate_lifetime;
 pub use types::{
-    AuthorityCapability, AuthorityScope, AuthoritySubject, AuthorityTokenId, DelegationRequest,
-    InvalidAuthorityReason, IssuerTrust, MintRequest, ScopeResource, TokenTimestamp,
+    AuthorityCapability, AuthorityIssuer, AuthorityScope, AuthoritySubject, AuthorityTokenId,
+    DelegationRequest, InvalidAuthorityReason, IssuerTrust, MintRequest, ScopeResource,
+    TokenTimestamp,
 };
 pub use validation::{
     AuthorityBoundaryValidation, InvalidAuthorityToken, revalidate_tokens_on_restore,
@@ -18,10 +19,14 @@ pub use validation::{
 };
 
 /// Host-minted authority token with lineage and lifecycle fields.
+///
+/// Tokens encode a subject, capability, scope, and time bounds. They are
+/// created via [`mint`](Self::mint) or derived from a parent via
+/// [`delegate`](Self::delegate), preserving lineage for audit.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct AuthorityToken {
     token_id: AuthorityTokenId,
-    issuer: String,
+    issuer: AuthorityIssuer,
     subject: AuthoritySubject,
     capability: AuthorityCapability,
     scope: AuthorityScope,
@@ -31,9 +36,35 @@ pub struct AuthorityToken {
 }
 
 impl AuthorityToken {
-    /// Mint a new authority token.
+    /// Mint a new root authority token from a host-trusted issuer.
+    ///
+    /// Untrusted issuers are rejected fail-closed. The minted token has no
+    /// parent lineage.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use zamburak_core::{
+    ///     AuthorityToken, AuthorityTokenId, AuthorityIssuer, AuthoritySubject,
+    ///     AuthorityCapability, AuthorityScope, ScopeResource, IssuerTrust,
+    ///     MintRequest, TokenTimestamp,
+    /// };
+    ///
+    /// let token = AuthorityToken::mint(MintRequest {
+    ///     token_id: AuthorityTokenId::try_from("tok-1")?,
+    ///     issuer: AuthorityIssuer::try_from("policy-host")?,
+    ///     issuer_trust: IssuerTrust::HostTrusted,
+    ///     subject: AuthoritySubject::try_from("assistant")?,
+    ///     capability: AuthorityCapability::try_from("EmailSendCap")?,
+    ///     scope: AuthorityScope::new(vec![ScopeResource::try_from("send_email")?])?,
+    ///     issued_at: TokenTimestamp::new(100),
+    ///     expires_at: TokenTimestamp::new(500),
+    /// })?;
+    ///
+    /// assert!(token.parent_token_id().is_none());
+    /// # Ok::<(), zamburak_core::AuthorityLifecycleError>(())
+    /// ```
     pub fn mint(request: MintRequest) -> Result<Self, AuthorityLifecycleError> {
-        non_empty(&request.issuer, "issuer")?;
         validate_lifetime(request.issued_at, request.expires_at)?;
 
         if request.issuer_trust != IssuerTrust::HostTrusted {
@@ -55,13 +86,57 @@ impl AuthorityToken {
     }
 
     /// Delegate an authority token with strict scope and lifetime narrowing.
+    ///
+    /// Delegation enforces fail-closed ordering: revoked or expired parents
+    /// are rejected before scope or lifetime checks run. The child token
+    /// inherits the parent's capability and records parent lineage.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use zamburak_core::{
+    ///     AuthorityToken, AuthorityTokenId, AuthorityIssuer, AuthoritySubject,
+    ///     AuthorityCapability, AuthorityScope, ScopeResource, IssuerTrust,
+    ///     MintRequest, DelegationRequest, RevocationIndex, TokenTimestamp,
+    /// };
+    ///
+    /// let parent = AuthorityToken::mint(MintRequest {
+    ///     token_id: AuthorityTokenId::try_from("parent")?,
+    ///     issuer: AuthorityIssuer::try_from("policy-host")?,
+    ///     issuer_trust: IssuerTrust::HostTrusted,
+    ///     subject: AuthoritySubject::try_from("assistant")?,
+    ///     capability: AuthorityCapability::try_from("EmailSendCap")?,
+    ///     scope: AuthorityScope::new(vec![
+    ///         ScopeResource::try_from("send_email")?,
+    ///         ScopeResource::try_from("draft_email")?,
+    ///     ])?,
+    ///     issued_at: TokenTimestamp::new(10),
+    ///     expires_at: TokenTimestamp::new(200),
+    /// })?;
+    ///
+    /// let child = AuthorityToken::delegate(
+    ///     &parent,
+    ///     DelegationRequest {
+    ///         token_id: AuthorityTokenId::try_from("child")?,
+    ///         delegated_by: AuthorityIssuer::try_from("policy-host")?,
+    ///         subject: AuthoritySubject::try_from("assistant")?,
+    ///         scope: AuthorityScope::new(vec![
+    ///             ScopeResource::try_from("send_email")?,
+    ///         ])?,
+    ///         delegated_at: TokenTimestamp::new(20),
+    ///         expires_at: TokenTimestamp::new(120),
+    ///     },
+    ///     &RevocationIndex::default(),
+    /// )?;
+    ///
+    /// assert_eq!(child.parent_token_id(), Some(parent.token_id()));
+    /// # Ok::<(), zamburak_core::AuthorityLifecycleError>(())
+    /// ```
     pub fn delegate(
         parent: &Self,
         request: DelegationRequest,
         revocation_index: &RevocationIndex,
     ) -> Result<Self, AuthorityLifecycleError> {
-        non_empty(&request.delegated_by, "delegated_by")?;
-
         // Reject invalid parent tokens before inspecting the delegation request
         // itself so that revoked or expired parents fail closed regardless of
         // whether the request carries well-formed timestamps or scope.
@@ -111,7 +186,9 @@ impl AuthorityToken {
         })
     }
 
-    /// Return whether this token grants authority for a tool resource.
+    /// Check whether this token authorizes a specific tool-resource action.
+    ///
+    /// Returns `true` only when subject, capability, and resource all match.
     #[must_use]
     pub fn grants(
         &self,
@@ -124,80 +201,101 @@ impl AuthorityToken {
             && self.scope().contains(tool_resource)
     }
 
-    /// Return whether the token is expired at an evaluation time.
+    /// Check whether the token has expired at a given evaluation time.
+    ///
+    /// Expiry is inclusive: a token whose `expires_at` equals `evaluation_time`
+    /// is considered expired.
     #[must_use]
     pub fn is_expired_at(&self, evaluation_time: TokenTimestamp) -> bool {
         evaluation_time >= self.expires_at
     }
 
-    /// Return whether the token has not yet reached its issuance time.
+    /// Check whether the evaluation time precedes this token's issuance.
+    ///
+    /// Pre-issuance tokens are stripped at policy boundaries.
     #[must_use]
     pub fn is_pre_issuance_at(&self, evaluation_time: TokenTimestamp) -> bool {
         evaluation_time < self.issued_at
     }
 
-    /// Return the token identifier.
+    /// Stable identifier used for revocation lookups and lineage tracking.
     #[must_use]
     pub const fn token_id(&self) -> &AuthorityTokenId {
         &self.token_id
     }
 
-    /// Return the token issuer.
+    /// Issuer that minted or delegated this token, used for audit provenance.
     #[must_use]
-    pub fn issuer(&self) -> &str {
+    pub const fn issuer(&self) -> &AuthorityIssuer {
         &self.issuer
     }
 
-    /// Return the token subject.
+    /// Principal to whom this token grants authority.
     #[must_use]
     pub const fn subject(&self) -> &AuthoritySubject {
         &self.subject
     }
 
-    /// Return the token capability.
+    /// Capability this token encodes (inherited from parent on delegation).
     #[must_use]
     pub const fn capability(&self) -> &AuthorityCapability {
         &self.capability
     }
 
-    /// Return the token scope.
+    /// Set of scope resources this token permits.
     #[must_use]
     pub const fn scope(&self) -> &AuthorityScope {
         &self.scope
     }
 
-    /// Return token issuance time.
+    /// Timestamp from which the token is considered valid.
     #[must_use]
     pub const fn issued_at(&self) -> TokenTimestamp {
         self.issued_at
     }
 
-    /// Return token expiry time.
+    /// Timestamp at which the token expires (inclusive boundary).
     #[must_use]
     pub const fn expires_at(&self) -> TokenTimestamp {
         self.expires_at
     }
 
-    /// Return parent token identifier when this token was delegated.
+    /// Parent token identifier, present only for delegated tokens.
     #[must_use]
     pub const fn parent_token_id(&self) -> Option<&AuthorityTokenId> {
         self.parent_token_id.as_ref()
     }
 }
 
-/// Host-managed revocation index for authority tokens.
+/// Host-managed index tracking revoked authority tokens.
+///
+/// Revoked tokens are stripped at policy-evaluation boundaries and rejected
+/// as delegation parents.
+///
+/// # Examples
+///
+/// ```
+/// use zamburak_core::{RevocationIndex, AuthorityTokenId};
+///
+/// let mut index = RevocationIndex::default();
+/// let id = AuthorityTokenId::try_from("tok-1").unwrap();
+/// assert!(!index.is_revoked(&id));
+///
+/// index.revoke(id.clone());
+/// assert!(index.is_revoked(&id));
+/// ```
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct RevocationIndex {
     revoked_tokens: HashSet<AuthorityTokenId>,
 }
 
 impl RevocationIndex {
-    /// Revoke a token identifier.
+    /// Mark a token as revoked so it is stripped at the next boundary check.
     pub fn revoke(&mut self, token_id: AuthorityTokenId) {
         self.revoked_tokens.insert(token_id);
     }
 
-    /// Return whether a token identifier is revoked.
+    /// Check whether a token identifier has been revoked.
     #[must_use]
     pub fn is_revoked(&self, token_id: &AuthorityTokenId) -> bool {
         self.revoked_tokens.contains(token_id)

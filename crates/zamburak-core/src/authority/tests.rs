@@ -8,28 +8,29 @@ use super::{
 };
 use rstest::rstest;
 
-#[test]
-fn mint_rejects_untrusted_issuer() {
+#[rstest]
+fn mint_rejects_untrusted_issuer() -> Result<(), AuthorityLifecycleError> {
     assert_mint_fails(
-        MintRequestBuilder::new(TOKEN_NAME_MINT_UNTRUSTED)
-            .issuer("remote-agent", IssuerTrust::Untrusted)
+        MintRequestBuilder::new(TOKEN_NAME_MINT_UNTRUSTED)?
+            .issuer("remote-agent", IssuerTrust::Untrusted)?
             .lifetime(10, 20)
-            .build(),
+            .build()?,
         |err| {
             matches!(
                 err,
-                AuthorityLifecycleError::UntrustedMinter { issuer } if issuer == "remote-agent"
+                AuthorityLifecycleError::UntrustedMinter { issuer } if issuer.as_str() == "remote-agent"
             )
         },
     );
+    Ok(())
 }
 
-#[test]
-fn mint_rejects_non_forward_lifetime() {
+#[rstest]
+fn mint_rejects_non_forward_lifetime() -> Result<(), AuthorityLifecycleError> {
     assert_mint_fails(
-        MintRequestBuilder::new(TOKEN_NAME_MINT_INVALID)
+        MintRequestBuilder::new(TOKEN_NAME_MINT_INVALID)?
             .lifetime(15, 15)
-            .build(),
+            .build()?,
         |err| {
             matches!(
                 err,
@@ -40,34 +41,59 @@ fn mint_rejects_non_forward_lifetime() {
             )
         },
     );
-}
-
-#[test]
-fn delegation_accepts_strict_scope_and_lifetime_narrowing() {
-    let delegated = AuthorityToken::delegate(
-        &TOKEN_PARENT,
-        delegation_request_with_scope(&TOKEN_ID_CHILD, &SCOPE_SEND_EMAIL, 20, 120),
-        &RevocationIndex::default(),
-    )
-    .expect("strictly narrowed delegations should succeed");
-
-    assert_eq!(delegated.parent_token_id(), Some(TOKEN_PARENT.token_id()));
-    assert_eq!(delegated.capability(), TOKEN_PARENT.capability());
+    Ok(())
 }
 
 #[rstest]
-#[case::equal_scope(SCOPE_EMAIL_AND_DRAFT.clone())]
-#[case::widened_scope(SCOPE_WIDENED.clone())]
-fn delegation_rejects_non_strict_scope_subset(#[case] delegated_scope: super::AuthorityScope) {
+fn delegation_accepts_strict_scope_and_lifetime_narrowing(
+    token_parent: Result<AuthorityToken, AuthorityLifecycleError>,
+    scope_send_email: Result<super::AuthorityScope, AuthorityLifecycleError>,
+) -> Result<(), AuthorityLifecycleError> {
+    let parent = token_parent?;
+    let child_id = token_id(TOKEN_NAME_CHILD)?;
+    let timing = DelegationTiming {
+        delegated_at: 20,
+        expires_at: 120,
+    };
+    let delegated = AuthorityToken::delegate(
+        &parent,
+        delegation_request_with_scope(&child_id, &scope_send_email?, &timing)?,
+        &RevocationIndex::default(),
+    )?;
+
+    assert_eq!(delegated.parent_token_id(), Some(parent.token_id()));
+    assert_eq!(delegated.capability(), parent.capability());
+    Ok(())
+}
+
+#[rstest]
+#[case::equal_scope(false)]
+#[case::widened_scope(true)]
+fn delegation_rejects_non_strict_scope_subset(
+    token_parent: Result<AuthorityToken, AuthorityLifecycleError>,
+    scope_email_and_draft: Result<super::AuthorityScope, AuthorityLifecycleError>,
+    scope_widened: Result<super::AuthorityScope, AuthorityLifecycleError>,
+    #[case] use_widened: bool,
+) -> Result<(), AuthorityLifecycleError> {
+    let delegated_scope = if use_widened {
+        scope_widened?
+    } else {
+        scope_email_and_draft?
+    };
+    let child_id = token_id(TOKEN_NAME_CHILD)?;
+    let timing = DelegationTiming {
+        delegated_at: 20,
+        expires_at: 120,
+    };
     let result = AuthorityToken::delegate(
-        &TOKEN_PARENT,
+        &token_parent?,
         DelegationRequest {
-            token_id: TOKEN_ID_CHILD.clone(),
-            delegated_by: TEST_DELEGATED_BY.to_owned(),
-            subject: SUBJECT_ASSISTANT.clone(),
+            token_id: child_id,
+            delegated_by: issuer(TEST_DELEGATED_BY)?,
+            subject: subject(TEST_SUBJECT)?,
             scope: delegated_scope,
-            delegated_at: TokenTimestamp::new(20),
-            expires_at: TokenTimestamp::new(120),
+            delegated_at: TokenTimestamp::new(timing.delegated_at),
+            expires_at: TokenTimestamp::new(timing.expires_at),
         },
         &RevocationIndex::default(),
     );
@@ -76,73 +102,95 @@ fn delegation_rejects_non_strict_scope_subset(#[case] delegated_scope: super::Au
         result,
         Err(AuthorityLifecycleError::DelegationScopeNotStrictSubset)
     ));
+    Ok(())
 }
 
-#[test]
-fn delegation_rejects_non_strict_lifetime_subset() {
+#[rstest]
+#[case::non_strict_lifetime(20, 200, |err: &AuthorityLifecycleError| {
+    matches!(
+        err,
+        AuthorityLifecycleError::DelegationLifetimeNotStrictSubset {
+            delegated_expires_at: 200,
+            parent_expires_at: 200,
+        }
+    )
+})]
+#[case::before_parent_issuance(5, 120, |err: &AuthorityLifecycleError| {
+    matches!(
+        err,
+        AuthorityLifecycleError::DelegationBeforeParentIssuance {
+            delegated_at: 5,
+            parent_issued_at: 10,
+        }
+    )
+})]
+fn delegation_rejects_invalid_timing<F>(
+    token_parent: Result<AuthorityToken, AuthorityLifecycleError>,
+    scope_send_email: Result<super::AuthorityScope, AuthorityLifecycleError>,
+    #[case] delegated_at: u64,
+    #[case] expires_at: u64,
+    #[case] predicate: F,
+) -> Result<(), AuthorityLifecycleError>
+where
+    F: Fn(&AuthorityLifecycleError) -> bool,
+{
+    let child_id = token_id(TOKEN_NAME_CHILD)?;
+    let timing = DelegationTiming {
+        delegated_at,
+        expires_at,
+    };
     assert_delegation_fails(
-        &TOKEN_PARENT,
-        delegation_request_with_scope(&TOKEN_ID_CHILD, &SCOPE_SEND_EMAIL, 20, 200),
+        &token_parent?,
+        delegation_request_with_scope(&child_id, &scope_send_email?, &timing)?,
         &RevocationIndex::default(),
-        |err| {
-            matches!(
-                err,
-                AuthorityLifecycleError::DelegationLifetimeNotStrictSubset {
-                    delegated_expires_at: 200,
-                    parent_expires_at: 200,
-                }
-            )
-        },
+        predicate,
     );
+    Ok(())
 }
 
-#[test]
-fn delegation_rejects_before_parent_issuance() {
-    assert_delegation_fails(
-        &TOKEN_PARENT,
-        delegation_request_with_scope(&TOKEN_ID_CHILD, &SCOPE_SEND_EMAIL, 5, 120),
-        &RevocationIndex::default(),
-        |err| {
-            matches!(
-                err,
-                AuthorityLifecycleError::DelegationBeforeParentIssuance {
-                    delegated_at: 5,
-                    parent_issued_at: 10,
-                }
-            )
-        },
-    );
-}
+#[rstest]
+fn policy_boundary_validation_strips_revoked_and_expired_tokens(
+    token_valid: Result<AuthorityToken, AuthorityLifecycleError>,
+    token_revoked: Result<AuthorityToken, AuthorityLifecycleError>,
+    token_expired: Result<AuthorityToken, AuthorityLifecycleError>,
+) -> Result<(), AuthorityLifecycleError> {
+    let valid = token_valid?;
+    let revoked = token_revoked?;
+    let expired = token_expired?;
 
-#[test]
-fn policy_boundary_validation_strips_revoked_and_expired_tokens() {
     let mut revocation_index = RevocationIndex::default();
-    revocation_index.revoke(TOKEN_ID_REVOKED.clone());
+    revocation_index.revoke(revoked.token_id().clone());
 
+    let revoked_id = revoked.token_id().clone();
+    let expired_id = expired.token_id().clone();
     let validation = validate_tokens_at_policy_boundary(
-        &[
-            TOKEN_VALID.clone(),
-            TOKEN_REVOKED.clone(),
-            TOKEN_EXPIRED.clone(),
-        ],
+        &[valid.clone(), revoked, expired],
         &revocation_index,
         TokenTimestamp::new(150),
     );
 
-    assert_eq!(validation.effective_tokens(), &[TOKEN_VALID.clone()]);
+    assert_eq!(validation.effective_tokens(), &[valid]);
     assert_eq!(validation.invalid_tokens().len(), 2);
-    assert!(validation.invalid_tokens().iter().any(|token| {
-        token.token_id() == &*TOKEN_ID_REVOKED && token.reason() == InvalidAuthorityReason::Revoked
-    }));
-    assert!(validation.invalid_tokens().iter().any(|token| {
-        token.token_id() == &*TOKEN_ID_EXPIRED && token.reason() == InvalidAuthorityReason::Expired
-    }));
+    assert!(
+        validation.invalid_tokens().iter().any(|t| {
+            t.token_id() == &revoked_id && t.reason() == InvalidAuthorityReason::Revoked
+        })
+    );
+    assert!(
+        validation.invalid_tokens().iter().any(|t| {
+            t.token_id() == &expired_id && t.reason() == InvalidAuthorityReason::Expired
+        })
+    );
+    Ok(())
 }
 
-#[test]
-fn policy_boundary_validation_strips_pre_issuance_tokens() {
+#[rstest]
+fn policy_boundary_validation_strips_pre_issuance_tokens(
+    token_future: Result<AuthorityToken, AuthorityLifecycleError>,
+) -> Result<(), AuthorityLifecycleError> {
+    let future = token_future?;
     let validation = validate_tokens_at_policy_boundary(
-        std::slice::from_ref(&*TOKEN_FUTURE),
+        std::slice::from_ref(&future),
         &RevocationIndex::default(),
         TokenTimestamp::new(100),
     );
@@ -153,29 +201,35 @@ fn policy_boundary_validation_strips_pre_issuance_tokens() {
         validation.invalid_tokens()[0].reason(),
         InvalidAuthorityReason::PreIssuance
     );
+    Ok(())
 }
 
-#[test]
-fn restore_revalidation_matches_policy_boundary_validation() {
+#[rstest]
+fn restore_revalidation_matches_policy_boundary_validation(
+    token_for_restore: Result<AuthorityToken, AuthorityLifecycleError>,
+) -> Result<(), AuthorityLifecycleError> {
+    let token = token_for_restore?;
     let revocation_index = RevocationIndex::default();
     let boundary = validate_tokens_at_policy_boundary(
-        std::slice::from_ref(&*TOKEN_FOR_RESTORE),
+        std::slice::from_ref(&token),
         &revocation_index,
         TokenTimestamp::new(120),
     );
     let restored = revalidate_tokens_on_restore(
-        std::slice::from_ref(&*TOKEN_FOR_RESTORE),
+        std::slice::from_ref(&token),
         &revocation_index,
         TokenTimestamp::new(120),
     );
     assert_eq!(restored, boundary);
+    Ok(())
 }
 
 #[test]
 fn domain_types_reject_empty_fields() {
-    use super::{AuthorityCapability, AuthoritySubject, AuthorityTokenId};
+    use super::{AuthorityCapability, AuthorityIssuer, AuthoritySubject, AuthorityTokenId};
     let cases: Vec<(&str, Result<(), AuthorityLifecycleError>)> = vec![
         ("token_id", AuthorityTokenId::try_from("").map(|_| ())),
+        ("issuer", AuthorityIssuer::try_from("").map(|_| ())),
         ("subject", AuthoritySubject::try_from("").map(|_| ())),
         ("capability", AuthorityCapability::try_from("").map(|_| ())),
         ("scope_resource", ScopeResource::try_from("").map(|_| ())),
@@ -188,35 +242,23 @@ fn domain_types_reject_empty_fields() {
     }
 }
 
-#[test]
-fn mint_rejects_empty_issuer() {
-    assert_mint_fails(
-        MintRequestBuilder::new(TOKEN_NAME_MINT_UNTRUSTED)
-            .issuer("", IssuerTrust::HostTrusted)
-            .lifetime(10, 20)
-            .build(),
-        |err| matches!(err, AuthorityLifecycleError::EmptyField { field } if *field == "issuer"),
-    );
-}
-
-#[test]
-fn delegation_rejects_empty_delegated_by() {
-    let mut req = delegation_request_with_scope(&TOKEN_ID_CHILD, &SCOPE_SEND_EMAIL, 20, 120);
-    req.delegated_by = String::new();
-    let result = AuthorityToken::delegate(&TOKEN_PARENT, req, &RevocationIndex::default());
-    assert!(matches!(
-        result,
-        Err(AuthorityLifecycleError::EmptyField { field }) if field == "delegated_by"
-    ));
-}
-
 #[rstest]
 #[case::equal(100, 100)]
 #[case::reversed(120, 100)]
-fn delegation_rejects_invalid_request_lifetime(#[case] delegated_at: u64, #[case] expires_at: u64) {
+fn delegation_rejects_invalid_request_lifetime(
+    token_parent: Result<AuthorityToken, AuthorityLifecycleError>,
+    scope_send_email: Result<super::AuthorityScope, AuthorityLifecycleError>,
+    #[case] delegated_at: u64,
+    #[case] expires_at: u64,
+) -> Result<(), AuthorityLifecycleError> {
+    let child_id = token_id(TOKEN_NAME_CHILD)?;
+    let timing = DelegationTiming {
+        delegated_at,
+        expires_at,
+    };
     assert_delegation_fails(
-        &TOKEN_PARENT,
-        delegation_request_with_scope(&TOKEN_ID_CHILD, &SCOPE_SEND_EMAIL, delegated_at, expires_at),
+        &token_parent?,
+        delegation_request_with_scope(&child_id, &scope_send_email?, &timing)?,
         &RevocationIndex::default(),
         |err| {
             matches!(
@@ -226,27 +268,37 @@ fn delegation_rejects_invalid_request_lifetime(#[case] delegated_at: u64, #[case
             )
         },
     );
+    Ok(())
 }
 
 #[rstest]
 #[case::before_expiry(299, false)]
 #[case::at_expiry(300, true)]
 #[case::after_expiry(301, true)]
-fn is_expired_at_boundary_conditions(#[case] time: u64, #[case] expected_expired: bool) {
+fn is_expired_at_boundary_conditions(
+    token_valid: Result<AuthorityToken, AuthorityLifecycleError>,
+    #[case] time: u64,
+    #[case] expected_expired: bool,
+) -> Result<(), AuthorityLifecycleError> {
     assert_eq!(
-        TOKEN_VALID.is_expired_at(TokenTimestamp::new(time)),
+        token_valid?.is_expired_at(TokenTimestamp::new(time)),
         expected_expired
     );
+    Ok(())
 }
 
-#[test]
-fn grants_respects_subject_capability_and_scope() {
-    let subj = TOKEN_VALID.subject().clone();
-    let cap = TOKEN_VALID.capability().clone();
-    let res = ScopeResource::try_from("send_email").expect("valid resource");
-    assert!(TOKEN_VALID.grants(&subj, &cap, &res));
-    assert!(!TOKEN_VALID.grants(&subject("other"), &cap, &res));
-    assert!(!TOKEN_VALID.grants(&subj, &capability("OtherCap"), &res));
-    let out = ScopeResource::try_from("calendar_write").expect("valid resource");
-    assert!(!TOKEN_VALID.grants(&subj, &cap, &out));
+#[rstest]
+fn grants_respects_subject_capability_and_scope(
+    token_valid: Result<AuthorityToken, AuthorityLifecycleError>,
+) -> Result<(), AuthorityLifecycleError> {
+    let valid = token_valid?;
+    let subj = valid.subject().clone();
+    let cap = valid.capability().clone();
+    let res = ScopeResource::try_from("send_email")?;
+    assert!(valid.grants(&subj, &cap, &res));
+    assert!(!valid.grants(&subject("other")?, &cap, &res));
+    assert!(!valid.grants(&subj, &capability("OtherCap")?, &res));
+    let out = ScopeResource::try_from("calendar_write")?;
+    assert!(!valid.grants(&subj, &cap, &out));
+    Ok(())
 }
