@@ -14,31 +14,41 @@ const TEST_SUBJECT: &str = "assistant";
 const TEST_CAPABILITY: &str = "EmailSendCap";
 const TEST_DELEGATED_BY: &str = "policy-host";
 
+// Token name constants to reduce string literal usage.
+const TOKEN_NAME_PARENT: &str = "parent";
+const TOKEN_NAME_CHILD: &str = "child";
+const TOKEN_NAME_VALID: &str = "valid";
+const TOKEN_NAME_REVOKED: &str = "revoked";
+const TOKEN_NAME_EXPIRED: &str = "expired";
+const TOKEN_NAME_TOKEN: &str = "token";
+const TOKEN_NAME_MINT_UNTRUSTED: &str = "mint-untrusted";
+const TOKEN_NAME_MINT_INVALID: &str = "mint-invalid-lifetime";
+
 // Pre-built domain type constants to reduce string parameter usage.
 lazy_static::lazy_static! {
-    static ref TOKEN_ID_PARENT: AuthorityTokenId = token_id("parent");
-    static ref TOKEN_ID_CHILD: AuthorityTokenId = token_id("child");
-    static ref TOKEN_ID_VALID: AuthorityTokenId = token_id("valid");
-    static ref TOKEN_ID_REVOKED: AuthorityTokenId = token_id("revoked");
-    static ref TOKEN_ID_EXPIRED: AuthorityTokenId = token_id("expired");
-    static ref TOKEN_ID_TOKEN: AuthorityTokenId = token_id("token");
+    static ref TOKEN_ID_PARENT: AuthorityTokenId = token_id(TOKEN_NAME_PARENT);
+    static ref TOKEN_ID_CHILD: AuthorityTokenId = token_id(TOKEN_NAME_CHILD);
+    static ref TOKEN_ID_VALID: AuthorityTokenId = token_id(TOKEN_NAME_VALID);
+    static ref TOKEN_ID_REVOKED: AuthorityTokenId = token_id(TOKEN_NAME_REVOKED);
+    static ref TOKEN_ID_EXPIRED: AuthorityTokenId = token_id(TOKEN_NAME_EXPIRED);
+    static ref TOKEN_ID_TOKEN: AuthorityTokenId = token_id(TOKEN_NAME_TOKEN);
     static ref SCOPE_SEND_EMAIL: AuthorityScope = scope(&["send_email"]);
     static ref SCOPE_EMAIL_AND_DRAFT: AuthorityScope = scope(&["send_email", "send_email_draft"]);
-    static ref SUBJECT_ASSISTANT: AuthoritySubject = subject("assistant");
+    static ref SUBJECT_ASSISTANT: AuthoritySubject = subject(TEST_SUBJECT);
     static ref SCOPE_WIDENED: AuthorityScope =
         scope(&["send_email", "send_email_draft", "calendar_write"]);
 
-    // Pre-built test tokens to reduce string parameter usage.
+    // Pre-built test tokens using typed helper to reduce string parameters.
     static ref TOKEN_PARENT: AuthorityToken =
-        mint_authority_token("parent", &["send_email", "send_email_draft"], 10, 200);
+        mint_authority_token_with_types(TOKEN_ID_PARENT.clone(), SCOPE_EMAIL_AND_DRAFT.clone(), 10, 200);
     static ref TOKEN_VALID: AuthorityToken =
-        mint_authority_token("valid", &["send_email"], 10, 300);
+        mint_authority_token_with_types(TOKEN_ID_VALID.clone(), SCOPE_SEND_EMAIL.clone(), 10, 300);
     static ref TOKEN_REVOKED: AuthorityToken =
-        mint_authority_token("revoked", &["send_email"], 10, 300);
+        mint_authority_token_with_types(TOKEN_ID_REVOKED.clone(), SCOPE_SEND_EMAIL.clone(), 10, 300);
     static ref TOKEN_EXPIRED: AuthorityToken =
-        mint_authority_token("expired", &["send_email"], 10, 100);
+        mint_authority_token_with_types(TOKEN_ID_EXPIRED.clone(), SCOPE_SEND_EMAIL.clone(), 10, 100);
     static ref TOKEN_FOR_RESTORE: AuthorityToken =
-        mint_authority_token("token", &["send_email"], 10, 100);
+        mint_authority_token_with_types(TOKEN_ID_TOKEN.clone(), SCOPE_SEND_EMAIL.clone(), 10, 100);
 }
 
 /// Builder for mint requests with sensible test defaults.
@@ -70,11 +80,6 @@ impl MintRequestBuilder {
     fn issuer(mut self, issuer: &str, trust: IssuerTrust) -> Self {
         self.issuer = issuer.to_owned();
         self.issuer_trust = trust;
-        self
-    }
-
-    fn scope(mut self, resources: &[&str]) -> Self {
-        self.scope_resources = resources.iter().map(|s| (*s).to_owned()).collect();
         self
     }
 
@@ -118,18 +123,23 @@ fn scope(resources: &[&str]) -> AuthorityScope {
     AuthorityScope::new(parsed_resources).expect("scope fixtures are valid")
 }
 
-fn mint_authority_token(
-    token_name: &str,
-    scope_resources: &[&str],
+/// Helper to mint an authority token using pre-built domain types.
+fn mint_authority_token_with_types(
+    token_id: AuthorityTokenId,
+    scope: AuthorityScope,
     issued_at: u64,
     expires_at: u64,
 ) -> AuthorityToken {
-    AuthorityToken::mint(
-        MintRequestBuilder::new(token_name)
-            .scope(scope_resources)
-            .lifetime(issued_at, expires_at)
-            .build(),
-    )
+    AuthorityToken::mint(MintRequest {
+        token_id,
+        issuer: TEST_ISSUER.to_owned(),
+        issuer_trust: IssuerTrust::HostTrusted,
+        subject: subject(TEST_SUBJECT),
+        capability: capability(TEST_CAPABILITY),
+        scope,
+        issued_at: TokenTimestamp::new(issued_at),
+        expires_at: TokenTimestamp::new(expires_at),
+    })
     .expect("mint fixtures are valid")
 }
 
@@ -181,7 +191,7 @@ fn assert_delegation_fails<F>(
 #[test]
 fn mint_rejects_untrusted_issuer() {
     assert_mint_fails(
-        MintRequestBuilder::new("mint-untrusted")
+        MintRequestBuilder::new(TOKEN_NAME_MINT_UNTRUSTED)
             .issuer("remote-agent", IssuerTrust::Untrusted)
             .lifetime(10, 20)
             .build(),
@@ -197,7 +207,7 @@ fn mint_rejects_untrusted_issuer() {
 #[test]
 fn mint_rejects_non_forward_lifetime() {
     assert_mint_fails(
-        MintRequestBuilder::new("mint-invalid-lifetime")
+        MintRequestBuilder::new(TOKEN_NAME_MINT_INVALID)
             .lifetime(15, 15)
             .build(),
         |err| {
