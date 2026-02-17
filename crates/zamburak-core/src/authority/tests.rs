@@ -25,6 +25,8 @@ lazy_static::lazy_static! {
     static ref SCOPE_SEND_EMAIL: AuthorityScope = scope(&["send_email"]);
     static ref SCOPE_EMAIL_AND_DRAFT: AuthorityScope = scope(&["send_email", "send_email_draft"]);
     static ref SUBJECT_ASSISTANT: AuthoritySubject = subject("assistant");
+    static ref SCOPE_WIDENED: AuthorityScope =
+        scope(&["send_email", "send_email_draft", "calendar_write"]);
 
     // Pre-built test tokens to reduce string parameter usage.
     static ref TOKEN_PARENT: AuthorityToken =
@@ -132,14 +134,14 @@ fn mint_authority_token(
 }
 
 /// Helper to assert that a mint request fails with a specific error predicate.
-fn assert_mint_fails<F>(request: MintRequest, predicate: F, error_desc: &str)
+fn assert_mint_fails<F>(request: MintRequest, predicate: F)
 where
     F: Fn(&AuthorityLifecycleError) -> bool,
 {
     let result = AuthorityToken::mint(request);
     match result {
         Err(ref err) if predicate(err) => {} // success
-        _ => panic!("expected mint to fail with {error_desc}, got: {result:?}"),
+        _ => panic!("mint request did not fail as expected, got: {result:?}"),
     }
 }
 
@@ -166,14 +168,13 @@ fn assert_delegation_fails<F>(
     request: DelegationRequest,
     revocation_index: &RevocationIndex,
     predicate: F,
-    error_desc: &str,
 ) where
     F: Fn(&AuthorityLifecycleError) -> bool,
 {
     let result = AuthorityToken::delegate(parent, request, revocation_index);
     match result {
         Err(ref err) if predicate(err) => {} // success
-        _ => panic!("expected delegation to fail with {error_desc}, got: {result:?}"),
+        _ => panic!("delegation request did not fail as expected, got: {result:?}"),
     }
 }
 
@@ -190,7 +191,6 @@ fn mint_rejects_untrusted_issuer() {
                 AuthorityLifecycleError::UntrustedMinter { issuer } if issuer == "remote-agent"
             )
         },
-        "UntrustedMinter",
     );
 }
 
@@ -209,7 +209,6 @@ fn mint_rejects_non_forward_lifetime() {
                 }
             )
         },
-        "InvalidTokenLifetime",
     );
 }
 
@@ -228,7 +227,7 @@ fn delegation_accepts_strict_scope_and_lifetime_narrowing() {
 
 #[rstest]
 #[case::equal_scope(SCOPE_EMAIL_AND_DRAFT.clone())]
-#[case::widened_scope(scope(&["send_email", "send_email_draft", "calendar_write"]))]
+#[case::widened_scope(SCOPE_WIDENED.clone())]
 fn delegation_rejects_non_strict_scope_subset(#[case] delegated_scope: AuthorityScope) {
     let result = AuthorityToken::delegate(
         &TOKEN_PARENT,
@@ -264,7 +263,6 @@ fn delegation_rejects_non_strict_lifetime_subset() {
                 }
             )
         },
-        "DelegationLifetimeNotStrictSubset",
     );
 }
 
