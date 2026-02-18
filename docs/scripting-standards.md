@@ -35,8 +35,8 @@ as a default.
   expectations travel with the file. Prefer the shebang
   `#!/usr/bin/env -S uv run python` followed by the metadata block shown in the
   example below.
-- External processes are invoked via [`plumbum`](https://plumbum.readthedocs.io)
-  to provide structured command execution rather than ad‑hoc shell strings.
+- External processes are invoked via `cuprum==0.1.0` to provide structured
+  command execution rather than ad‑hoc shell strings.
 - File‑system interactions use `pathlib.Path`. Higher‑level operations (for
   example, copying or removing trees) go through the `shutil` standard library
   module.
@@ -47,14 +47,14 @@ as a default.
 #!/usr/bin/env -S uv run python
 # /// script
 # requires-python = ">=3.13"
-# dependencies = ["plumbum", "cmd-mox"]
+# dependencies = ["cuprum==0.1.0", "cmd-mox"]
 # ///
 
 from __future__ import annotations
 
 from pathlib import Path
-from plumbum import local
-from plumbum.cmd import tofu
+from cuprum import local
+from cuprum.cmd import tofu
 
 
 def main() -> None:
@@ -77,7 +77,7 @@ Employ Cyclopts when a script requires parameters, particularly under CI with
 #!/usr/bin/env -S uv run python
 # /// script
 # requires-python = ">=3.13"
-# dependencies = ["cyclopts>=2.9", "plumbum", "cmd-mox"]
+# dependencies = ["cyclopts>=2.9", "cuprum==0.1.0", "cmd-mox"]
 # ///
 
 from __future__ import annotations
@@ -87,8 +87,8 @@ from typing import Annotated
 
 import cyclopts
 from cyclopts import App, Parameter
-from plumbum import local
-from plumbum.cmd import tofu
+from cuprum import local
+from cuprum.cmd import tofu
 
 # Map INPUT_<PARAM> → function parameter without additional glue
 app = App(config=cyclopts.config.Env("INPUT_", command=False))
@@ -162,14 +162,14 @@ Guidance:
   config_out: Annotated[Path | None, Parameter(env_var="INPUT_CONFIG_PATH")] = None
   ```
 
-## Plumbum: command calling and pipelines
+## Cuprum: command calling and pipelines
 
 ### Basics: command calls, capturing output, handling failures
 
 ```python
 from __future__ import annotations  # Enables postponed annotation evaluation
-from plumbum import local
-from plumbum.cmd import git, grep
+from cuprum import local
+from cuprum.cmd import git, grep
 
 # Capture stdout (raises ProcessExecutionError on non‑zero exit)
 last_commit = git["--no-pager", "log", "-1", "--pretty=%H"]().strip()
@@ -188,7 +188,7 @@ shortlog = (git["--no-pager", "log", "--oneline"] | grep["fix"])()
 
 ```python
 from pathlib import Path
-from plumbum import local
+from cuprum import local
 
 repo_dir = Path(__file__).resolve().parents[1]
 
@@ -203,8 +203,8 @@ with local.env(GIT_AUTHOR_NAME="CI", GIT_AUTHOR_EMAIL="ci@example.org"):
 ### Foreground execution and background jobs
 
 ```python
-from plumbum import FG, BG
-from plumbum.cmd import make
+from cuprum import FG, BG
+from cuprum.cmd import make
 
 # Stream output to terminal
 make["-j4"] & FG
@@ -217,8 +217,8 @@ proc.wait()
 ### Piping stdin and redirecting
 
 ```python
-from plumbum import local
-from plumbum.cmd import sed, git, grep, wc
+from cuprum import local
+from cuprum.cmd import sed, git, grep, wc
 
 # Provide stdin explicitly
 _, out, _ = sed["-n", "s/^v//p"].run(stdin="v1.2.3\nv2.0.0\n")
@@ -282,13 +282,13 @@ except FileNotFoundError:
     pass
 ```
 
-## Cyclopts + Plumbum + Pathlib together (reference script)
+## Cyclopts + Cuprum + Pathlib together (reference script)
 
 ```python
 #!/usr/bin/env -S uv run python
 # /// script
 # requires-python = ">=3.13"
-# dependencies = ["cyclopts>=2.9", "plumbum", "cmd-mox"]
+# dependencies = ["cyclopts>=2.9", "cuprum==0.1.0", "cmd-mox"]
 # ///
 
 from __future__ import annotations
@@ -297,8 +297,8 @@ from typing import Annotated
 
 import cyclopts
 from cyclopts import App, Parameter
-from plumbum import local, FG
-from plumbum.cmd import git
+from cuprum import local, FG
+from cuprum.cmd import git
 
 app = App(config=cyclopts.config.Env("INPUT_", command=False))
 
@@ -384,7 +384,7 @@ pytest_plugins = ("cmd_mox.pytest_plugin",)
 ```
 
 ```python
-from plumbum import local
+from cuprum import local
 
 
 def test_git_tag_happy_path(cmd_mox, monkeypatch, tmp_path):
@@ -417,7 +417,7 @@ def test_git_tag_failure_surface_error(cmd_mox, monkeypatch, tmp_path):
 ### Spies and passthrough capture (turn real calls into fixtures)
 
 ```python
-from plumbum import local
+from cuprum import local
 
 
 def test_spy_and_record(cmd_mox, monkeypatch, tmp_path):
