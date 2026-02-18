@@ -1,489 +1,317 @@
-# Implement authority token lifecycle conformance checks (Task 0.1.3)
+# Align toolchain and quality-gate baseline with repository configuration (Task 0.2.1)
 
 This ExecPlan is a living document. The sections `Constraints`, `Tolerances`,
 `Risks`, `Progress`, `Surprises & Discoveries`, `Decision Log`, and
 `Outcomes & Retrospective` must be kept up to date as work proceeds.
 
-Status: DONE
+Status: DRAFT
 
-`PLANS.md` is not present in this repository at draft time, so this document is
-the governing execution plan for this task.
+`PLANS.md` is not present in this repository, so this document is the
+controlling execution plan for roadmap Task 0.2.1.
 
 ## Purpose / big picture
 
-Implement roadmap Task 0.1.3 from `docs/roadmap.md`: authority token lifecycle
-semantics must be enforced and verified for mint scope, delegation narrowing,
-revocation, expiry, and snapshot-restore revalidation.
+Implement `docs/roadmap.md` Task 0.2.1 by making the toolchain pin and
+quality-gate command contract consistent across repository configuration and
+baseline documentation.
 
-After this change, a library consumer should be able to observe deterministic,
-fail-closed authority lifecycle behaviour: valid transitions are accepted,
-invalid transitions are denied, and restored state is conservatively
-revalidated against current revocation and expiry facts.
-
-Task completion is observable when unit and behavioural lifecycle transition
-suites pass for both valid and invalid transition paths, design decisions are
-documented, user-facing API guidance is updated, and roadmap Task 0.1.3 is
-marked done.
+After this change, maintainers should observe one canonical baseline across
+`rust-toolchain.toml`, `Makefile`, and baseline docs, with drift detection
+covered by tests and enforced by required gates. Success is observable when the
+new baseline consistency tests pass, required gates pass, and Task 0.2.1 is
+marked done in `docs/roadmap.md`.
 
 ## Constraints
 
-- Implement to these normative signposts:
-  `docs/zamburak-design-document.md` section "Authority token lifecycle
-  semantics", `docs/verification-targets.md` row "Authority lifecycle",
-  `docs/zamburak-engineering-standards.md` section "Verification and
-  endorsement standards", `docs/repository-layout.md` sections
-  `crates/zamburak-core` and `tests/security/`.
-- Scope is limited to authority lifecycle conformance checks:
-  mint scope, delegation narrowing, revocation, expiry, and snapshot-restore
-  validation.
-- Out of scope: external identity-provider integration.
-- Lifecycle checks must fail closed for invalid, stale, revoked, or
-  non-revalidatable authority states.
-- Keep authority as a separate concept from integrity and confidentiality,
-  preserving the three-axis model from the design document.
-- Add unit tests and behavioural tests covering happy and unhappy paths plus
-  edge cases.
-- Use `rstest-bdd` v0.5.0 for behaviour-driven development (BDD) suites where
-  lifecycle scenarios are expressed as user-observable transitions.
-- Record concrete lifecycle design decisions in
-  `docs/zamburak-design-document.md`.
-- Update `docs/users-guide.md` with any new authority lifecycle API or
-  behaviour visible to library consumers.
-- Mark roadmap Task 0.1.3 done in `docs/roadmap.md` when implementation and
-  verification are complete.
-- Required completion gates: `make check-fmt`, `make lint`, and `make test`.
-- Because Markdown documentation is changed, run docs gates too:
-  `make markdownlint`, `make nixie`, and `make fmt`.
+- Implement against these requirement signposts only:
+  `docs/tech-baseline.md` sections "Canonical version baseline" and "Baseline
+  usage contract", `docs/zamburak-engineering-standards.md` section "Command
+  and gateway standards", and `docs/repository-layout.md` section "Root and
+  operational files".
+- Keep scope to baseline alignment for `rust-toolchain.toml`, `Makefile`, and
+  baseline-document consistency.
+- Out of scope: introducing additional build systems.
+- Preserve Makefile-first command workflow; do not replace gate invocation with
+  ad hoc scripts.
+- Add validation coverage for happy and unhappy paths plus relevant edge cases.
+  Use unit tests and behavioural tests with `rstest-bdd` v0.5.0 where
+  behavioural scenario narration is appropriate.
+- Record design decisions in `docs/zamburak-design-document.md` if this task
+  changes baseline governance semantics.
+- Update `docs/users-guide.md` only if library-consumer-visible behaviour or
+  API changes; if none, record that conclusion in `Decision Log`.
+- Completion requires `make check-fmt`, `make lint`, and `make test` to pass.
+- Because Markdown docs will be updated, also run `make markdownlint`,
+  `make nixie`, and `make fmt`.
+- Mark roadmap Task 0.2.1 as `[x]` in `docs/roadmap.md` only after all
+  completion criteria and gates succeed.
 
 ## Tolerances (exception triggers)
 
-- Scope tolerance:
-  if implementation requires edits in more than 18 files or exceeds 1,200 net
-  changed lines, stop and escalate with a split proposal.
-- Interface tolerance:
-  if existing stable policy-loading APIs must change signature, stop and
-  escalate with compatibility options.
-- Dependency tolerance:
-  if implementation requires adding external dependencies beyond expected core
-  modelling/test crates, stop and escalate before adding them.
-- Semantics tolerance:
-  if token scope-subset semantics cannot be derived unambiguously from current
-  docs, stop and present candidate interpretations.
-- Behavioural-test tolerance:
-  if lifecycle behaviour cannot be represented with `rstest-bdd` after two
-  concrete attempts, stop and document why before using a non-BDD fallback.
-- Iteration tolerance:
-  if required gates still fail after three focused fix loops, stop and report
-  failing suites plus root-cause hypotheses.
+- Scope tolerance: if implementation exceeds 10 files or 450 net changed lines,
+  stop and escalate with a split proposal.
+- Interface tolerance: if changes to make-target names (`check-fmt`, `lint`,
+  `test`) are required, stop and escalate with compatibility options.
+- Dependency tolerance: if any new dependency is required for baseline
+  consistency checks, stop and escalate before adding it.
+- Test strategy tolerance: if `rstest-bdd` cannot express the behavioural
+  baseline checks after two concrete attempts, stop and record why before
+  selecting a non-BDD behavioural fallback.
+- Ambiguity tolerance: if documentation signposts disagree on canonical command
+  semantics in a way that changes gate meaning, stop and escalate with explicit
+  interpretations and trade-offs.
+- Iteration tolerance: if required gates still fail after three focused fix
+  loops, stop and report failures with root-cause hypotheses.
 
 ## Risks
 
-- Risk: `crates/zamburak-core` does not yet exist in this repository.
-  Severity: high Likelihood: high Mitigation: add minimal crate scaffolding
-  focused on authority lifecycle contracts only, then expand narrowly for task
-  requirements.
+- Risk: baseline docs and Makefile currently describe similar but not identical
+  command forms (`--workspace` versus `--all`, `cargo doc` in `lint`, extra
+  test flags). Severity: high Likelihood: high Mitigation: choose one canonical
+  contract and align all artefacts in one change set with explicit acceptance
+  tests.
 
-- Risk: roadmap traceability names
-  `crates/zamburak-core/src/authority.rs`, while repository-layout currently
-  maps authority helpers to `capability.rs`. Severity: medium Likelihood:
-  medium Mitigation: choose one canonical module path during implementation and
-  update documentation consistently in the same change set.
+- Risk: behavioural tests for contributor tooling can become brittle if they
+  assert full command strings including irrelevant formatting. Severity: medium
+  Likelihood: medium Mitigation: assert stable command fragments and semantics,
+  not whitespace or argument ordering that does not alter behaviour.
 
-- Risk: time-dependent expiry logic can create flaky tests.
-  Severity: high Likelihood: medium Mitigation: use deterministic lifecycle
-  evaluation inputs (explicit timestamp parameters or injected clock
-  abstractions) instead of ambient wall-clock reads in tests.
-
-- Risk: snapshot-restore semantics may be over-scoped without runtime snapshot
-  infrastructure in place. Severity: medium Likelihood: medium Mitigation:
-  model restore validation as explicit revalidation of token sets against
-  current revocation/expiry state and verify that invalid tokens are stripped
-  before downstream checks.
-
-- Risk: delegation narrowing checks may accidentally allow broadened scope.
-  Severity: high Likelihood: medium Mitigation: encode subset checks as
-  explicit predicate functions and cover broadening attempts in negative tests.
+- Risk: aligning to stricter gate commands may expose latent warnings in crates
+  not currently exercised by `make lint`. Severity: medium Likelihood: medium
+  Mitigation: run targeted and full gates early, then fix surfaced defects
+  rather than weakening the contract.
 
 ## Progress
 
-- [x] (2026-02-13 18:53Z) Reviewed roadmap, design, verification, standards,
-  and repository-layout signposts for Task 0.1.3.
-- [x] (2026-02-13 18:53Z) Inspected current code baseline and confirmed the
-  repository presently contains `zamburak-policy` only.
-- [x] (2026-02-13 18:53Z) Drafted this ExecPlan with lifecycle scope,
-  implementation stages, and quality-gate requirements.
-- [x] (2026-02-13) Implemented `zamburak-core` authority lifecycle domain model
-  and validator (previous session).
-- [x] (2026-02-13) Added 8 lifecycle transition unit tests (previous session).
-- [x] (2026-02-13) Fixed `Display` impl for `AuthorityTokenId` (required by
-  `thiserror` format strings).
-- [x] (2026-02-13) Fixed `Makefile` test target to include `--workspace` flag
-  so all crate members are tested.
-- [x] (2026-02-13) Added 13 `rstest-bdd` behavioural lifecycle scenarios in
-  `tests/security/features/authority_lifecycle.feature` with step definitions
-  in `tests/security/authority_lifecycle_bdd.rs`.
-- [x] (2026-02-13) Integrated lifecycle checks into `zamburak-policy` via
-  `PolicyEngine::validate_authority_tokens` delegating to `zamburak-core`.
-- [x] (2026-02-13) Updated `docs/zamburak-design-document.md` with lifecycle
-  implementation decision block.
-- [x] (2026-02-13) Updated `docs/users-guide.md` with authority lifecycle API
-  section covering mint, delegation, revocation, boundary validation, restore,
-  and error handling.
-- [x] (2026-02-13) Updated `docs/repository-layout.md` with `authority.rs`
-  entry and refined crate responsibility description.
-- [x] (2026-02-13) Marked roadmap Task 0.1.3 as done.
-- [x] (2026-02-13) All required quality gates pass (`make check-fmt`,
-  `make lint`, `make test`).
+- [x] (2026-02-18 12:00Z) Reviewed roadmap Task 0.2.1 and all listed signpost
+  documents.
+- [x] (2026-02-18 12:05Z) Inspected current `Makefile`, `rust-toolchain.toml`,
+  and workspace testing layout.
+- [x] (2026-02-18 12:10Z) Drafted this ExecPlan with staged execution,
+  tolerances, and validation criteria.
+- [ ] Implement baseline alignment updates in configuration and docs.
+- [ ] Add/extend baseline consistency unit and behavioural tests.
+- [ ] Run required gates and capture evidence logs.
+- [ ] Update roadmap status for Task 0.2.1.
 
-## Surprises & discoveries
+## Surprises & Discoveries
 
-- Observation: there is currently no `crates/zamburak-core` crate.
-  Evidence: workspace members list only `crates/zamburak-policy` and file tree
-  has no `zamburak-core` directory. Impact: this task must include minimal
-  workspace expansion before lifecycle implementation can proceed.
+- Observation: `docs/tech-baseline.md` pins `nightly-2026-01-30`, and
+  `rust-toolchain.toml` already matches this value. Evidence: direct file
+  comparison during planning. Impact: toolchain-channel work is likely minimal;
+  focus shifts to gate-command and documentation consistency.
 
-- Observation: `tests/security/` already exists and is wired as an integration
-  suite root. Evidence: `tests/security/main.rs` currently includes
-  migration-security coverage. Impact: lifecycle conformance scenarios can be
-  colocated in `tests/security/` without introducing a new test harness shape.
+- Observation: `Makefile` currently defines `lint` as `cargo doc --no-deps`
+  plus `cargo clippy`, while standards docs describe lint as clippy-only.
+  Evidence: `Makefile` target body versus
+  `docs/zamburak-engineering-standards.md` command block. Impact: Task 0.2.1
+  needs an explicit canonical decision for `lint` semantics.
 
-- Observation: task traceability and repository-layout currently differ on the
-  likely authority module filename (`authority.rs` vs `capability.rs`).
-  Evidence: `docs/roadmap.md` table row `0.1.3` vs `docs/repository-layout.md`
-  `crates/zamburak-core` mapping. Impact: implementation should normalize this
-  path decision and update docs in the same change set to avoid follow-up
-  ambiguity.
+- Observation: `Makefile` uses `cargo fmt --all` and additional test flags,
+  while baseline docs describe `--workspace` and simpler test invocation.
+  Evidence: `Makefile` compared against `docs/tech-baseline.md` baseline table.
+  Impact: alignment changes are required in either code or docs, with tests to
+  prevent future drift.
 
-## Decision log
+## Decision Log
 
-- Decision: model authority lifecycle with explicit domain types and transition
-  validators in `zamburak-core`, not ad hoc checks inside policy parsing code.
-  Rationale: lifecycle semantics are security-critical and need focused,
-  testable primitives reusable across policy evaluation paths. Date/Author:
-  2026-02-13 / Codex
+- Decision: treat Task 0.2.1 as a contract-alignment task with tests that guard
+  against future drift, rather than a one-time textual sync. Rationale: roadmap
+  completion criteria require ongoing consistency, not merely a snapshot edit.
+  Date/Author: 2026-02-18 / Codex
 
-- Decision: treat expiry and restore-time validation as deterministic checks
-  using injected/evaluated time inputs rather than ambient system time.
-  Rationale: deterministic checks support reliable tests and avoid flaky gate
-  outcomes. Date/Author: 2026-02-13 / Codex
+- Decision: include behavioural checks with `rstest-bdd` only for externally
+  observable command-contract behaviour (for example, make-target semantics),
+  and keep low-level parsing checks as unit tests. Rationale: this satisfies
+  the requested unit plus behavioural coverage while keeping test intent clear
+  and maintainable. Date/Author: 2026-02-18 / Codex
 
-- Decision: include behavioural lifecycle transition scenarios under
-  `tests/security/` using `rstest-bdd` v0.5.0 where scenario narration improves
-  contract clarity. Rationale: verification targets explicitly require
-  lifecycle transition fixtures and integration/security evidence. Date/Author:
-  2026-02-13 / Codex
-
-- Decision: use `BTreeSet<ScopeResource>` for `AuthorityScope` to guarantee
-  deterministic ordering and O(log n) subset checks. `is_strict_subset_of`
-  requires proper subset (not equal). Rationale: deterministic ordering avoids
-  hash-iteration non-determinism in security checks; strict subset prevents
-  lateral delegation (same scope, just relabelled). Date/Author: 2026-02-13
-
-- Decision: `PolicyEngine::validate_authority_tokens` delegates to
-  `zamburak-core::validate_tokens_at_policy_boundary` rather than duplicating
-  logic. Rationale: single source of truth for lifecycle verdicts prevents
-  divergence between engine and core validation paths. Date/Author: 2026-02-13
-
-- Decision: delegation from revoked or expired parent checks run before scope
-  and lifetime narrowing checks. Rationale: fail-closed ordering — a revoked or
-  expired parent should be rejected as early as possible regardless of whether
-  the delegation request is otherwise well-formed. Date/Author: 2026-02-13
-
-- Decision: fixed Makefile `test` target to include `--workspace` flag.
-  Rationale: without `--workspace`, `cargo test` only tests the root package,
-  omitting `zamburak-core` and `zamburak-policy` unit tests from CI gating.
-  Date/Author: 2026-02-13
-
-- Decision: BDD step definitions avoid `expect()` in favour of `let...else`
-  with `panic!()` to satisfy the workspace `clippy::expect_used` deny lint.
-  Helper functions (`require_mint_result`, `require_delegation_result`,
-  `require_boundary_result`) centralize option unwrapping. Rationale:
-  consistency with existing compatibility BDD tests and workspace lint rules.
-  Date/Author: 2026-02-13
+- Decision: require explicit evidence logs for both code and docs gates using
+  `set -o pipefail` and `tee`. Rationale: this matches `AGENTS.md` and the
+  engineering standards command logging convention. Date/Author: 2026-02-18 /
+  Codex
 
 ## Outcomes & retrospective
 
-All expected outcomes are met:
+Execution has not started. Expected outcomes at completion:
 
-- Authority lifecycle transition checks implemented and fail-closed in
-  `crates/zamburak-core/src/authority.rs`.
-- 8 unit tests in `zamburak-core` covering valid/invalid mint, delegation
-  scope narrowing, delegation lifetime narrowing, revocation, expiry, policy
-  boundary validation, and restore revalidation.
-- 13 BDD scenarios in `tests/security/features/authority_lifecycle.feature`
-  covering mint (trusted/untrusted/invalid-lifetime), delegation (narrowed,
-  widened, equal-scope, non-narrowed-lifetime, revoked-parent, expired-parent),
-  boundary validation (revoked/expired stripping), and snapshot restore
-  (conservative revalidation, all-expired stripping).
-- `PolicyEngine::validate_authority_tokens` wires policy-engine authority
-  checks to `zamburak-core` lifecycle validation.
-- Design document updated with implementation decision block.
-- User's guide updated with authority lifecycle API section.
-- Repository layout updated with `authority.rs` entry.
-- Roadmap Task 0.1.3 marked `[x]`.
-- 46 total tests pass across workspace: 8 core + 17 policy + 4 compatibility +
-  17 security.
-- `make check-fmt`, `make lint`, `make test` all pass.
+- `rust-toolchain.toml`, `Makefile`, and baseline docs define one canonical
+  toolchain and gate-command contract with no contradictions.
+- Baseline consistency checks cover happy and unhappy paths and guard against
+  regressions.
+- Required gates pass with captured evidence logs.
+- `docs/roadmap.md` Task 0.2.1 is marked `[x]`.
 
-Retrospective notes:
-
-- The previous session created `zamburak-core` but left a compilation error
-  (`AuthorityTokenId` missing `Display` impl for `thiserror` format strings).
-  This was caught immediately by running quality gates first.
-- The Makefile `test` target was missing `--workspace`, causing `zamburak-core`
-  unit tests to be silently excluded from `make test`. Fixed as part of this
-  task.
-- BDD step parameter capture includes literal quotes from Gherkin text;
-  removing quotes from the feature file is cleaner than stripping in code.
-- The `too_many_arguments` clippy lint fires on BDD step functions with many
-  Gherkin parameters; a tightly-scoped `#[expect]` annotation is the correct
-  response since the parameter count is driven by the scenario text.
+Retrospective notes will be added after implementation.
 
 ## Context and orientation
 
-Repository state at the start of Task 0.1.3:
+Current repository context relevant to this task:
 
-- Workspace contained `crates/zamburak-policy` only; `crates/zamburak-core` was
-  added as part of this task.
-- `crates/zamburak-policy/src/engine.rs` handled policy loading but did not yet
-  enforce authority-token lifecycle transitions.
-- Existing behavioural tests cover policy schema and migration contracts in
-  `tests/compatibility/`.
-- Existing security tests cover migration fail-closed behaviour in
-  `tests/security/`.
-- Root dev dependencies already include `rstest-bdd = "0.5.0"` and
-  `rstest-bdd-macros = "0.5.0"`.
+- Toolchain pin lives in `rust-toolchain.toml`.
+- Quality-gate entrypoints live in `Makefile` targets `check-fmt`, `lint`, and
+  `test`.
+- Baseline policy is documented in `docs/tech-baseline.md`.
+- Command and logging standards are documented in
+  `docs/zamburak-engineering-standards.md` and `AGENTS.md`.
+- Root-operational-file expectations are documented in
+  `docs/repository-layout.md`.
+- Existing BDD harnesses reside in `tests/compatibility/` and `tests/security/`
+  and already use `rstest-bdd` v0.5.0.
 
-Target state for Task 0.1.3:
-
-- `crates/zamburak-core` exists with authority lifecycle module(s),
-- lifecycle checks enforce mint, delegation, revocation, expiry, and
-  restore-time revalidation semantics,
-- `zamburak-policy` authority evaluation path uses lifecycle validation where
-  traceability requires,
-- lifecycle transition conformance suites exist in unit and security-level
-  behavioural tests,
-- design and user docs reflect shipped behaviour and API,
-- roadmap Task 0.1.3 is marked done.
+No prior context is required beyond this plan and the repository tree.
 
 ## Plan of work
 
-Stage A: contract lock and scaffold authority-core surfaces.
+Stage A: lock the canonical baseline contract (no edits yet).
 
-- Add workspace member `crates/zamburak-core` with crate-level docs and a
-  minimal public API for authority lifecycle modelling.
-- Introduce authority lifecycle domain types and error enums in
-  `crates/zamburak-core/src/authority.rs` (or selected canonical equivalent),
-  including token identity, subject, capability, scope, expiry, delegation
-  lineage, and revocation references.
-- Add explicit transition predicate helpers for mint validity, delegation
-  narrowing, revocation, expiry, and restore revalidation.
-- Resolve and document canonical filename decision if `authority.rs` and
-  `capability.rs` naming diverges.
+Reconcile differences between `Makefile` commands and baseline docs. Decide the
+single canonical command semantics for `check-fmt`, `lint`, and `test`, then
+list exact edits needed in config and docs.
 
-Go/no-go for Stage A: crate compiles, public authority lifecycle interfaces are
-well-scoped, and no behaviour is implied without tests.
+Go/no-go for Stage A: every mismatch is identified and mapped to a concrete
+edit; no implementation starts with unresolved contract ambiguity.
 
-Stage B: test-first conformance suites.
+Stage B: add tests first for baseline consistency.
 
-- Add unit tests under `crates/zamburak-core` using `rstest` fixtures and
-  parameterized cases for: valid mint, invalid mint scope/expiry, valid
-  narrowed delegation, invalid widened delegation, revocation invalidation,
-  expiry invalidation, and restore-time token stripping.
-- Add behavioural lifecycle scenarios using `rstest-bdd` v0.5.0 under
-  `tests/security/` (feature files and step bindings) that exercise full
-  transition narratives and attack-shaped unhappy paths.
-- Ensure happy and unhappy paths plus edge cases are explicitly represented,
-  including boundary-time expiry and parent-child lifetime equality limits.
+Add unit tests for deterministic checks (for example, parsing pinned toolchain
+channel and required command fragments from source files). Add behavioural
+tests using `rstest-bdd` v0.5.0 for user-observable baseline behaviour (happy
+path: baseline aligned; unhappy path: representative mismatch fixture fails;
+edge cases: whitespace/order variance that should not fail).
 
-Go/no-go for Stage B: new lifecycle tests fail for expected reasons before
-implementation, while existing schema and migration suites remain stable.
+Go/no-go for Stage B: new tests fail before baseline-alignment edits and prove
+that the intended contract is being enforced.
 
-Stage C: implement lifecycle validation and policy-engine integration.
+Stage C: align configuration and documentation.
 
-- Implement lifecycle transition operations and validation outcomes in
-  `zamburak-core` with fail-closed defaults.
-- Add revocation-index and restore-revalidation helpers that evaluate token sets
-  against current revocation and expiry state.
-- Integrate lifecycle checks into the relevant authority path in
-  `crates/zamburak-policy/src/engine.rs` so policy-facing logic consumes
-  canonical lifecycle verdicts instead of local ad hoc checks.
-- Export required types from `crates/zamburak-core/src/lib.rs` and root
-  re-export surfaces as needed.
+Apply minimal edits to `rust-toolchain.toml`, `Makefile`, and baseline docs so
+all canonical values and gate commands match. Keep target names stable and
+maintain Makefile-first invocation patterns. If command semantics are
+clarified, update `docs/tech-baseline.md` and
+`docs/zamburak-engineering-standards.md` together.
 
-Go/no-go for Stage C: all lifecycle unit and behavioural/security tests pass,
-and invalid transitions are denied deterministically.
+Go/no-go for Stage C: all baseline consistency tests pass and no contradictory
+baseline statements remain.
 
-Stage D: documentation and roadmap closure.
+Stage D: documentation closure, gates, and roadmap update.
 
-- Update `docs/zamburak-design-document.md` with concrete authority lifecycle
-  design decisions taken during implementation (scope model, narrowing rules,
-  revocation semantics, restore revalidation contract).
-- Update `docs/users-guide.md` with authority lifecycle API usage and observable
-  fail-closed outcomes.
-- Update `docs/roadmap.md` by marking Task 0.1.3 as `[x]` once all completion
-  criteria and gates are satisfied.
-- If module-path decisions changed ownership mapping, update
-  `docs/repository-layout.md` in the same change set.
+Update `docs/users-guide.md` only if there is consumer-visible behaviour/API
+impact; otherwise record explicit no-change rationale. Record design decisions
+in `docs/zamburak-design-document.md` if governance semantics changed. Run all
+required gates with logs, then mark Task 0.2.1 done in `docs/roadmap.md`.
 
-Go/no-go for Stage D: docs and roadmap match shipped behaviour and do not
-contradict code or tests.
-
-Stage E: full validation and evidence capture.
-
-- Run targeted lifecycle suites and then mandatory repository gates.
-- Capture logs proving pass status for code and docs gates.
-
-Go/no-go for Stage E: `make check-fmt`, `make lint`, `make test`,
-`make markdownlint`, `make nixie`, and `make fmt` all pass.
+Go/no-go for Stage D: every completion criterion in roadmap Task 0.2.1 is
+satisfied and evidenced.
 
 ## Concrete steps
 
-Run commands from repository root: `/home/user/project`.
+Run commands from `/home/user/project`.
 
-1. Baseline orientation.
+1. Baseline inventory and mismatch capture.
 
-   ```bash
-   git status --short
-   rg --files crates tests docs | sort
-   ```
+    set -o pipefail && cat rust-toolchain.toml \
+      | tee /tmp/toolchain-task-0-2-1-$(git branch --show-current).out |
+    set -o pipefail && make -n check-fmt \
+      | tee /tmp/check-fmt-dry-task-0-2-1-$(git branch --show-current).out |
+    set -o pipefail && make -n lint \
+      | tee /tmp/lint-dry-task-0-2-1-$(git branch --show-current).out |
+    set -o pipefail && make -n test \
+      | tee /tmp/test-dry-task-0-2-1-$(git branch --show-current).out |
 
-2. Scaffold and wire `zamburak-core`.
+2. Add tests before alignment edits.
 
-   ```bash
-   mkdir -p crates/zamburak-core/src
-   # Edit workspace Cargo manifests and add:
-   # - crates/zamburak-core/Cargo.toml
-   # - crates/zamburak-core/src/lib.rs
-   # - crates/zamburak-core/src/authority.rs
-   ```
+    Edit/add test artefacts (exact paths to be finalized in Stage A), likely:
+    - `tests/compatibility/main.rs`
+    - `tests/compatibility/toolchain_baseline_contract.rs`
+    - `tests/compatibility/features/tooling_baseline.feature`
+    - `tests/compatibility/tooling_baseline_bdd.rs`
 
-3. Add lifecycle tests before implementation.
+3. Align baseline artefacts.
 
-   ```bash
-   mkdir -p tests/security/features
-   # Edit/add:
-   # - crates/zamburak-core/src/authority.rs (unit tests)
-   # - tests/security/features/authority_lifecycle.feature
-   # - tests/security/authority_lifecycle_bdd.rs
-   # - tests/security/main.rs
-   ```
+    Edit:
+    - `rust-toolchain.toml` (only if mismatch exists)
+    - `Makefile`
+    - `docs/tech-baseline.md`
+    - `docs/zamburak-engineering-standards.md`
+    - `docs/repository-layout.md` (only if root-operational-file contract text
+      needs correction)
 
-4. Run targeted suites during implementation loops.
+4. Update design/user docs where required.
 
-   ```bash
-   set -o pipefail && cargo test -p zamburak-core authority \
-     | tee /tmp/test-0-1-3-authority-unit.out
-   set -o pipefail && cargo test --test security authority_lifecycle \
-     | tee /tmp/test-0-1-3-authority-security.out
-   ```
+    Edit conditionally:
+    - `docs/zamburak-design-document.md`
+    - `docs/users-guide.md`
 
-5. Implement lifecycle checks and integrate policy-engine usage.
+5. Run required quality gates with evidence logs.
 
-   ```plaintext
-   Edit/add:
-   - crates/zamburak-core/src/authority.rs
-   - crates/zamburak-core/src/lib.rs
-   - crates/zamburak-policy/src/engine.rs
-   - crates/zamburak-policy/src/lib.rs
-   - src/lib.rs
-   ```
+    set -o pipefail && make check-fmt \
+      | tee /tmp/check-fmt-zamburak-$(git branch --show-current).out |
+    set -o pipefail && make lint \
+      | tee /tmp/lint-zamburak-$(git branch --show-current).out |
+    set -o pipefail && make test \
+      | tee /tmp/test-zamburak-$(git branch --show-current).out |
+    set -o pipefail && make markdownlint \
+      | tee /tmp/markdownlint-zamburak-$(git branch --show-current).out |
+    set -o pipefail && make nixie \
+      | tee /tmp/nixie-zamburak-$(git branch --show-current).out |
+    set -o pipefail && make fmt \
+      | tee /tmp/fmt-zamburak-$(git branch --show-current).out |
 
-6. Update design, guide, and roadmap artefacts.
+6. Mark roadmap completion.
 
-   ```plaintext
-   Edit:
-   - docs/zamburak-design-document.md
-   - docs/users-guide.md
-   - docs/roadmap.md
-   - docs/repository-layout.md (if path mapping changed)
-   ```
-
-7. Run mandatory quality gates with logs.
-
-   ```bash
-   set -o pipefail && make check-fmt | tee /tmp/check-fmt-0-1-3.out
-   set -o pipefail && make lint | tee /tmp/lint-0-1-3.out
-   set -o pipefail && make test | tee /tmp/test-0-1-3.out
-   ```
-
-8. Run docs gates because Markdown is modified.
-
-   ```bash
-   set -o pipefail && make markdownlint | tee /tmp/markdownlint-0-1-3.out
-   set -o pipefail && make nixie | tee /tmp/nixie-0-1-3.out
-   set -o pipefail && make fmt | tee /tmp/fmt-0-1-3.out
-   ```
+    Update `docs/roadmap.md` Task 0.2.1 checkbox from `[ ]` to `[x]` only after
+    Step 5 succeeds and acceptance evidence is complete.
 
 ## Validation and acceptance
 
-Task 0.1.3 acceptance is satisfied only when all conditions below hold:
+Task 0.2.1 is complete only when all conditions are true:
 
-- Lifecycle behaviour:
-  mint scope, delegation narrowing, revocation, expiry, and snapshot-restore
-  revalidation transitions enforce valid paths and deny invalid paths.
-- Unit tests:
-  `zamburak-core` lifecycle tests cover happy and unhappy transitions plus edge
-  cases.
-- Behavioural/security tests:
-  lifecycle transition scenarios (including attack-shaped invalid transitions)
-  pass in `tests/security/` with `rstest-bdd` v0.5.0 where applicable.
-- Policy integration:
-  policy-engine authority checks consume lifecycle validation outcomes and
-  remain fail-closed on invalid state.
-- Documentation:
-  design and user guide updates describe shipped lifecycle semantics and API.
-- Roadmap state:
-  Task 0.1.3 in `docs/roadmap.md` is marked `[x]`.
-- Required gates:
-  `make check-fmt`, `make lint`, and `make test` succeed.
+- Baseline consistency: toolchain pin and gate commands are identical in
+  `rust-toolchain.toml`, `Makefile`, and baseline docs.
+- Test coverage: unit and behavioural tests (using `rstest-bdd` v0.5.0 where
+  applicable) validate happy path, unhappy path, and edge-case baseline checks.
+- Required gates: `make check-fmt`, `make lint`, and `make test` pass.
+- Documentation gates: `make markdownlint`, `make nixie`, and `make fmt` pass.
+- Documentation obligations: design and user docs are updated where required,
+  with explicit rationale when no user-guide update is needed.
+- Roadmap closure: Task 0.2.1 is marked done in `docs/roadmap.md`.
 
 ## Idempotence and recovery
 
-- All steps in this plan are re-runnable; edits should be additive and
-  deterministic.
-- If a targeted lifecycle suite fails, fix that failing transition class first,
-  rerun targeted suites, then rerun full gates.
-- If snapshot-restore validation semantics remain ambiguous during
-  implementation, stop and record alternatives in `Decision Log` before
-  continuing.
-- Do not weaken lifecycle assertions to pass tests; fix implementation defects
-  or clarify contract decisions in docs.
+- All commands in this plan are safe to rerun.
+- If a consistency test fails, update only the conflicting contract artefact,
+  rerun targeted tests, then rerun full gates.
+- If gate failures expose unrelated pre-existing defects, isolate and document
+  them in `Surprises & Discoveries` before continuing.
+- Do not weaken checks to force green status; repair source-of-truth drift.
 
-## Artefacts and notes
+## Artifacts and notes
 
-Keep these artefacts for review and traceability:
+Retain these artefacts as implementation evidence:
 
-- final `git diff` and changed-file summary,
-- targeted logs:
-  `/tmp/test-0-1-3-authority-unit.out`,
-  `/tmp/test-0-1-3-authority-security.out`,
-- full-gate logs:
-  `/tmp/check-fmt-0-1-3.out`, `/tmp/lint-0-1-3.out`, `/tmp/test-0-1-3.out`,
-  `/tmp/markdownlint-0-1-3.out`, `/tmp/nixie-0-1-3.out`, `/tmp/fmt-0-1-3.out`,
-- a criterion-to-evidence mapping from acceptance requirements to concrete test
-  files and gate outputs.
+- Dry-run command captures:
+  `/tmp/check-fmt-dry-task-0-2-1-<branch>.out`,
+  `/tmp/lint-dry-task-0-2-1-<branch>.out`,
+  `/tmp/test-dry-task-0-2-1-<branch>.out`.
+- Gate logs:
+  `/tmp/check-fmt-zamburak-<branch>.out`, `/tmp/lint-zamburak-<branch>.out`,
+  `/tmp/test-zamburak-<branch>.out`, `/tmp/markdownlint-zamburak-<branch>.out`,
+  `/tmp/nixie-zamburak-<branch>.out`, `/tmp/fmt-zamburak-<branch>.out`.
+- Criterion-to-evidence mapping from roadmap completion criteria to concrete
+  tests and logs.
 
 ## Interfaces and dependencies
 
-Planned interface surface after Task 0.1.3:
-
-- `zamburak-core` exposes authority lifecycle domain types and validators for:
-  token minting, delegation checks, revocation checks, expiry checks, and
-  restore revalidation.
-- `zamburak-policy` consumes lifecycle verdicts from `zamburak-core` for
-  authority-related policy checks instead of duplicating transition logic.
-- Behavioural fixtures in `tests/security/` use the public API surface only,
-  ensuring transition conformance is verified from consumer-observable paths.
-
-Dependency posture:
-
-- Prefer existing dependencies.
-- Add new crates only when strictly required for lifecycle modelling or test
-  determinism, and document rationale in the change set.
+- No new production-library interfaces are expected.
+- Test interfaces may be added under `tests/compatibility/` to codify baseline
+  contracts.
+- Dependency posture: use existing workspace dependencies; do not add new
+  dependencies without escalation per tolerance rules.
 
 ## Revision note
 
-Initial draft created for roadmap Task 0.1.3 with explicit lifecycle scope,
-unit and behavioural/security verification strategy, documentation obligations,
-and completion gates.
+This file was revised from a completed Task 0.1.3 plan to a new draft ExecPlan
+for roadmap Task 0.2.1 at user request. The remaining work now focuses on
+baseline-tooling and documentation-contract alignment instead of authority
+lifecycle behaviour.
