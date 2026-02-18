@@ -1118,6 +1118,12 @@ exist and pass for:
 If any contract conformance suite is missing or failing, phase-1 build work is
 blocked.
 
+Repository CI enforces this phase-gate contract through `make phase-gate` and
+the merge-blocking `phase-gate` workflow job. The advancement target is set in
+`.github/phase-gate-target.txt`. When a mandated suite is missing or failing,
+the gate fails closed and emits escalation actions aligned with
+`docs/verification-targets.md`.
+
 ## Performance and resource model
 
 ### Resource budget classes

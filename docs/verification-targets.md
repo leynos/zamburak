@@ -73,6 +73,21 @@ Phase-gate expectations:
   localization fallback ordering and no-global-state conformance suites must
   pass.
 
+### Repository CI wiring contract
+
+Phase-gate checks are enforced in repository CI as follows:
+
+- `.github/phase-gate-target.txt` declares the target phase currently permitted
+  for advancement.
+- `make phase-gate` evaluates required suites for that target by:
+  - checking that mandated suites are present in the test catalog produced by
+    `cargo test --workspace --all-targets --all-features -- --list`,
+  - executing mandated suites by their configured test filters.
+- `.github/workflows/ci.yml` runs `make phase-gate` in the merge-blocking
+  `phase-gate` job.
+
+If a mandated suite is missing or failing, the phase gate fails closed.
+
 ## Failure and escalation policy
 
 A verification target failure is release-blocking when it affects:
@@ -87,6 +102,8 @@ When a blocking failure appears:
 1. freeze merges affecting the failing subsystem,
 2. add or update a regression test reproducing the failure,
 3. restore gate green status before continuing feature work.
+
+CI phase-gate output must include these escalation actions on failure.
 
 ## Maintenance expectations
 

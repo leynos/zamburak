@@ -4,7 +4,7 @@ This ExecPlan is a living document. The sections `Constraints`, `Tolerances`,
 `Risks`, `Progress`, `Surprises & Discoveries`, `Decision Log`, and
 `Outcomes & Retrospective` must be kept up to date as work proceeds.
 
-Status: DRAFT
+Status: COMPLETE
 
 `PLANS.md` is not present in this repository at draft time, so this document is
 the governing execution plan for this task.
@@ -104,10 +104,16 @@ failing mandated suites, pass when mandated suites are green, and roadmap Task
   `.github/workflows/ci.yml` and current test layout.
 - [x] (2026-02-18 23:00Z) Drafted this ExecPlan with constraints, tolerances,
   staged delivery, validation criteria, and evidence commands.
-- [ ] Implement phase-gate contract model and test harness.
-- [ ] Wire CI workflow jobs as merge-blocking phase-gate checks.
-- [ ] Update design and user docs as needed and mark roadmap Task 0.2.2 done.
-- [ ] Run all required quality gates and capture logs.
+- [x] (2026-02-18 23:31Z) Implemented phase-gate contract evaluator in
+  `src/phase_gate_contract.rs` and command in `src/bin/phase_gate.rs`.
+- [x] (2026-02-18 23:34Z) Added `make phase-gate` target plus CI wiring in
+  `.github/workflows/ci.yml`.
+- [x] (2026-02-18 23:37Z) Added unit tests and `rstest-bdd` behavioural tests
+  for pass, missing-suite block, failing-suite block, and invalid target parse.
+- [x] (2026-02-18 23:40Z) Updated roadmap and supporting documentation for
+  phase-gate wiring and target-file workflow.
+- [x] (2026-02-18 23:48Z) Ran required code and documentation gates with log
+  capture.
 
 ## Surprises & discoveries
 
@@ -121,6 +127,13 @@ failing mandated suites, pass when mandated suites are green, and roadmap Task
   session. Evidence: `list_mcp_resources` and `list_mcp_resource_templates`
   returned no resources/templates. Impact: all planning context is derived from
   repository sources in this workspace.
+
+- Observation: reusing `src/phase_gate_contract.rs` from compatibility tests
+  via `#[path = ...]` initially triggered dead-code failures under
+  `RUSTFLAGS="-D warnings"` for helper items used by the CLI only. Evidence:
+  `cargo test -- --list` failed on unused `as_str`, constants, and suite lookup
+  symbols. Impact: added a focused compatibility test asserting those symbols
+  so strict warning gates stay green without suppression attributes.
 
 ## Decision log
 
@@ -139,19 +152,49 @@ failing mandated suites, pass when mandated suites are green, and roadmap Task
   preserves developer throughput while enforcing hard blocking when phase
   progression is proposed. Date/Author: 2026-02-18 / Codex
 
+- Decision: store the active phase-advancement target in
+  `.github/phase-gate-target.txt` and run gating against that target in CI and
+  local `make phase-gate`. Rationale: this gives an explicit, reviewable,
+  fail-closed mechanism for advancement intent without external orchestration.
+  Date/Author: 2026-02-18 / Codex
+
 ## Outcomes & retrospective
 
-Planned target outcomes for completion:
+Delivered outcomes:
 
-- CI has explicit merge-blocking phase-gate jobs tied to verification-target
-  acceptance gates.
-- Gate failures show actionable escalation guidance aligned with
-  `docs/verification-targets.md`.
-- Unit and behavioural tests prove gate success, missing-suite failure, and
-  failing-suite failure behaviour.
-- `docs/roadmap.md` marks Task 0.2.2 done only after required gates pass.
+- Added phase-gate contract mapping and evaluator:
+  `src/phase_gate_contract.rs`.
+- Added CI command entrypoint:
+  `src/bin/phase_gate.rs`.
+- Added command surface and target configuration:
+  `make phase-gate` and `.github/phase-gate-target.txt`.
+- Added merge-blocking CI phase-gate job in `.github/workflows/ci.yml`.
+- Added unit tests and `rstest-bdd` behavioural suites for happy and unhappy
+  gate paths: `src/phase_gate_contract.rs`,
+  `tests/compatibility/phase_gate_bdd.rs`, and
+  `tests/compatibility/features/phase_gate.feature`.
+- Updated documentation and roadmap traceability:
+  `docs/verification-targets.md`, `docs/zamburak-design-document.md`,
+  `docs/tech-baseline.md`, `docs/zamburak-engineering-standards.md`,
+  `docs/repository-layout.md`, and `docs/roadmap.md` (Task 0.2.2 marked done).
+- No library-consumer API or runtime behaviour changed, so
+  `docs/users-guide.md` required no update for this task.
 
-Retrospective will be completed after implementation and validation.
+Gate outcomes:
+
+- passed: `make phase-gate`,
+- passed: `make check-fmt`,
+- passed: `make lint`,
+- passed: `make test`,
+- passed: `make markdownlint`,
+- passed: `make nixie`,
+- passed: `make fmt`.
+
+Retrospective:
+
+- A tracked phase-target file made advancement intent explicit and reviewable.
+- Keeping gate semantics in Rust reduced workflow YAML complexity and improved
+  testability of failure modes.
 
 ## Context and orientation
 
@@ -321,6 +364,5 @@ Prescriptive interface goals for this task:
 - No new external dependencies unless tolerance escalation is approved.
 - Continued use of `rstest` and `rstest-bdd` v0.5.0 for tests.
 
-Revision note: initial draft created for Task 0.2.2 planning. This revision
-establishes the delivery stages, tolerances, and validation contract before
-implementation.
+Revision note: implementation outcomes, quality-gate evidence, and
+documentation updates were recorded; status changed from `DRAFT` to `COMPLETE`.
