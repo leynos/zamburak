@@ -53,27 +53,13 @@ as a default.
 from __future__ import annotations
 
 from pathlib import Path
-from cuprum import (
-    ExecutionContext,
-    Program,
-    ProgramCatalogue,
-    ProjectSettings,
-    scoped,
-    sh,
-)
+from cuprum import ExecutionContext, Program, scoped
+from scripts._cuprum_helpers import build_catalogue, build_commands
 
 TOFU = Program("tofu")
-CATALOGUE = ProgramCatalogue(
-    projects=(
-        ProjectSettings(
-            name="repo-scripts",
-            programs=(TOFU,),
-            documentation_locations=("docs/scripting-standards.md",),
-            noise_rules=(),
-        ),
-    )
-)
-tofu = sh.make(TOFU, catalogue=CATALOGUE)
+CATALOGUE = build_catalogue(TOFU)
+COMMANDS = build_commands(catalogue=CATALOGUE, programs=(TOFU,))
+tofu = COMMANDS[TOFU]
 
 
 def main() -> int:
@@ -102,7 +88,7 @@ Employ Cyclopts when a script requires parameters, particularly under CI with
 #!/usr/bin/env -S uv run python
 # /// script
 # requires-python = ">=3.13"
-# dependencies = ["cyclopts>=2.9", "cuprum==0.1.0", "cmd-mox"]
+# dependencies = ["cyclopts>=2.9", "cuprum==0.1.0"]
 # ///
 
 from __future__ import annotations
@@ -112,27 +98,13 @@ from typing import Annotated
 
 import cyclopts
 from cyclopts import App, Parameter
-from cuprum import (
-    ExecutionContext,
-    Program,
-    ProgramCatalogue,
-    ProjectSettings,
-    scoped,
-    sh,
-)
+from cuprum import ExecutionContext, Program, scoped
+from scripts._cuprum_helpers import build_catalogue, build_commands
 
 TOFU = Program("tofu")
-CATALOGUE = ProgramCatalogue(
-    projects=(
-        ProjectSettings(
-            name="repo-scripts",
-            programs=(TOFU,),
-            documentation_locations=("docs/scripting-standards.md",),
-            noise_rules=(),
-        ),
-    )
-)
-tofu = sh.make(TOFU, catalogue=CATALOGUE)
+CATALOGUE = build_catalogue(TOFU)
+COMMANDS = build_commands(catalogue=CATALOGUE, programs=(TOFU,))
+tofu = COMMANDS[TOFU]
 
 # Map INPUT_<PARAM> → function parameter without additional glue
 app = App(config=cyclopts.config.Env("INPUT_", command=False))
@@ -215,27 +187,54 @@ Cuprum is **not** a drop‑in replacement for Plumbum. Build commands from
 allowlisted `Program` values, run via `run_sync()`/`run()`, and inspect
 `CommandResult`/`PipelineResult` explicitly.
 
-### Program catalogue and builders
+### Shared helper pattern
+
+Prefer a small helper module so script examples focus on command usage instead
+of repeating catalogue boilerplate.
 
 ```python
-from cuprum import Program, ProgramCatalogue, ProjectSettings, sh
+# scripts/_cuprum_helpers.py
+from __future__ import annotations
+
+from collections.abc import Iterable
+
+from cuprum import Program, ProgramCatalogue, ProjectSettings, SafeCmd, sh
+
+
+def build_catalogue(*programs: Program) -> ProgramCatalogue:
+    return ProgramCatalogue(
+        projects=(
+            ProjectSettings(
+                name="repo-scripts",
+                programs=tuple(programs),
+                documentation_locations=("docs/scripting-standards.md",),
+                noise_rules=(),
+            ),
+        )
+    )
+
+
+def build_commands(
+    *,
+    catalogue: ProgramCatalogue,
+    programs: Iterable[Program],
+) -> dict[Program, SafeCmd]:
+    return {program: sh.make(program, catalogue=catalogue) for program in programs}
+```
+
+### Program declarations and command builders
+
+```python
+from cuprum import Program
+from scripts._cuprum_helpers import build_catalogue, build_commands
 
 GIT = Program("git")
 GREP = Program("grep")
 
-CATALOGUE = ProgramCatalogue(
-    projects=(
-        ProjectSettings(
-            name="repo-scripts",
-            programs=(GIT, GREP),
-            documentation_locations=("docs/scripting-standards.md",),
-            noise_rules=(),
-        ),
-    )
-)
-
-git = sh.make(GIT, catalogue=CATALOGUE)
-grep = sh.make(GREP, catalogue=CATALOGUE)
+CATALOGUE = build_catalogue(GIT, GREP)
+COMMANDS = build_commands(catalogue=CATALOGUE, programs=(GIT, GREP))
+git = COMMANDS[GIT]
+grep = COMMANDS[GREP]
 ```
 
 ### Command execution and failure handling
@@ -357,27 +356,13 @@ from typing import Annotated
 
 import cyclopts
 from cyclopts import App, Parameter
-from cuprum import (
-    ExecutionContext,
-    Program,
-    ProgramCatalogue,
-    ProjectSettings,
-    scoped,
-    sh,
-)
+from cuprum import ExecutionContext, Program, scoped
+from scripts._cuprum_helpers import build_catalogue, build_commands
 
 GIT = Program("git")
-CATALOGUE = ProgramCatalogue(
-    projects=(
-        ProjectSettings(
-            name="repo-scripts",
-            programs=(GIT,),
-            documentation_locations=("docs/scripting-standards.md",),
-            noise_rules=(),
-        ),
-    )
-)
-git = sh.make(GIT, catalogue=CATALOGUE)
+CATALOGUE = build_catalogue(GIT)
+COMMANDS = build_commands(catalogue=CATALOGUE, programs=(GIT,))
+git = COMMANDS[GIT]
 
 app = App(config=cyclopts.config.Env("INPUT_", command=False))
 
@@ -469,6 +454,7 @@ pytest_plugins = ("cmd_mox.pytest_plugin",)
 from cuprum import Program, scoped, sh
 
 GIT = Program("git")
+git = sh.make(GIT)
 
 
 def test_git_tag_happy_path(cmd_mox, monkeypatch, tmp_path):
@@ -480,7 +466,7 @@ def test_git_tag_happy_path(cmd_mox, monkeypatch, tmp_path):
     # Run the code under test while shims are active
     cmd_mox.replay()
     with scoped(allowlist=frozenset([GIT])):
-        result = sh.make(GIT)("tag", "v1.2.3").run_sync()
+        result = git("tag", "v1.2.3").run_sync()
     cmd_mox.verify()
     assert result.ok
 
@@ -492,7 +478,7 @@ def test_git_tag_failure_surface_error(cmd_mox, monkeypatch, tmp_path):
 
     cmd_mox.replay()
     with scoped(allowlist=frozenset([GIT])):
-        result = sh.make(GIT)("tag", "v1.2.3").run_sync()
+        result = git("tag", "v1.2.3").run_sync()
     cmd_mox.verify()
     assert not result.ok
     assert result.exit_code == 1
@@ -505,6 +491,7 @@ def test_git_tag_failure_surface_error(cmd_mox, monkeypatch, tmp_path):
 from cuprum import Program, scoped, sh
 
 ECHO = Program("echo")
+echo = sh.make(ECHO)
 
 
 def test_spy_and_record(cmd_mox, monkeypatch, tmp_path):
@@ -515,7 +502,7 @@ def test_spy_and_record(cmd_mox, monkeypatch, tmp_path):
 
     cmd_mox.replay()
     with scoped(allowlist=frozenset([ECHO])):
-        result = sh.make(ECHO)("hello world").run_sync()
+        result = echo("hello world").run_sync()
     cmd_mox.verify()
     assert result.ok
 
