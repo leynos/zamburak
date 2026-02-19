@@ -18,6 +18,7 @@ use phase_gate_contract::{
 
 const DEFAULT_TARGET_FILE: &str = ".github/phase-gate-target.txt";
 const CARGO_TEST_BASE_ARGS: [&str; 4] = ["test", "--workspace", "--all-targets", "--all-features"];
+type SuiteId = &'static str;
 
 #[derive(Debug)]
 enum PhaseGateCliError {
@@ -214,6 +215,17 @@ fn emit_success_report(report: &PhaseGateReport) {
     ));
 }
 
+fn emit_suite_list(stderr: &mut io::StderrLock<'_>, header: &str, suite_ids: &[SuiteId]) {
+    if suite_ids.is_empty() {
+        return;
+    }
+
+    discard_write_result(writeln!(stderr, "{header}"));
+    for suite_id in suite_ids {
+        write_suite_line(stderr, suite_id);
+    }
+}
+
 fn emit_failure_report(report: &PhaseGateReport) {
     let mut stderr = io::stderr().lock();
     discard_write_result(writeln!(
@@ -223,19 +235,16 @@ fn emit_failure_report(report: &PhaseGateReport) {
         report.status
     ));
 
-    if !report.missing_suite_ids.is_empty() {
-        discard_write_result(writeln!(stderr, "missing mandated suites:"));
-        for suite_id in &report.missing_suite_ids {
-            write_suite_line(&mut stderr, suite_id);
-        }
-    }
-
-    if !report.failing_suite_ids.is_empty() {
-        discard_write_result(writeln!(stderr, "failing mandated suites:"));
-        for suite_id in &report.failing_suite_ids {
-            write_suite_line(&mut stderr, suite_id);
-        }
-    }
+    emit_suite_list(
+        &mut stderr,
+        "missing mandated suites:",
+        &report.missing_suite_ids,
+    );
+    emit_suite_list(
+        &mut stderr,
+        "failing mandated suites:",
+        &report.failing_suite_ids,
+    );
 
     discard_write_result(writeln!(stderr, "release-blocking when failures affect:"));
     for cause in RELEASE_BLOCKING_CAUSES {
