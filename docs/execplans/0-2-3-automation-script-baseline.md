@@ -4,7 +4,7 @@ This ExecPlan is a living document. The sections `Constraints`, `Tolerances`,
 `Risks`, `Progress`, `Surprises & Discoveries`, `Decision Log`, and
 `Outcomes & Retrospective` must be kept up to date as work proceeds.
 
-Status: DRAFT
+Status: COMPLETE
 
 `PLANS.md` is not present in this repository at draft time, so this document is
 the governing execution plan for this task.
@@ -107,11 +107,19 @@ and roadmap task `0.2.3` is marked done.
   helper module only and no script-test harness.
 - [x] (2026-02-20 17:16Z) Confirmed `PLANS.md` is absent.
 - [x] (2026-02-20 17:16Z) Drafted this ExecPlan.
-- [ ] Implement script baseline scaffolding and script test harness.
-- [ ] Wire script baseline checks into CI and local command flow.
-- [ ] Update design decisions, roadmap completion state, and user guide (if
-  applicable).
-- [ ] Run all required quality gates and archive logs.
+- [x] (2026-02-20 18:07Z) Implemented baseline checker script at
+  `scripts/verify_script_baseline.py`.
+- [x] (2026-02-20 18:08Z) Added script unit and behavioural tests under
+  `scripts/tests/` including `pytest-bdd` scenarios.
+- [x] (2026-02-20 18:09Z) Wired `make script-baseline` and `make script-test`
+  local command paths in `Makefile`.
+- [x] (2026-02-20 18:10Z) Updated CI to execute script baseline and script
+  tests in `.github/workflows/ci.yml`.
+- [x] (2026-02-20 18:11Z) Updated design and scripting docs, and marked roadmap
+  Task `0.2.3` done.
+- [x] (2026-02-20 18:12Z) Determined no `docs/users-guide.md` change is needed
+  because this task does not alter Rust library consumer APIs or behaviour.
+- [x] (2026-02-20 18:15Z) Ran all required quality gates and archived logs.
 
 ## Surprises & Discoveries
 
@@ -123,6 +131,11 @@ and roadmap task `0.2.3` is marked done.
 - Observation: `scripts/` currently contains only `scripts/_cuprum_helpers.py`.
   Evidence: repository tree inspection. Impact: baseline discovery rules must
   distinguish helper modules from roadmap-delivered script entrypoints.
+
+- Observation: `make fmt` modified unrelated wrapping in `docs/users-guide.md`.
+  Evidence: post-format diff contained line-wrap-only edits with no behavioural
+  relevance to Task 0.2.3. Impact: those changes were reverted to keep this
+  change set atomic to script-baseline scope.
 
 ## Decision Log
 
@@ -136,17 +149,63 @@ and roadmap task `0.2.3` is marked done.
   behaviours. Rationale: aligns the user request with the task scope and
   existing scripting-standards contract. Date/Author: 2026-02-20 / Codex
 
+- Decision: enforce command invocation baseline via static pattern checks in
+  `scripts/verify_script_baseline.py`, including explicit rejection of Plumbum,
+  `subprocess`, `os.system`, `os.popen`, `cuprum.cmd`, and
+  `from cuprum import local`. Rationale: this provides deterministic
+  fail-closed checks for roadmap scripts without executing scripts during
+  validation. Date/Author: 2026-02-20 / Codex
+
+- Decision: use script discovery rules that exclude underscore-prefixed modules
+  and `scripts/tests/` paths. Rationale: helper modules such as
+  `_cuprum_helpers.py` are implementation support files, not script entrypoint
+  deliveries. Date/Author: 2026-02-20 / Codex
+
+- Decision: do not update `docs/users-guide.md` for Task 0.2.3. Rationale:
+  this task changes contributor workflows and CI/documentation enforcement, not
+  public Rust API behaviour consumed by library users. Date/Author: 2026-02-20
+  / Codex
+
 ## Outcomes & Retrospective
 
-Pending implementation. Success criteria at completion:
+Task 0.2.3 implementation is complete.
 
-- script baseline rules are codified and executable,
-- script unit/behavioural tests exist for baseline enforcement,
-- CI and local workflows execute script checks,
-- design and roadmap docs are updated and consistent,
-- required quality gates pass.
+Delivered outcomes:
 
-Retrospective notes will be added when execution completes.
+- added `scripts/verify_script_baseline.py` as the baseline enforcement script
+  for roadmap-delivered scripts,
+- added script test coverage under `scripts/tests/`:
+  unit tests in `scripts/tests/test_verify_script_baseline.py` and behavioural
+  scenarios in `scripts/tests/test_verify_script_baseline_bdd.py` with feature
+  narratives in `scripts/tests/features/script_baseline.feature`,
+- added local invocation paths:
+  `make script-baseline` and `make script-test`,
+- updated CI to run script baseline and script tests as merge-blocking steps,
+- updated `docs/zamburak-design-document.md` with automation script delivery
+  baseline semantics,
+- updated `docs/scripting-standards.md` with repository baseline enforcement
+  commands,
+- marked roadmap Task `0.2.3` as done in `docs/roadmap.md`,
+- preserved `docs/users-guide.md` unchanged, as there are no library
+  consumer-visible API or behaviour changes.
+
+Validation outcomes:
+
+- passed: `make script-baseline`,
+- passed: `make script-test`,
+- passed: `make fmt`,
+- passed: `make check-fmt`,
+- passed: `make lint`,
+- passed: `make test`,
+- passed: `make markdownlint`,
+- passed: `make nixie`.
+
+Retrospective:
+
+- Static baseline enforcement plus behavioural tests gives fast feedback and
+  keeps script standards auditable.
+- Excluding helper modules from entrypoint checks avoids false-positive
+  failures while preserving strict enforcement for roadmap-delivered scripts.
 
 ## Context and orientation
 
@@ -337,3 +396,10 @@ Expected dependency surface for script testing:
 
 No additional dependency families should be introduced unless a tolerance
 escalation is recorded first.
+
+Revision note (2026-02-20):
+
+- Updated plan state from `DRAFT` to `COMPLETE`.
+- Recorded implemented files, decisions, and validation evidence.
+- Marked all execution progress items complete and documented the no-change
+  decision for `docs/users-guide.md`.
