@@ -667,11 +667,11 @@ completion criteria so the work can be sequenced and assessed without ambiguity.
 ### Step 5.3: Scripted automation quality and CI integration
 
 - [ ] Task 5.3.1: Implement benchmark and verification helper scripts using
-      Cyclopts, Plumbum, and Pathlib conventions.
+      Cyclopts, Cuprum, and Pathlib conventions.
   - Requirement signposts:
     - `docs/scripting-standards.md` sections
       "Cyclopts CLI pattern (environment-first)",
-      "Plumbum: command calling and pipelines", and
+      "Cuprum: command invocation and capability-scoped execution", and
       "Pathlib: robust path manipulation",
     - `docs/repository-layout.md` section "Root and operational files"
       (`scripts/`),
@@ -704,7 +704,7 @@ completion criteria so the work can be sequenced and assessed without ambiguity.
       "Policy evaluation semantics",
     - `docs/scripting-standards.md` sections
       "Cyclopts CLI pattern (environment-first)" and
-      "Plumbum: command calling and pipelines",
+      "Cuprum: command invocation and capability-scoped execution",
     - `docs/repository-layout.md` section "Root and operational files"
       (`scripts/`).
   - Dependencies: Task 0.1.1, Task 5.3.1, and Task 5.3.2.

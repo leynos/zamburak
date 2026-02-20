@@ -3,13 +3,24 @@
 # requires-python = ">=3.13"
 # dependencies = ["astroid"]
 # ///
-"""Validate roadmap script baseline contracts for `scripts/`.
+"""Validate roadmap script baseline contracts for ``scripts/``.
 
-The checker enforces the Phase 0.2.3 baseline for roadmap-delivered scripts:
+This module provides a deterministic, fail-closed checker for
+roadmap-delivered automation scripts. It enforces runtime metadata
+requirements, command invocation posture, and matching script-test coverage.
 
-- script runtime metadata (uv shebang and metadata block),
-- command invocation posture (Cuprum-first, no Plumbum/subprocess shelling),
-- matching script tests under `scripts/tests/`.
+Utility
+-------
+Use this checker in local development and continuous integration to prevent
+script regressions from merging.
+
+Usage
+-----
+Run from the repository root:
+
+```
+make script-baseline
+```
 """
 
 from __future__ import annotations
@@ -20,10 +31,10 @@ import sys
 from dataclasses import dataclass
 from pathlib import Path
 
-UV_SHEBANG = "#!/usr/bin/env -S uv run python"
-UV_BLOCK_START = "# /// script"
-UV_BLOCK_END = "# ///"
-REQUIRES_PYTHON = ">=3.13"
+UV_SHEBANG: str = "#!/usr/bin/env -S uv run python"
+UV_BLOCK_START: str = "# /// script"
+UV_BLOCK_END: str = "# ///"
+REQUIRES_PYTHON: str = ">=3.13"
 FORBIDDEN_PATTERNS: tuple[tuple[re.Pattern[str], str], ...] = (
     (
         re.compile(r"^\s*(from|import)\s+plumbum\b", flags=re.MULTILINE),
@@ -65,7 +76,20 @@ class BaselineIssue:
 
 
 def is_roadmap_script(path: Path, scripts_root: Path) -> bool:
-    """Return `True` when a path is a roadmap script entrypoint candidate."""
+    """Return whether a path is a roadmap script entrypoint candidate.
+
+    Parameters
+    ----------
+    path : Path
+        Candidate path to evaluate.
+    scripts_root : Path
+        Repository `scripts/` root path.
+
+    Returns
+    -------
+    bool
+        ``True`` when the path is an eligible roadmap script entrypoint.
+    """
     if path.suffix != ".py":
         return False
     if path.name.startswith("_"):
@@ -78,14 +102,38 @@ def is_roadmap_script(path: Path, scripts_root: Path) -> bool:
 
 
 def discover_roadmap_scripts(scripts_root: Path) -> list[Path]:
-    """Find all roadmap script entrypoint candidates under `scripts_root`."""
+    """Find roadmap script entrypoint candidates under `scripts_root`.
+
+    Parameters
+    ----------
+    scripts_root : Path
+        Repository `scripts/` root path.
+
+    Returns
+    -------
+    list[Path]
+        Sorted list of eligible script entrypoint paths.
+    """
     return sorted(
         path for path in scripts_root.rglob("*.py") if is_roadmap_script(path, scripts_root)
     )
 
 
 def expected_test_path(script_path: Path, scripts_root: Path) -> Path:
-    """Return the expected matching test file path for one script."""
+    """Return the expected matching test file path for one script.
+
+    Parameters
+    ----------
+    script_path : Path
+        Script entrypoint path.
+    scripts_root : Path
+        Repository `scripts/` root path.
+
+    Returns
+    -------
+    Path
+        Expected pytest module path for the script.
+    """
     relative_without_suffix = script_path.relative_to(scripts_root).with_suffix("")
     return (
         scripts_root
@@ -96,7 +144,18 @@ def expected_test_path(script_path: Path, scripts_root: Path) -> Path:
 
 
 def parse_uv_metadata(script_text: str) -> dict[str, str]:
-    """Parse key-value lines from the inline uv metadata block."""
+    """Parse key-value lines from the inline uv metadata block.
+
+    Parameters
+    ----------
+    script_text : str
+        Raw script text to parse.
+
+    Returns
+    -------
+    dict[str, str]
+        Parsed metadata mapping, or an empty mapping when no valid block exists.
+    """
     lines = script_text.splitlines()
     try:
         block_start = lines.index(UV_BLOCK_START)
@@ -119,8 +178,29 @@ def parse_uv_metadata(script_text: str) -> dict[str, str]:
     return metadata
 
 
+def _has_required_python_baseline(requires_python: str) -> bool:
+    """Return whether a `requires-python` constraint includes the baseline."""
+    cleaned = requires_python.strip().strip("'\"")
+    constraints = [part.strip().strip("'\"") for part in cleaned.split(",")]
+    required_pattern = re.compile(r">=\s*3\.13(?:\.\d+)?$")
+    return any(required_pattern.fullmatch(part) for part in constraints)
+
+
 def validate_runtime_metadata(path: Path, script_text: str) -> list[BaselineIssue]:
-    """Validate uv shebang and metadata baseline expectations."""
+    """Validate uv shebang and metadata baseline expectations.
+
+    Parameters
+    ----------
+    path : Path
+        Script path for issue attribution.
+    script_text : str
+        Raw script text to validate.
+
+    Returns
+    -------
+    list[BaselineIssue]
+        Validation issues discovered in runtime metadata.
+    """
     issues: list[BaselineIssue] = []
     lines = script_text.splitlines()
     shebang = lines[0] if lines else ""
@@ -143,7 +223,7 @@ def validate_runtime_metadata(path: Path, script_text: str) -> list[BaselineIssu
         return issues
 
     requires_python = metadata.get("requires-python")
-    if requires_python is None or REQUIRES_PYTHON not in requires_python:
+    if requires_python is None or not _has_required_python_baseline(requires_python):
         issues.append(
             BaselineIssue(
                 path=path,
@@ -162,8 +242,8 @@ def validate_runtime_metadata(path: Path, script_text: str) -> list[BaselineIssu
     return issues
 
 
-def validate_command_invocation(path: Path, script_text: str) -> list[BaselineIssue]:
-    """Validate command invocation conventions for roadmap scripts."""
+def _check_forbidden_patterns(path: Path, script_text: str) -> list[BaselineIssue]:
+    """Check script text against forbidden command patterns."""
     issues: list[BaselineIssue] = []
     for pattern, violation in FORBIDDEN_PATTERNS:
         if pattern.search(script_text):
@@ -173,32 +253,101 @@ def validate_command_invocation(path: Path, script_text: str) -> list[BaselineIs
                     message=violation,
                 )
             )
+    return issues
 
+
+def _is_sh_make_call(func_node) -> bool:
+    """Check if an AST node represents a sh.make(...) call pattern."""
+    from astroid import nodes
+
+    match func_node:
+        case nodes.Attribute(attrname="make", expr=nodes.Name(name="sh")):
+            return True
+        case _:
+            return False
+
+
+def _detect_cuprum_usage(script_text: str) -> bool:
+    """Detect whether script uses Cuprum Program or sh.make constructs.
+
+    Uses AST parsing when available, falls back to heuristic search.
+    """
     try:
         import astroid
         from astroid import nodes
+    except ImportError:
+        return "Program(" in script_text or "sh.make(" in script_text
 
-        module = astroid.parse(script_text)
-        uses_cuprum_programs = False
-        for call_node in module.nodes_of_class(nodes.Call):
-            func_node = call_node.func
-            if isinstance(func_node, nodes.Name) and func_node.name == "Program":
-                uses_cuprum_programs = True
-                break
-            if (
-                isinstance(func_node, nodes.Attribute)
-                and func_node.attrname == "make"
-                and isinstance(func_node.expr, nodes.Name)
-                and func_node.expr.name == "sh"
-            ):
-                uses_cuprum_programs = True
-                break
-    except (SyntaxError, ImportError):
-        uses_cuprum_programs = "Program(" in script_text or "sh.make(" in script_text
+    try:
+        tree = astroid.parse(script_text)
+    except astroid.AstroidSyntaxError:
+        return "Program(" in script_text or "sh.make(" in script_text
 
-    if not uses_cuprum_programs:
-        return issues
+    for call_node in tree.nodes_of_class(nodes.Call):
+        match call_node.func:
+            case nodes.Name(name="Program"):
+                return True
+            case _ if _is_sh_make_call(call_node.func):
+                return True
+            case _:
+                continue
 
+    return False
+
+
+def _detect_cuprum_programs(script_text: str) -> bool:
+    """Detect whether the script uses Cuprum Program or sh.make constructs."""
+    return _detect_cuprum_usage(script_text)
+
+
+def _has_cuprum_imports(tree) -> bool:
+    """Return whether a parsed module imports Cuprum symbols."""
+    from astroid import nodes
+
+    for node in tree.body:
+        match node:
+            case nodes.Import():
+                if any("cuprum" in name for name, _alias in node.names):
+                    return True
+            case nodes.ImportFrom():
+                if node.modname and "cuprum" in node.modname:
+                    return True
+            case _:
+                continue
+
+    return False
+
+
+def _has_cuprum_run_calls(tree) -> bool:
+    """Return whether a parsed module calls `run` or `run_sync`."""
+    from astroid import nodes
+
+    return any(
+        isinstance(call_node.func, nodes.Attribute)
+        and call_node.func.attrname in ("run", "run_sync")
+        for call_node in tree.nodes_of_class(nodes.Call)
+    )
+
+
+def _run_invocation_present(script_text: str) -> bool:
+    """Return whether Cuprum run invocation requirements are satisfied."""
+    try:
+        import astroid
+    except ImportError:
+        return bool("run_sync(" in script_text or re.search(r"\.run\(", script_text))
+
+    try:
+        tree = astroid.parse(script_text)
+    except astroid.AstroidSyntaxError:
+        # Fall back to text heuristics when parsing fails on syntactically invalid scripts.
+        return bool("run_sync(" in script_text or re.search(r"\.run\(", script_text))
+
+    return _has_cuprum_imports(tree) and _has_cuprum_run_calls(tree)
+
+
+def _validate_cuprum_requirements(path: Path, script_text: str) -> list[BaselineIssue]:
+    """Validate that Cuprum usage follows baseline requirements."""
+    issues: list[BaselineIssue] = []
     if "scoped(" not in script_text:
         issues.append(
             BaselineIssue(
@@ -207,8 +356,7 @@ def validate_command_invocation(path: Path, script_text: str) -> list[BaselineIs
             )
         )
 
-    has_run_invocation = "run_sync(" in script_text or re.search(r"\.run\(", script_text)
-    if not has_run_invocation:
+    if not _run_invocation_present(script_text):
         issues.append(
             BaselineIssue(
                 path=path,
@@ -219,8 +367,48 @@ def validate_command_invocation(path: Path, script_text: str) -> list[BaselineIs
     return issues
 
 
+def _validate_cuprum_rules(path: Path, script_text: str) -> list[BaselineIssue]:
+    """Validate Cuprum-specific invocation rules (scoped and run/run_sync)."""
+    return _validate_cuprum_requirements(path, script_text)
+
+
+def validate_command_invocation(path: Path, script_text: str) -> list[BaselineIssue]:
+    """Validate command invocation conventions for roadmap scripts.
+
+    Parameters
+    ----------
+    path : Path
+        Script path for issue attribution.
+    script_text : str
+        Raw script text to validate.
+
+    Returns
+    -------
+    list[BaselineIssue]
+        Validation issues discovered in command invocation usage.
+    """
+    issues = _check_forbidden_patterns(path, script_text)
+    if not _detect_cuprum_programs(script_text):
+        return issues
+    issues.extend(_validate_cuprum_rules(path, script_text))
+    return issues
+
+
 def validate_matching_test(script_path: Path, scripts_root: Path) -> list[BaselineIssue]:
-    """Ensure each roadmap script has a matching pytest file."""
+    """Ensure each roadmap script has a matching pytest file.
+
+    Parameters
+    ----------
+    script_path : Path
+        Script path to validate.
+    scripts_root : Path
+        Repository `scripts/` root path.
+
+    Returns
+    -------
+    list[BaselineIssue]
+        Missing-test issue if no matching test file exists.
+    """
     expected = expected_test_path(script_path, scripts_root)
     if expected.exists():
         return []
@@ -234,7 +422,20 @@ def validate_matching_test(script_path: Path, scripts_root: Path) -> list[Baseli
 
 
 def validate_script(script_path: Path, scripts_root: Path) -> list[BaselineIssue]:
-    """Validate one roadmap script against all baseline checks."""
+    """Validate one roadmap script against all baseline checks.
+
+    Parameters
+    ----------
+    script_path : Path
+        Script path to validate.
+    scripts_root : Path
+        Repository `scripts/` root path.
+
+    Returns
+    -------
+    list[BaselineIssue]
+        Aggregated issues from metadata, command, and matching-test checks.
+    """
     try:
         script_text = script_path.read_text(encoding="utf-8")
     except OSError as error:
@@ -254,7 +455,20 @@ def validate_script(script_path: Path, scripts_root: Path) -> list[BaselineIssue
 
 
 def render_issues(issues: list[BaselineIssue], scripts_root: Path) -> str:
-    """Render issues in a deterministic, review-friendly format."""
+    """Render issues in a deterministic, review-friendly format.
+
+    Parameters
+    ----------
+    issues : list[BaselineIssue]
+        Validation issues to render.
+    scripts_root : Path
+        Repository `scripts/` root path.
+
+    Returns
+    -------
+    str
+        Stable text output for terminal and CI reporting.
+    """
 
     def display_path(path: Path) -> Path:
         try:
@@ -274,7 +488,18 @@ def render_issues(issues: list[BaselineIssue], scripts_root: Path) -> str:
 
 
 def parse_args(argv: list[str]) -> argparse.Namespace:
-    """Parse command-line arguments for baseline validation."""
+    """Parse command-line arguments for baseline validation.
+
+    Parameters
+    ----------
+    argv : list[str]
+        Command-line tokens excluding executable name.
+
+    Returns
+    -------
+    argparse.Namespace
+        Parsed command-line arguments.
+    """
     parser = argparse.ArgumentParser(
         description="Validate roadmap script baseline contracts."
     )
@@ -323,24 +548,50 @@ def _validate_explicit_path(path: Path, scripts_root: Path) -> BaselineIssue | N
     return None
 
 
+def _process_explicit_paths(
+    paths: list[Path],
+    scripts_root: Path,
+) -> tuple[list[Path], list[BaselineIssue]]:
+    """Process explicit path arguments and validate them.
+
+    Returns a tuple of (valid script paths, validation issues).
+    """
+    script_paths = []
+    issues: list[BaselineIssue] = []
+    for path in paths:
+        issue = _validate_explicit_path(path, scripts_root)
+        resolved_path = path.resolve()
+        if issue is not None:
+            issues.append(issue)
+        else:
+            script_paths.append(resolved_path)
+
+    return script_paths, issues
+
+
 def main(argv: list[str] | None = None) -> int:
-    """Entry point for script baseline validation."""
+    """Run script-baseline validation and return process exit code.
+
+    Parameters
+    ----------
+    argv : list[str] | None, optional
+        Optional command-line tokens. When ``None``, uses an empty list.
+
+    Returns
+    -------
+    int
+        ``0`` on success, ``1`` when validation issues are present.
+    """
     args = parse_args(argv or [])
     scripts_root = args.root.resolve()
 
     if args.paths:
-        script_paths = []
-        explicit_path_issues: list[BaselineIssue] = []
-        for path in args.paths:
-            issue = _validate_explicit_path(path, scripts_root)
-            resolved_path = path.resolve()
-            if issue is not None:
-                explicit_path_issues.append(issue)
-            else:
-                script_paths.append(resolved_path)
+        script_paths, explicit_path_issues = _process_explicit_paths(
+            args.paths, scripts_root
+        )
     else:
-        explicit_path_issues = []
         script_paths = discover_roadmap_scripts(scripts_root)
+        explicit_path_issues = []
 
     issues = explicit_path_issues + [
         issue

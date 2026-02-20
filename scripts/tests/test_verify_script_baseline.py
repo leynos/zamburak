@@ -1,4 +1,16 @@
-"""Unit tests for `scripts/verify_script_baseline.py`."""
+"""Unit tests for ``scripts/verify_script_baseline.py``.
+
+These tests validate script-baseline rule enforcement for discovery, metadata,
+command invocation, explicit-path handling, and matching-test contracts.
+
+Usage
+-----
+Run with:
+
+```
+make script-test
+```
+"""
 
 from __future__ import annotations
 
@@ -10,7 +22,7 @@ import pytest
 import verify_script_baseline as baseline
 
 
-VALID_SCRIPT = """#!/usr/bin/env -S uv run python
+VALID_SCRIPT: str = """#!/usr/bin/env -S uv run python
 # /// script
 # requires-python = ">=3.13"
 # dependencies = ["cuprum==0.1.0"]
@@ -27,10 +39,34 @@ with scoped(allowlist=frozenset([TOFU])):
 """
 
 
+def _assert_validation_issue_contains(
+    issues: list[baseline.BaselineIssue],
+    expected_fragment: str,
+) -> None:
+    """Assert that at least one validation issue contains the expected text."""
+    assert any(
+        expected_fragment in issue.message for issue in issues
+    ), f"expected issue fragment not found: {expected_fragment}"
+
+
 def test_discover_roadmap_scripts_skips_helpers_and_tests(
     scripts_root: Path,
     write_text: Callable[[Path, str], None],
 ) -> None:
+    """Verify discovery excludes helper and tests paths.
+
+    Parameters
+    ----------
+    scripts_root : Path
+        Temporary scripts root fixture.
+    write_text : Callable[[Path, str], None]
+        Text-writing helper fixture.
+
+    Returns
+    -------
+    None
+        This test asserts discovery behaviour only.
+    """
     write_text(scripts_root / "_helper.py", "print('ignore')\n")
     write_text(scripts_root / "tests" / "test_demo.py", "def test_demo():\n    assert True\n")
     write_text(scripts_root / "demo.py", VALID_SCRIPT)
@@ -38,7 +74,9 @@ def test_discover_roadmap_scripts_skips_helpers_and_tests(
 
     discovered = baseline.discover_roadmap_scripts(scripts_root)
     discovered_relatives = [path.relative_to(scripts_root) for path in discovered]
-    assert discovered_relatives == [Path("demo.py"), Path("nested/tool.py")]
+    assert discovered_relatives == [Path("demo.py"), Path("nested/tool.py")], (
+        "roadmap discovery should include only non-helper, non-test Python scripts"
+    )
 
 
 def test_validate_script_accepts_compliant_script_with_matching_test(
@@ -46,23 +84,53 @@ def test_validate_script_accepts_compliant_script_with_matching_test(
     write_text: Callable[[Path, str], None],
     create_matching_test: Callable[[Path, Path], Path],
 ) -> None:
+    """Verify compliant scripts with matching tests produce no issues.
+
+    Parameters
+    ----------
+    scripts_root : Path
+        Temporary scripts root fixture.
+    write_text : Callable[[Path, str], None]
+        Text-writing helper fixture.
+    create_matching_test : Callable[[Path, Path], Path]
+        Matching-test creation helper fixture.
+
+    Returns
+    -------
+    None
+        This test asserts successful validation.
+    """
     script_path = scripts_root / "release.py"
     write_text(script_path, VALID_SCRIPT)
     create_matching_test(script_path, scripts_root)
 
     issues = baseline.validate_script(script_path, scripts_root)
-    assert issues == []
+    assert issues == [], "compliant script should have no validation issues"
 
 
 def test_validate_script_reports_missing_matching_test(
     scripts_root: Path,
     write_text: Callable[[Path, str], None],
 ) -> None:
+    """Verify missing matching-test files are reported.
+
+    Parameters
+    ----------
+    scripts_root : Path
+        Temporary scripts root fixture.
+    write_text : Callable[[Path, str], None]
+        Text-writing helper fixture.
+
+    Returns
+    -------
+    None
+        This test asserts missing-test failure messaging.
+    """
     script_path = scripts_root / "release.py"
     write_text(script_path, VALID_SCRIPT)
 
     issues = baseline.validate_script(script_path, scripts_root)
-    assert any("missing matching test" in issue.message for issue in issues)
+    _assert_validation_issue_contains(issues, "missing matching test")
 
 
 def test_validate_script_reports_missing_uv_metadata(
@@ -70,6 +138,22 @@ def test_validate_script_reports_missing_uv_metadata(
     write_text: Callable[[Path, str], None],
     create_matching_test: Callable[[Path, Path], Path],
 ) -> None:
+    """Verify scripts without uv metadata report expected errors.
+
+    Parameters
+    ----------
+    scripts_root : Path
+        Temporary scripts root fixture.
+    write_text : Callable[[Path, str], None]
+        Text-writing helper fixture.
+    create_matching_test : Callable[[Path, Path], Path]
+        Matching-test creation helper fixture.
+
+    Returns
+    -------
+    None
+        This test asserts metadata-related failures.
+    """
     script_path = scripts_root / "broken.py"
     write_text(
         script_path,
@@ -78,8 +162,8 @@ def test_validate_script_reports_missing_uv_metadata(
     create_matching_test(script_path, scripts_root)
 
     issues = baseline.validate_script(script_path, scripts_root)
-    assert any("uv shebang" in issue.message for issue in issues)
-    assert any("uv metadata block" in issue.message for issue in issues)
+    _assert_validation_issue_contains(issues, "uv shebang")
+    _assert_validation_issue_contains(issues, "uv metadata block")
 
 
 @pytest.mark.parametrize(
@@ -104,6 +188,24 @@ def test_validate_script_reports_forbidden_command_patterns(
     create_matching_test: Callable[[Path, Path], Path],
     test_case: tuple[str, str],
 ) -> None:
+    """Verify forbidden command patterns are surfaced.
+
+    Parameters
+    ----------
+    scripts_root : Path
+        Temporary scripts root fixture.
+    write_text : Callable[[Path, str], None]
+        Text-writing helper fixture.
+    create_matching_test : Callable[[Path, Path], Path]
+        Matching-test creation helper fixture.
+    test_case : tuple[str, str]
+        Snippet and expected message fragment pair.
+
+    Returns
+    -------
+    None
+        This test asserts forbidden-pattern diagnostics.
+    """
     snippet, expected_fragment = test_case
     script_path = scripts_root / "forbidden.py"
     write_text(
@@ -113,7 +215,7 @@ def test_validate_script_reports_forbidden_command_patterns(
     create_matching_test(script_path, scripts_root)
 
     issues = baseline.validate_script(script_path, scripts_root)
-    assert any(expected_fragment in issue.message for issue in issues)
+    _assert_validation_issue_contains(issues, expected_fragment)
 
 
 def test_validate_script_requires_run_sync_or_run_for_cuprum_programs(
@@ -121,6 +223,22 @@ def test_validate_script_requires_run_sync_or_run_for_cuprum_programs(
     write_text: Callable[[Path, str], None],
     create_matching_test: Callable[[Path, Path], Path],
 ) -> None:
+    """Verify Cuprum command calls require run/run_sync invocation.
+
+    Parameters
+    ----------
+    scripts_root : Path
+        Temporary scripts root fixture.
+    write_text : Callable[[Path, str], None]
+        Text-writing helper fixture.
+    create_matching_test : Callable[[Path, Path], Path]
+        Matching-test creation helper fixture.
+
+    Returns
+    -------
+    None
+        This test asserts run invocation enforcement.
+    """
     script_path = scripts_root / "missing_run.py"
     write_text(
         script_path,
@@ -140,7 +258,7 @@ with scoped(allowlist=frozenset([TOFU])):
     create_matching_test(script_path, scripts_root)
 
     issues = baseline.validate_script(script_path, scripts_root)
-    assert any("run_sync()" in issue.message for issue in issues)
+    _assert_validation_issue_contains(issues, "run_sync()")
 
 
 def test_main_returns_non_zero_and_renders_relative_paths(
@@ -148,15 +266,31 @@ def test_main_returns_non_zero_and_renders_relative_paths(
     write_text: Callable[[Path, str], None],
     capsys: pytest.CaptureFixture[str],
 ) -> None:
+    """Verify CLI output includes relative paths for failures.
+
+    Parameters
+    ----------
+    scripts_root : Path
+        Temporary scripts root fixture.
+    write_text : Callable[[Path, str], None]
+        Text-writing helper fixture.
+    capsys : pytest.CaptureFixture[str]
+        Captured stdout fixture.
+
+    Returns
+    -------
+    None
+        This test asserts exit code and rendered output.
+    """
     script_path = scripts_root / "broken.py"
     write_text(script_path, VALID_SCRIPT)
 
     exit_code = baseline.main(["--root", str(scripts_root)])
     output = capsys.readouterr().out
 
-    assert exit_code == 1
-    assert "broken.py" in output
-    assert "missing matching test" in output
+    assert exit_code == 1, "baseline checker should fail when matching test is missing"
+    assert "broken.py" in output, "output should include the failing script path"
+    assert "missing matching test" in output, "output should report missing matching tests"
 
 
 @pytest.mark.parametrize(
@@ -197,19 +331,49 @@ def test_validate_script_reports_metadata_edge_cases(
     create_matching_test: Callable[[Path, Path], Path],
     test_case: tuple[str, str],
 ) -> None:
+    """Verify metadata edge-case failures are reported.
+
+    Parameters
+    ----------
+    scripts_root : Path
+        Temporary scripts root fixture.
+    write_text : Callable[[Path, str], None]
+        Text-writing helper fixture.
+    create_matching_test : Callable[[Path, Path], Path]
+        Matching-test creation helper fixture.
+    test_case : tuple[str, str]
+        Script source and expected error-fragment pair.
+
+    Returns
+    -------
+    None
+        This test asserts metadata diagnostics.
+    """
     source, expected_message_fragment = test_case
     script_path = scripts_root / "metadata_case.py"
     write_text(script_path, source)
     create_matching_test(script_path, scripts_root)
 
     issues = baseline.validate_script(script_path, scripts_root)
-    assert any(expected_message_fragment in issue.message for issue in issues)
+    _assert_validation_issue_contains(issues, expected_message_fragment)
 
 
 def test_validate_script_reports_missing_file_read_error(scripts_root: Path) -> None:
+    """Verify missing explicit script files report read errors.
+
+    Parameters
+    ----------
+    scripts_root : Path
+        Temporary scripts root fixture.
+
+    Returns
+    -------
+    None
+        This test asserts missing-file diagnostics.
+    """
     script_path = scripts_root / "missing.py"
     issues = baseline.validate_script(script_path, scripts_root)
-    assert any("unable to read script" in issue.message for issue in issues)
+    _assert_validation_issue_contains(issues, "unable to read script")
 
 
 def test_main_reports_non_roadmap_explicit_path(
@@ -217,6 +381,22 @@ def test_main_reports_non_roadmap_explicit_path(
     write_text: Callable[[Path, str], None],
     capsys: pytest.CaptureFixture[str],
 ) -> None:
+    """Verify explicit non-roadmap paths are rejected by the CLI.
+
+    Parameters
+    ----------
+    scripts_root : Path
+        Temporary scripts root fixture.
+    write_text : Callable[[Path, str], None]
+        Text-writing helper fixture.
+    capsys : pytest.CaptureFixture[str]
+        Captured stdout fixture.
+
+    Returns
+    -------
+    None
+        This test asserts explicit-path failure handling.
+    """
     non_roadmap_path = scripts_root / "tests" / "test_helper.py"
     write_text(non_roadmap_path, "def test_helper() -> None:\n    assert True\n")
 
@@ -224,16 +404,32 @@ def test_main_reports_non_roadmap_explicit_path(
         ["--root", str(scripts_root), str(non_roadmap_path)]
     )
     output = capsys.readouterr().out
-    assert exit_code == 1
-    assert "not a roadmap-delivered script entrypoint" in output
+    assert exit_code == 1, "non-roadmap explicit paths should fail validation"
+    assert "not a roadmap-delivered script entrypoint" in output, (
+        "output should explain why explicit test paths are rejected"
+    )
 
 
 def test_expected_test_path_avoids_collisions_for_nested_scripts(
     scripts_root: Path,
 ) -> None:
+    """Verify nested and flat script names map to distinct test paths.
+
+    Parameters
+    ----------
+    scripts_root : Path
+        Temporary scripts root fixture.
+
+    Returns
+    -------
+    None
+        This test asserts mapping uniqueness.
+    """
     flat_script = scripts_root / "a_b.py"
     nested_script = scripts_root / "a" / "b.py"
     flat_test = baseline.expected_test_path(flat_script, scripts_root)
     nested_test = baseline.expected_test_path(nested_script, scripts_root)
 
-    assert flat_test != nested_test
+    assert flat_test != nested_test, (
+        "flat and nested scripts must not resolve to the same matching test path"
+    )

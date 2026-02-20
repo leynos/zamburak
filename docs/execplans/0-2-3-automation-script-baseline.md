@@ -143,29 +143,29 @@ decision record is updated, and roadmap task `0.2.3` is marked done.
 - Decision: treat this change as baseline-contract establishment rather than
   adding a large script portfolio. Rationale: roadmap scope for Task 0.2.3 is
   standards and conventions, not feature script rollout. Date/Author:
-  2026-02-20 / Codex
+  2026-02-20 / Codex.
 
 - Decision: keep `rstest-bdd` behavioural coverage conditional on Rust-facing
   behaviour changes, and use scripting-standards BDD guidance for Python script
   behaviours. Rationale: aligns the user request with the task scope and
-  existing scripting-standards contract. Date/Author: 2026-02-20 / Codex
+  existing scripting-standards contract. Date/Author: 2026-02-20 / Codex.
 
 - Decision: enforce command invocation baseline via static pattern checks in
   `scripts/verify_script_baseline.py`, including explicit rejection of Plumbum,
   `subprocess`, `os.system`, `os.popen`, `cuprum.cmd`, and
   `from cuprum import local`. Rationale: this provides deterministic
   fail-closed checks for roadmap scripts without executing scripts during
-  validation. Date/Author: 2026-02-20 / Codex
+  validation. Date/Author: 2026-02-20 / Codex.
 
 - Decision: use script discovery rules that exclude underscore-prefixed modules
   and `scripts/tests/` paths. Rationale: helper modules such as
   `_cuprum_helpers.py` are implementation support files, not script entrypoint
-  deliveries. Date/Author: 2026-02-20 / Codex
+  deliveries. Date/Author: 2026-02-20 / Codex.
 
 - Decision: do not update `docs/users-guide.md` for Task 0.2.3. Rationale:
   this task changes contributor workflows and CI/documentation enforcement, not
   public Rust API behaviour consumed by library users. Date/Author: 2026-02-20
-  / Codex
+  / Codex.
 
 ## Outcomes & Retrospective
 
