@@ -363,7 +363,7 @@ mod tests {
     }
 
     #[test]
-    fn phase_one_reports_failing_suites_when_catalog_is_complete() {
+    fn phase_one_reports_failing_suites_when_catalogue_is_complete() {
         let available_tests = vec![
             "policy_schema_bdd::load_canonical_schema_policy".to_owned(),
             "authority_lifecycle_bdd::mint_host_trusted".to_owned(),

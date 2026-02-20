@@ -22,6 +22,10 @@ enum PhaseGateCliError {
     InvalidArgument(Box<str>),
     MissingArgumentValue(Box<str>),
     InvalidTargetValue(Box<str>),
+    Command {
+        cmd: String,
+        source: io::Error,
+    },
     Io {
         path: Utf8PathBuf,
         source: io::Error,
@@ -42,6 +46,9 @@ impl std::fmt::Display for PhaseGateCliError {
                     f,
                     "invalid phase-gate target `{value}`; expected one of: phase0, phase1, phase2, phase3, phase4, phase5, completion"
                 )
+            }
+            Self::Command { cmd, source } => {
+                write!(f, "failed to run command `{cmd}`: {source}")
             }
             Self::Io { path, source } => {
                 write!(f, "I/O error for `{path}`: {source}")
@@ -169,8 +176,8 @@ fn list_available_tests() -> Result<Vec<String>, PhaseGateCliError> {
         .args(CARGO_TEST_BASE_ARGS)
         .args(["--", "--list"])
         .output()
-        .map_err(|source| PhaseGateCliError::Io {
-            path: Utf8PathBuf::from("cargo"),
+        .map_err(|source| PhaseGateCliError::Command {
+            cmd: "cargo".to_owned(),
             source,
         })?;
 
