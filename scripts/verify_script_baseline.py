@@ -34,6 +34,10 @@ FORBIDDEN_PATTERNS: tuple[tuple[re.Pattern[str], str], ...] = (
         "subprocess imports are forbidden; use Cuprum",
     ),
     (
+        re.compile(r"^\s*from\s+subprocess\s+import\b", flags=re.MULTILINE),
+        "subprocess imports are forbidden; use Cuprum",
+    ),
+    (
         re.compile(r"\bsubprocess\.[A-Za-z_]+\(", flags=re.MULTILINE),
         "subprocess invocation is forbidden; use Cuprum",
     ),
@@ -83,9 +87,12 @@ def discover_roadmap_scripts(scripts_root: Path) -> list[Path]:
 def expected_test_path(script_path: Path, scripts_root: Path) -> Path:
     """Return the expected matching test file path for one script."""
     relative_without_suffix = script_path.relative_to(scripts_root).with_suffix("")
-    flattened_name = "_".join(relative_without_suffix.parts)
-
-    return scripts_root / "tests" / f"test_{flattened_name}.py"
+    return (
+        scripts_root
+        / "tests"
+        / relative_without_suffix.parent
+        / f"test_{relative_without_suffix.name}.py"
+    )
 
 
 def parse_uv_metadata(script_text: str) -> dict[str, str]:
@@ -207,7 +214,16 @@ def validate_matching_test(script_path: Path, scripts_root: Path) -> list[Baseli
 
 def validate_script(script_path: Path, scripts_root: Path) -> list[BaselineIssue]:
     """Validate one roadmap script against all baseline checks."""
-    script_text = script_path.read_text(encoding="utf-8")
+    try:
+        script_text = script_path.read_text(encoding="utf-8")
+    except OSError as error:
+        detail = error.strerror if error.strerror else str(error)
+        return [
+            BaselineIssue(
+                path=script_path,
+                message=f"unable to read script: {detail}",
+            )
+        ]
 
     return [
         *validate_runtime_metadata(script_path, script_text),
@@ -261,12 +277,48 @@ def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv or [])
     scripts_root = args.root.resolve()
 
+    explicit_path_issues: list[BaselineIssue] = []
     if args.paths:
-        script_paths = [path.resolve() for path in args.paths]
+        script_paths = []
+        for path in args.paths:
+            resolved_path = path.resolve()
+            if resolved_path.exists():
+                if not resolved_path.is_file():
+                    explicit_path_issues.append(
+                        BaselineIssue(
+                            path=resolved_path,
+                            message="explicit path is not a file",
+                        )
+                    )
+                    continue
+                try:
+                    if not is_roadmap_script(resolved_path, scripts_root):
+                        explicit_path_issues.append(
+                            BaselineIssue(
+                                path=resolved_path,
+                                message=(
+                                    "explicit path is not a roadmap-delivered "
+                                    "script entrypoint"
+                                ),
+                            )
+                        )
+                        continue
+                except ValueError:
+                    explicit_path_issues.append(
+                        BaselineIssue(
+                            path=resolved_path,
+                            message=(
+                                "explicit path must be under scripts root and "
+                                "match roadmap script discovery rules"
+                            ),
+                        )
+                    )
+                    continue
+            script_paths.append(resolved_path)
     else:
         script_paths = discover_roadmap_scripts(scripts_root)
 
-    issues = [
+    issues = explicit_path_issues + [
         issue
         for script_path in script_paths
         for issue in validate_script(script_path, scripts_root)

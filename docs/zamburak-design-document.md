@@ -1140,7 +1140,7 @@ keep operational tooling deterministic and reviewable.
 - test pairing:
   each roadmap-delivered script must have a matching pytest file in
   `scripts/tests/` using the naming contract
-  `scripts/tests/test_<script_relative_name>.py`.
+  `scripts/tests/<relative_script_parent>/test_<script_stem>.py`.
 - enforcement path:
   local and CI checks run `make script-baseline` and `make script-test`.
 

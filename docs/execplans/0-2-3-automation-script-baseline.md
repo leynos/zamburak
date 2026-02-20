@@ -21,8 +21,8 @@ external commands use Cuprum execution patterns, and each script ships with
 matching tests (unit and behavioural where meaningful).
 
 Task completion is observable when script baseline checks and script tests are
-wired into local and CI execution paths, the design decision record is updated,
-and roadmap task `0.2.3` is marked done.
+wired into local and continuous integration (CI) execution paths, the design
+decision record is updated, and roadmap task `0.2.3` is marked done.
 
 ## Constraints
 
@@ -123,7 +123,8 @@ and roadmap task `0.2.3` is marked done.
 
 ## Surprises & Discoveries
 
-- Observation: no Qdrant MCP note tools are exposed in this session.
+- Observation: no Qdrant Model Context Protocol (MCP) note tools are exposed
+  in this session.
   Evidence: `list_mcp_resources` and `list_mcp_resource_templates` returned
   empty results. Impact: this planning pass cannot retrieve or store
   project-memory notes via Qdrant; rely on repository docs only.
@@ -363,7 +364,7 @@ Acceptance is met only when all criteria below are true.
 - If CI wiring changes break unrelated jobs, isolate and revert only the CI
   hunk, then reapply in smaller increments.
 
-## Artifacts and notes
+## Artefacts and notes
 
 Keep these artefacts while executing:
 

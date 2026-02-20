@@ -2,10 +2,11 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
+from contextlib import redirect_stdout
 from dataclasses import dataclass
 from io import StringIO
 from pathlib import Path
-from contextlib import redirect_stdout
 
 import pytest
 from pytest_bdd import given, scenarios, then, when
@@ -38,32 +39,27 @@ class ScenarioState:
     output: str = ""
 
 
-def write_text(path: Path, text: str) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(text, encoding="utf-8")
-
-
-def create_matching_test(script_path: Path, scripts_root: Path) -> None:
-    relative_without_suffix = script_path.relative_to(scripts_root).with_suffix("")
-    flattened_name = "_".join(relative_without_suffix.parts)
-    test_path = scripts_root / "tests" / f"test_{flattened_name}.py"
-    write_text(test_path, "def test_placeholder() -> None:\n    assert True\n")
-
-
 @pytest.fixture
 def scenario_state(scripts_root: Path) -> ScenarioState:
     return ScenarioState(scripts_root=scripts_root)
 
 
 @given("a compliant roadmap script tree")
-def given_compliant_tree(scenario_state: ScenarioState) -> None:
+def given_compliant_tree(
+    scenario_state: ScenarioState,
+    write_text: Callable[[Path, str], None],
+    create_matching_test: Callable[[Path, Path], Path],
+) -> None:
     script_path = scenario_state.scripts_root / "release.py"
     write_text(script_path, VALID_SCRIPT)
     create_matching_test(script_path, scenario_state.scripts_root)
 
 
 @given("a roadmap script without matching tests")
-def given_missing_tests_tree(scenario_state: ScenarioState) -> None:
+def given_missing_tests_tree(
+    scenario_state: ScenarioState,
+    write_text: Callable[[Path, str], None],
+) -> None:
     script_path = scenario_state.scripts_root / "release.py"
     write_text(script_path, VALID_SCRIPT)
 
