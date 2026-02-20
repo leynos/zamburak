@@ -1,7 +1,7 @@
 #!/usr/bin/env -S uv run python
 # /// script
 # requires-python = ">=3.13"
-# dependencies = []
+# dependencies = ["astroid"]
 # ///
 """Validate roadmap script baseline contracts for `scripts/`.
 
@@ -174,7 +174,28 @@ def validate_command_invocation(path: Path, script_text: str) -> list[BaselineIs
                 )
             )
 
-    uses_cuprum_programs = "Program(" in script_text or "sh.make(" in script_text
+    try:
+        import astroid
+        from astroid import nodes
+
+        module = astroid.parse(script_text)
+        uses_cuprum_programs = False
+        for call_node in module.nodes_of_class(nodes.Call):
+            func_node = call_node.func
+            if isinstance(func_node, nodes.Name) and func_node.name == "Program":
+                uses_cuprum_programs = True
+                break
+            if (
+                isinstance(func_node, nodes.Attribute)
+                and func_node.attrname == "make"
+                and isinstance(func_node.expr, nodes.Name)
+                and func_node.expr.name == "sh"
+            ):
+                uses_cuprum_programs = True
+                break
+    except (SyntaxError, ImportError):
+        uses_cuprum_programs = "Program(" in script_text or "sh.make(" in script_text
+
     if not uses_cuprum_programs:
         return issues
 
@@ -272,50 +293,53 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     return parser.parse_args(argv)
 
 
+def _validate_explicit_path(path: Path, scripts_root: Path) -> BaselineIssue | None:
+    """Validate a single explicit path argument and return a BaselineIssue if invalid, otherwise None."""
+    resolved_path = path.resolve()
+    if not resolved_path.exists():
+        return None
+
+    if not resolved_path.is_file():
+        return BaselineIssue(
+            path=resolved_path,
+            message="explicit path is not a file",
+        )
+
+    try:
+        if not is_roadmap_script(resolved_path, scripts_root):
+            return BaselineIssue(
+                path=resolved_path,
+                message="explicit path is not a roadmap-delivered script entrypoint",
+            )
+    except ValueError:
+        return BaselineIssue(
+            path=resolved_path,
+            message=(
+                "explicit path must be under scripts root and "
+                "match roadmap script discovery rules"
+            ),
+        )
+
+    return None
+
+
 def main(argv: list[str] | None = None) -> int:
     """Entry point for script baseline validation."""
     args = parse_args(argv or [])
     scripts_root = args.root.resolve()
 
-    explicit_path_issues: list[BaselineIssue] = []
     if args.paths:
         script_paths = []
+        explicit_path_issues: list[BaselineIssue] = []
         for path in args.paths:
+            issue = _validate_explicit_path(path, scripts_root)
             resolved_path = path.resolve()
-            if resolved_path.exists():
-                if not resolved_path.is_file():
-                    explicit_path_issues.append(
-                        BaselineIssue(
-                            path=resolved_path,
-                            message="explicit path is not a file",
-                        )
-                    )
-                    continue
-                try:
-                    if not is_roadmap_script(resolved_path, scripts_root):
-                        explicit_path_issues.append(
-                            BaselineIssue(
-                                path=resolved_path,
-                                message=(
-                                    "explicit path is not a roadmap-delivered "
-                                    "script entrypoint"
-                                ),
-                            )
-                        )
-                        continue
-                except ValueError:
-                    explicit_path_issues.append(
-                        BaselineIssue(
-                            path=resolved_path,
-                            message=(
-                                "explicit path must be under scripts root and "
-                                "match roadmap script discovery rules"
-                            ),
-                        )
-                    )
-                    continue
-            script_paths.append(resolved_path)
+            if issue is not None:
+                explicit_path_issues.append(issue)
+            else:
+                script_paths.append(resolved_path)
     else:
+        explicit_path_issues = []
         script_paths = discover_roadmap_scripts(scripts_root)
 
     issues = explicit_path_issues + [

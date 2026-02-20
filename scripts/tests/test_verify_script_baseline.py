@@ -83,7 +83,7 @@ def test_validate_script_reports_missing_uv_metadata(
 
 
 @pytest.mark.parametrize(
-    ("snippet", "expected_fragment"),
+    "test_case",
     [
         ("import subprocess\n", "subprocess imports are forbidden"),
         ("from subprocess import run\n", "subprocess imports are forbidden"),
@@ -102,9 +102,9 @@ def test_validate_script_reports_forbidden_command_patterns(
     scripts_root: Path,
     write_text: Callable[[Path, str], None],
     create_matching_test: Callable[[Path, Path], Path],
-    snippet: str,
-    expected_fragment: str,
+    test_case: tuple[str, str],
 ) -> None:
+    snippet, expected_fragment = test_case
     script_path = scripts_root / "forbidden.py"
     write_text(
         script_path,
@@ -160,7 +160,7 @@ def test_main_returns_non_zero_and_renders_relative_paths(
 
 
 @pytest.mark.parametrize(
-    ("source", "expected_message_fragment"),
+    "test_case",
     [
         (
             """#!/usr/bin/env -S uv run python
@@ -195,9 +195,9 @@ def test_validate_script_reports_metadata_edge_cases(
     scripts_root: Path,
     write_text: Callable[[Path, str], None],
     create_matching_test: Callable[[Path, Path], Path],
-    source: str,
-    expected_message_fragment: str,
+    test_case: tuple[str, str],
 ) -> None:
+    source, expected_message_fragment = test_case
     script_path = scripts_root / "metadata_case.py"
     write_text(script_path, source)
     create_matching_test(script_path, scripts_root)
