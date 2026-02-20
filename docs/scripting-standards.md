@@ -187,6 +187,20 @@ Cuprum is **not** a drop‑in replacement for Plumbum. Build commands from
 allowlisted `Program` values, run via `run_sync()`/`run()`, and inspect
 `CommandResult`/`PipelineResult` explicitly.
 
+### Security model: allowlists and scoped execution
+
+- Rationale: allowlists prevent arbitrary command execution and reduce the
+  command‑injection attack surface.
+- Catalogue allowlist: use `CATALOGUE.allowlist` when programs are
+  pre-declared. This keeps command intent explicit and supports project-wide
+  auditing.
+- Manual allowlist: use `frozenset([PROGRAM, ...])` for ad‑hoc scoping or when
+  mixing catalogued and uncatalogued programs.
+- Enforcement: executing a non-allowlisted program raises an exception and
+  fails fast.
+- Migration note: this is a breaking behaviour change from Plumbum, where
+  commands were implicitly available.
+
 ### Shared helper pattern
 
 Prefer a small helper module so script examples focus on command usage instead
@@ -250,6 +264,13 @@ if not result.ok:
 
 last_commit = result.stdout.strip()
 ```
+
+Guidance:
+
+- In script entry points, propagate command failures with
+  `return result.exit_code` or `raise SystemExit(result.exit_code)`.
+- In helper/library-style functions, raise `RuntimeError` (or a domain error)
+  so callers can decide how to present or recover from failures.
 
 ### Working directory and environment management
 
@@ -525,6 +546,22 @@ def test_spy_and_record(cmd_mox, monkeypatch, tmp_path):
   Human-friendly error messages should highlight remediation steps.
 - Dependencies must remain minimal. Any new package should be added to the `uv`
   block and the rationale documented within the script or companion tests.
+
+## Migration guidance (Plumbum → Cuprum)
+
+1. Imports: replace `from plumbum import local` with cuprum primitives such as
+   `Program`, `ExecutionContext`, and `scoped`.
+2. Command creation: replace `local["git"]` style calls with
+   `Program("git")`, register the program in a catalogue, then build commands
+   via `sh.make(...)`.
+3. Execution: replace implicit execution (`cmd()`) with explicit
+   `cmd.run_sync()` (or `await cmd.run()`), then inspect `CommandResult`.
+4. Context handling: replace `local.cwd(...)` and `local.env(...)` with
+   `ExecutionContext(cwd=..., env=...)`.
+5. Error handling: replace exception-driven command checks with explicit
+   `result.ok`, `result.exit_code`, and `result.stderr` handling.
+6. Security posture: apply `scoped(allowlist=...)` consistently; treat missing
+   allowlist entries as policy failures that must be fixed rather than bypassed.
 
 ## Migration guidance (Typer → Cyclopts)
 
