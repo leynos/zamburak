@@ -12,8 +12,8 @@ the governing execution plan for this task.
 ## Purpose / big picture
 
 Implement roadmap Task 0.2.2 from `docs/roadmap.md`: wire merge-blocking phase
-verification gates in repository CI using the required suites defined in
-`docs/verification-targets.md`.
+verification gates in repository continuous integration (CI) using the required
+suites defined in `docs/verification-targets.md`.
 
 After this change, phase advancement can be objectively blocked when required
 verification suites are missing or failing, and CI output must explicitly
@@ -37,9 +37,9 @@ failing mandated suites, pass when mandated suites are green, and roadmap Task
 - Out of scope: release-train orchestration outside repository CI.
 - CI gate logic must fail closed if required suites are not configured,
   missing, or failing.
-- Add unit tests and behavioural tests (using `rstest-bdd` v0.5.0 where the
-  gate contract is scenario-driven) for happy path, unhappy path, and edge
-  cases.
+- Add unit tests and behaviour-driven development (BDD) behavioural tests
+  (using `rstest-bdd` v0.5.0 where the gate contract is scenario-driven) for
+  happy path, unhappy path, and edge cases.
 - Record design decisions in `docs/zamburak-design-document.md` when introducing
   durable contract behaviour for phase-gate enforcement.
 - Update `docs/users-guide.md` if any library-consumer-visible behaviour or API
@@ -123,10 +123,10 @@ failing mandated suites, pass when mandated suites are green, and roadmap Task
   one `build-test` job only. Impact: task implementation must add explicit
   phase-gate checks, not only rely on aggregate `make test`.
 
-- Observation: no project-memory MCP/qdrant server is available in this
-  session. Evidence: `list_mcp_resources` and `list_mcp_resource_templates`
-  returned no resources/templates. Impact: all planning context is derived from
-  repository sources in this workspace.
+- Observation: no project-memory Model Context Protocol (MCP)/Qdrant server is
+  available in this session. Evidence: `list_mcp_resources` and
+  `list_mcp_resource_templates` returned no resources/templates. Impact: all
+  planning context is derived from repository sources in this workspace.
 
 - Observation: reusing `src/phase_gate_contract.rs` from compatibility tests
   via `#[path = ...]` initially triggered dead-code failures under
@@ -343,7 +343,7 @@ Required gates:
 - If workflow wiring causes unexpected broad merge blocking, revert only the
   phase-gate wiring commit and keep test assets for diagnosis.
 
-## Artifacts and notes
+## Artefacts and notes
 
 Evidence to capture during implementation:
 

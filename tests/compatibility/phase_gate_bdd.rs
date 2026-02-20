@@ -57,15 +57,12 @@ fn full_phase_one_catalog(world: &mut PhaseGateWorld) {
 
 #[given("the suite {suite_id} is marked failing")]
 fn marked_failing_suite(world: &mut PhaseGateWorld, suite_id: String) {
-    let mapped_suite_id = match suite_id.trim_matches('"') {
-        "authority-lifecycle" => "authority-lifecycle",
-        "policy-schema-contract" => "policy-schema-contract",
-        "llm-sink-enforcement" => "llm-sink-enforcement",
-        "localization-contract" => "localization-contract",
-        _ => panic!("unsupported suite id in scenario: {suite_id}"),
+    let normalized_suite_id = suite_id.trim_matches('"');
+    let Some(suite) = suite_by_id(normalized_suite_id) else {
+        panic!("unsupported suite id in scenario: {suite_id}");
     };
 
-    world.failing_suite_ids.insert(mapped_suite_id);
+    world.failing_suite_ids.insert(suite.id);
 }
 
 #[when("the phase gate is evaluated")]

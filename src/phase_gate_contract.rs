@@ -240,13 +240,7 @@ pub(crate) fn evaluate_phase_gate(
         .map(|suite| suite.id)
         .collect::<Vec<_>>();
 
-    let status = if !missing_suite_ids.is_empty() {
-        PhaseGateStatus::MissingSuites
-    } else if !failing_suite_ids.is_empty() {
-        PhaseGateStatus::FailingSuites
-    } else {
-        PhaseGateStatus::Passed
-    };
+    let status = compute_phase_gate_status(&missing_suite_ids, &failing_suite_ids);
 
     PhaseGateReport {
         target,
@@ -254,6 +248,17 @@ pub(crate) fn evaluate_phase_gate(
         required_suite_ids,
         missing_suite_ids,
         failing_suite_ids,
+    }
+}
+
+const fn compute_phase_gate_status(
+    missing_suite_ids: &[&'static str],
+    failing_suite_ids: &[&'static str],
+) -> PhaseGateStatus {
+    match (missing_suite_ids.is_empty(), failing_suite_ids.is_empty()) {
+        (false, _) => PhaseGateStatus::MissingSuites,
+        (true, false) => PhaseGateStatus::FailingSuites,
+        (true, true) => PhaseGateStatus::Passed,
     }
 }
 

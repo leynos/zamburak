@@ -45,7 +45,6 @@ jobs:
 
   phase-gate:
     runs-on: ubuntu-latest
-    needs: build-test
     permissions:
       contents: read
     env:

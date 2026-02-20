@@ -8,6 +8,8 @@ members = ["crates/zamburak-core", "crates/zamburak-policy"]
 resolver = "3"
 
 [dependencies]
+camino = "1.2.2"
+cap-std = { version = "3.4.5", features = ["fs_utf8"] }
 zamburak-core = { path = "crates/zamburak-core" }
 zamburak-policy = { path = "crates/zamburak-policy" }
 

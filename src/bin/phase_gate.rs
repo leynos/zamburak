@@ -5,12 +5,11 @@ mod phase_gate_contract;
 
 use std::collections::BTreeSet;
 use std::env;
-use std::ffi::OsStr;
-use std::fs;
 use std::io::{self, Write};
-use std::path::{Path, PathBuf};
 use std::process::{Command, ExitCode};
 
+use camino::{Utf8Path, Utf8PathBuf};
+use cap_std::{ambient_authority, fs_utf8};
 use phase_gate_contract::{
     ESCALATION_STEPS, PhaseGateReport, PhaseGateStatus, RELEASE_BLOCKING_CAUSES, VerificationSuite,
     evaluate_phase_gate, parse_phase_gate_target, required_suites_for_target, suite_by_id,
@@ -25,7 +24,10 @@ enum PhaseGateCliError {
     InvalidArgument(Box<str>),
     MissingArgumentValue(Box<str>),
     InvalidTargetValue(Box<str>),
-    Io { path: PathBuf, source: io::Error },
+    Io {
+        path: Utf8PathBuf,
+        source: io::Error,
+    },
     CargoListFailed,
     GateBlocked,
 }
@@ -44,7 +46,7 @@ impl std::fmt::Display for PhaseGateCliError {
                 )
             }
             Self::Io { path, source } => {
-                write!(f, "failed to read `{}`: {source}", path.display())
+                write!(f, "I/O error for `{path}`: {source}")
             }
             Self::CargoListFailed => {
                 write!(f, "failed to enumerate tests from `cargo test -- --list`")
@@ -58,7 +60,7 @@ impl std::error::Error for PhaseGateCliError {}
 
 #[derive(Debug)]
 struct CliArgs {
-    target_file: PathBuf,
+    target_file: Utf8PathBuf,
     explicit_target: Option<String>,
 }
 
@@ -101,7 +103,7 @@ fn run() -> Result<(), PhaseGateCliError> {
 }
 
 fn parse_cli_args(raw_args: Vec<String>) -> Result<CliArgs, PhaseGateCliError> {
-    let mut target_file = PathBuf::from(DEFAULT_TARGET_FILE);
+    let mut target_file = Utf8PathBuf::from(DEFAULT_TARGET_FILE);
     let mut explicit_target = None::<String>;
     let mut args = raw_args.into_iter();
 
@@ -113,7 +115,7 @@ fn parse_cli_args(raw_args: Vec<String>) -> Result<CliArgs, PhaseGateCliError> {
                         flag.into_boxed_str(),
                     ));
                 };
-                target_file = PathBuf::from(raw_path);
+                target_file = Utf8PathBuf::from(raw_path);
             }
             "--target" => {
                 let Some(raw_target) = args.next() else {
@@ -146,11 +148,21 @@ fn resolve_target(
         .ok_or_else(|| PhaseGateCliError::InvalidTargetValue(raw_target.into_boxed_str()))
 }
 
-fn load_target_from_file(target_file: &Path) -> Result<String, PhaseGateCliError> {
-    let raw = fs::read_to_string(target_file).map_err(|source| PhaseGateCliError::Io {
-        path: target_file.to_path_buf(),
-        source,
-    })?;
+fn load_target_from_file(target_file: &Utf8Path) -> Result<String, PhaseGateCliError> {
+    let ambient_dir =
+        fs_utf8::Dir::open_ambient_dir(".", ambient_authority()).map_err(|source| {
+            PhaseGateCliError::Io {
+                path: Utf8PathBuf::from("."),
+                source,
+            }
+        })?;
+
+    let raw = ambient_dir
+        .read_to_string(target_file)
+        .map_err(|source| PhaseGateCliError::Io {
+            path: target_file.to_path_buf(),
+            source,
+        })?;
 
     Ok(raw.trim().to_owned())
 }
@@ -162,7 +174,7 @@ fn list_available_tests() -> Result<Vec<String>, PhaseGateCliError> {
         .args(["--", "--list"])
         .output()
         .map_err(|source| PhaseGateCliError::Io {
-            path: PathBuf::from(OsStr::new("cargo")),
+            path: Utf8PathBuf::from("cargo"),
             source,
         })?;
 
