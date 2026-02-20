@@ -61,7 +61,7 @@ impl PhaseGateTarget {
 pub enum PhaseGateStatus {
     /// All required suites exist and passed.
     Passed,
-    /// One or more required suites are missing from the catalog.
+    /// One or more required suites are missing from the catalogue.
     MissingSuites,
     /// One or more required suites failed execution.
     FailingSuites,
@@ -243,13 +243,14 @@ pub const fn required_suites_for_target(target: PhaseGateTarget) -> &'static [Ve
 /// ```
 #[must_use]
 pub fn suite_by_id(suite_id: &str) -> Option<&'static VerificationSuite> {
-    required_suites_for_target(PhaseGateTarget::Phase1)
+    required_suites_for_target(PhaseGateTarget::Phase0)
         .iter()
-        .chain(required_suites_for_target(PhaseGateTarget::Phase2))
-        .chain(required_suites_for_target(PhaseGateTarget::Phase3))
-        .chain(required_suites_for_target(PhaseGateTarget::Phase4))
-        .chain(required_suites_for_target(PhaseGateTarget::Phase5))
-        .chain(required_suites_for_target(PhaseGateTarget::Completion))
+        .chain(required_suites_for_target(PhaseGateTarget::Phase1).iter())
+        .chain(required_suites_for_target(PhaseGateTarget::Phase2).iter())
+        .chain(required_suites_for_target(PhaseGateTarget::Phase3).iter())
+        .chain(required_suites_for_target(PhaseGateTarget::Phase4).iter())
+        .chain(required_suites_for_target(PhaseGateTarget::Phase5).iter())
+        .chain(required_suites_for_target(PhaseGateTarget::Completion).iter())
         .find(|suite| suite.id == suite_id)
 }
 

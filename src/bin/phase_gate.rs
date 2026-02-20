@@ -282,6 +282,7 @@ fn render_suite(stderr: &mut dyn Write, suite: &VerificationSuite) {
     ));
 }
 
+/// Best-effort diagnostic output; write failures are non-recoverable here.
 fn discard_write_result(write_result: io::Result<()>) {
     drop(write_result);
 }

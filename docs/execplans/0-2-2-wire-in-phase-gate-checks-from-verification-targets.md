@@ -63,7 +63,7 @@ failing mandated suites, pass when mandated suites are green, and roadmap Task
   if a new third-party dependency is required for gate wiring or tests, stop
   and escalate before adding it.
 - Workflow tolerance:
-  if branch-protection assumptions are unclear (for example required-check
+  if branch-protection assumptions are unclear (for example, required-check
   naming), stop and present concrete options and trade-offs.
 - Behavioural-test tolerance:
   if `rstest-bdd` cannot express gate-behaviour scenarios after two concrete
@@ -132,7 +132,7 @@ failing mandated suites, pass when mandated suites are green, and roadmap Task
   via `#[path = ...]` initially triggered dead-code failures under
   `RUSTFLAGS="-D warnings"` for helper items used by the CLI only. Evidence:
   `cargo test -- --list` failed on unused `as_str`, constants, and suite lookup
-  symbols. Impact: added a focused compatibility test asserting those symbols
+  symbols. Impact: added a focused compatibility test asserting those symbols,
   so strict warning gates stay green without suppression attributes.
 
 ## Decision log
@@ -351,7 +351,7 @@ Evidence to capture during implementation:
 - `Makefile` target(s) used by CI and local verification,
 - unit test and BDD test files proving pass/fail/missing suite handling,
 - gate logs in `/tmp/*-zamburak-<branch>.out`,
-- criterion-to-evidence mapping in final outcomes section.
+- criterion-to-evidence mapping in outcomes section.
 
 ## Interfaces and dependencies
 
