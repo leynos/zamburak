@@ -1,4 +1,4 @@
-.PHONY: help all clean test build release lint fmt check-fmt markdownlint nixie
+.PHONY: help all clean test build release lint fmt check-fmt markdownlint nixie phase-gate
 
 
 TARGET ?= libzamburak.rlib
@@ -11,6 +11,7 @@ CLIPPY_FLAGS ?= $(CARGO_FLAGS) -- $(RUST_FLAGS)
 TEST_FLAGS ?= $(CARGO_FLAGS)
 MDLINT ?= markdownlint-cli2
 NIXIE ?= nixie
+PHASE_GATE_TARGET_FILE ?= .github/phase-gate-target.txt
 
 build: target/debug/$(TARGET) ## Build debug binary
 release: target/release/$(TARGET) ## Build release binary
@@ -22,6 +23,9 @@ clean: ## Remove build artifacts
 
 test: ## Run tests with warnings treated as errors
 	RUSTFLAGS="$(RUST_FLAGS)" $(CARGO) test --workspace $(TEST_FLAGS) $(BUILD_JOBS)
+
+phase-gate: ## Evaluate phase-gate verification suites for configured target
+	RUSTFLAGS="$(RUST_FLAGS)" $(CARGO) run --bin phase_gate -- --target-file $(PHASE_GATE_TARGET_FILE)
 
 target/%/$(TARGET): ## Build binary in debug or release mode
 	$(CARGO) build $(BUILD_JOBS) $(if $(findstring release,$(@)),--release)

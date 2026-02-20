@@ -244,17 +244,18 @@ _Table 13: Core documentation artefacts and ownership._
 
 ### Root and operational files
 
-| Path                      | Purpose                                           |
-| ------------------------- | ------------------------------------------------- |
-| `Cargo.toml`              | Workspace member registration and shared settings |
-| `Cargo.lock`              | Reproducible dependency resolution                |
-| `rust-toolchain.toml`     | Toolchain pinning and compatibility               |
-| `.env.example`            | Configuration template for local integrations     |
-| `README.md`               | Project entry document and orientation            |
-| `LICENSE`                 | Project licence                                   |
-| `third_party/full-monty/` | `full-monty` submodule checkout for Track A work  |
-| `scripts/`                | Operational helper scripts for local workflows    |
-| `.github/workflows/`      | CI and automation workflow definitions            |
+| Path                            | Purpose                                             |
+| ------------------------------- | --------------------------------------------------- |
+| `Cargo.toml`                    | Workspace member registration and shared settings   |
+| `Cargo.lock`                    | Reproducible dependency resolution                  |
+| `rust-toolchain.toml`           | Toolchain pinning and compatibility                 |
+| `.env.example`                  | Configuration template for local integrations       |
+| `README.md`                     | Project entry document and orientation              |
+| `LICENSE`                       | Project licence                                     |
+| `third_party/full-monty/`       | `full-monty` submodule checkout for Track A work    |
+| `scripts/`                      | Operational helper scripts for local workflows      |
+| `.github/workflows/`            | CI and automation workflow definitions              |
+| `.github/phase-gate-target.txt` | Phase-advancement target consumed by CI gate checks |
 
 _Table 14: Root and operational artefacts with purposes._
 

@@ -117,6 +117,12 @@ make lint | tee /tmp/lint-zamburak-$(git branch --show-current).out
 make test | tee /tmp/test-zamburak-$(git branch --show-current).out
 ```
 
+For phase-advancement pull requests, CI must also run:
+
+```sh
+make phase-gate | tee /tmp/phase-gate-zamburak-$(git branch --show-current).out
+```
+
 ## Review and change-management standards
 
 - Use atomic commits with descriptive rationale.

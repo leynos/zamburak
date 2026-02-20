@@ -182,8 +182,7 @@ revocation_index.revoke(token.token_id().clone());
 
 `PolicyEngine::validate_authority_tokens` partitions tokens into effective and
 invalid sets at a given evaluation time. Revoked, expired, and pre-issuance
-tokens (evaluation time before `issued_at`) are stripped from the effective
-set.
+tokens (evaluation time before `issued_at`) are stripped from the effective set.
 
 ```rust
 let validation = engine.validate_authority_tokens(
@@ -226,8 +225,8 @@ environment variables or maintains mutable global state.
 
 ### Host-owned loader setup
 
-Create a `FluentLanguageLoader` in the host application and pass it through
-a `FluentLocalizerAdapter` that implements the `Localizer` trait:
+Create a `FluentLanguageLoader` in the host application and pass it through a
+`FluentLocalizerAdapter` that implements the `Localizer` trait:
 
 ```rust
 use zamburak_core::i18n::{FluentLocalizerAdapter, Localizer};
@@ -249,8 +248,8 @@ let localizer = NoOpLocalizer;
 
 ### Loading Zamburak embedded assets
 
-Zamburak publishes embedded `.ftl` translation assets via `Localizations`.
-Load them into the host-owned loader so Zamburak messages are available:
+Zamburak publishes embedded `.ftl` translation assets via `Localizations`. Load
+them into the host-owned loader so Zamburak messages are available:
 
 ```rust
 use zamburak_core::i18n::Localizations;
@@ -274,7 +273,7 @@ injected `&dyn Localizer` plus caller fallback copy:
 let message = diagnostic.render_localized(&localizer, "fallback text");
 ```
 
-Formatting failures and missing translations fall through the resolution
-chain and always produce deterministic output. See
+Formatting failures and missing translations fall through the resolution chain
+and always produce deterministic output. See
 `adr-002-localization-and-internationalization-with-fluent.md` for the full
 design rationale.

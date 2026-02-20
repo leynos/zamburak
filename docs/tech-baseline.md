@@ -32,6 +32,7 @@ The baseline is normative for:
 | Markdown linting          | `markdownlint-cli2`      | `Makefile`, `.markdownlint-cli2.jsonc`  |
 | Markdown formatting       | `mdformat-all`           | `Makefile`                              |
 | Mermaid validation        | `nixie`                  | `Makefile`                              |
+| Phase-gate verification   | `make phase-gate`        | `Makefile`, `.github/workflows/ci.yml`  |
 
 _Table 1: Canonical technology and tooling baseline._
 
@@ -45,6 +46,7 @@ _Table 1: Canonical technology and tooling baseline._
 | `make markdownlint` | Enforces documentation consistency and readability constraints.         |
 | `make fmt`          | Normalizes Rust and Markdown formatting before review.                  |
 | `make nixie`        | Validates Mermaid diagrams to prevent broken architecture renderings.   |
+| `make phase-gate`   | Enforces phase-advancement verification suites in CI fail-closed mode.  |
 
 _Table 2: Required engineering tools and quality-gate rationale._
 
@@ -56,6 +58,9 @@ All repository changes must run the quality gates that match scope:
   `make markdownlint`, `make nixie`, and `make fmt`,
 - code-affecting changes:
   `make check-fmt`, `make lint`, and `make test`.
+- phase-advancement changes:
+  `make phase-gate` in CI must pass for the configured
+  `.github/phase-gate-target.txt` target.
 
 Command logging convention should follow `AGENTS.md`, using branch-qualified
 paths such as:

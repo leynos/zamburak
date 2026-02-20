@@ -92,7 +92,7 @@ completion criteria so the work can be sequenced and assessed without ambiguity.
   - Out of scope: introducing additional build systems.
   - Completion criteria: baseline versions and gate commands are consistent
     across config and documentation.
-- [ ] Task 0.2.2: Wire phase-gate checks from verification targets into
+- [x] Task 0.2.2: Wire phase-gate checks from verification targets into
       continuous integration (CI).
   - Requirement signposts:
     - `docs/verification-targets.md` sections

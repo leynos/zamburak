@@ -1350,6 +1350,8 @@ dependencies = [
 name = "zamburak"
 version = "0.1.0"
 dependencies = [
+ "camino",
+ "cap-std",
  "rstest",
  "rstest-bdd",
  "rstest-bdd-macros",
