@@ -54,7 +54,7 @@ from __future__ import annotations
 
 from pathlib import Path
 from cuprum import ExecutionContext, Program, scoped
-from scripts._cuprum_helpers import build_catalogue, build_commands
+from _cuprum_helpers import build_catalogue, build_commands
 
 TOFU = Program("tofu")
 CATALOGUE = build_catalogue(TOFU)
@@ -99,7 +99,7 @@ from typing import Annotated
 import cyclopts
 from cyclopts import App, Parameter
 from cuprum import ExecutionContext, Program, scoped
-from scripts._cuprum_helpers import build_catalogue, build_commands
+from _cuprum_helpers import build_catalogue, build_commands
 
 TOFU = Program("tofu")
 CATALOGUE = build_catalogue(TOFU)
@@ -240,7 +240,7 @@ def build_commands(
 
 ```python
 from cuprum import Program
-from scripts._cuprum_helpers import build_catalogue, build_commands
+from _cuprum_helpers import build_catalogue, build_commands
 
 GIT = Program("git")
 GREP = Program("grep")
@@ -378,7 +378,7 @@ from typing import Annotated
 import cyclopts
 from cyclopts import App, Parameter
 from cuprum import ExecutionContext, Program, scoped
-from scripts._cuprum_helpers import build_catalogue, build_commands
+from _cuprum_helpers import build_catalogue, build_commands
 
 GIT = Program("git")
 CATALOGUE = build_catalogue(GIT)
