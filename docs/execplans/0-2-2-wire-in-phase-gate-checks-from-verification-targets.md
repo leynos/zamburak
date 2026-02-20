@@ -212,7 +212,7 @@ Current baseline relevant to this task:
   `tests/compatibility/` and `tests/security/`, providing a known pattern for
   scenario-driven contract tests.
 
-Planned repository touch points:
+Planned repository touchpoints:
 
 - `.github/workflows/ci.yml` for CI gate wiring and merge-blocking job shape.
 - `Makefile` for developer-facing phase-gate invocation targets used both

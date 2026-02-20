@@ -32,21 +32,21 @@ fn phase_gate_target_input(world: &mut PhaseGateWorld, target: String) {
     target.trim_matches('"').clone_into(&mut world.target_input);
 }
 
-#[given("an empty verification catalog")]
-fn empty_verification_catalog(world: &mut PhaseGateWorld) {
+#[given("an empty verification catalogue")]
+fn empty_verification_catalogue(world: &mut PhaseGateWorld) {
     world.available_tests.clear();
 }
 
-#[given("the verification catalog has schema and authority suites only")]
-fn schema_and_authority_only_catalog(world: &mut PhaseGateWorld) {
+#[given("the verification catalogue has schema and authority suites only")]
+fn schema_and_authority_only_catalogue(world: &mut PhaseGateWorld) {
     world.available_tests = vec![
         "policy_schema_bdd::load_canonical_schema_policy".to_owned(),
         "authority_lifecycle_bdd::mint_host_trusted".to_owned(),
     ];
 }
 
-#[given("the verification catalog has all phase-one suites")]
-fn full_phase_one_catalog(world: &mut PhaseGateWorld) {
+#[given("the verification catalogue has all phase-one suites")]
+fn full_phase_one_catalogue(world: &mut PhaseGateWorld) {
     world.available_tests = vec![
         "policy_schema_bdd::load_canonical_schema_policy".to_owned(),
         "authority_lifecycle_bdd::mint_host_trusted".to_owned(),
