@@ -1,8 +1,5 @@
 //! CI phase-gate command for verification-target enforcement.
 
-#[path = "../phase_gate_contract.rs"]
-mod phase_gate_contract;
-
 use std::collections::BTreeSet;
 use std::env;
 use std::io::{self, Write};
@@ -10,9 +7,10 @@ use std::process::{Command, ExitCode};
 
 use camino::{Utf8Path, Utf8PathBuf};
 use cap_std::{ambient_authority, fs_utf8};
-use phase_gate_contract::{
-    ESCALATION_STEPS, PhaseGateReport, PhaseGateStatus, RELEASE_BLOCKING_CAUSES, VerificationSuite,
-    evaluate_phase_gate, parse_phase_gate_target, required_suites_for_target, suite_by_id,
+use zamburak::phase_gate_contract::{
+    ESCALATION_STEPS, PhaseGateReport, PhaseGateStatus, PhaseGateTarget, RELEASE_BLOCKING_CAUSES,
+    VerificationSuite, evaluate_phase_gate, parse_phase_gate_target, required_suites_for_target,
+    suite_by_id,
 };
 
 const DEFAULT_TARGET_FILE: &str = ".github/phase-gate-target.txt";
@@ -135,9 +133,7 @@ fn parse_cli_args(raw_args: Vec<String>) -> Result<CliArgs, PhaseGateCliError> {
     })
 }
 
-fn resolve_target(
-    cli_args: &CliArgs,
-) -> Result<phase_gate_contract::PhaseGateTarget, PhaseGateCliError> {
+fn resolve_target(cli_args: &CliArgs) -> Result<PhaseGateTarget, PhaseGateCliError> {
     let raw_target = if let Some(explicit_target) = &cli_args.explicit_target {
         explicit_target.clone()
     } else {

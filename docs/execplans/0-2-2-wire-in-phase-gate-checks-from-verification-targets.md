@@ -140,23 +140,23 @@ failing mandated suites, pass when mandated suites are green, and roadmap Task
 - Decision: implement a testable phase-gate contract evaluator in Rust and keep
   workflow YAML as orchestration only. Rationale: this allows unit tests plus
   BDD scenarios for gate policy while keeping CI wiring deterministic and
-  maintainable. Date/Author: 2026-02-18 / Codex
+  maintainable. Date/Author: 2026-02-18 / Codex.
 
 - Decision: treat missing mandated suites as an immediate fail-closed result
   with explicit escalation instructions. Rationale: this directly satisfies the
   completion criterion that phase advancement must be blocked when suites are
-  missing or failing. Date/Author: 2026-02-18 / Codex
+  missing or failing. Date/Author: 2026-02-18 / Codex.
 
 - Decision: include a dedicated check for phase-advancement intent rather than
   turning every PR into a global future-phase gate evaluation. Rationale: this
   preserves developer throughput while enforcing hard blocking when phase
-  progression is proposed. Date/Author: 2026-02-18 / Codex
+  progression is proposed. Date/Author: 2026-02-18 / Codex.
 
 - Decision: store the active phase-advancement target in
   `.github/phase-gate-target.txt` and run gating against that target in CI and
   local `make phase-gate`. Rationale: this gives an explicit, reviewable,
   fail-closed mechanism for advancement intent without external orchestration.
-  Date/Author: 2026-02-18 / Codex
+  Date/Author: 2026-02-18 / Codex.
 
 ## Outcomes & retrospective
 

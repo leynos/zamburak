@@ -4,18 +4,18 @@ use std::collections::BTreeSet;
 
 /// A verification suite required by a phase gate.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub(crate) struct VerificationSuite {
+pub struct VerificationSuite {
     /// Stable suite identifier used in reports and CI output.
-    pub(crate) id: &'static str,
+    pub id: &'static str,
     /// Subsystem label used to tie failures to escalation scope.
-    pub(crate) subsystem: &'static str,
+    pub subsystem: &'static str,
     /// Substring used to match tests from `cargo test -- --list` output.
-    pub(crate) test_filter: &'static str,
+    pub test_filter: &'static str,
 }
 
 /// Phase target for gate enforcement.
 #[derive(Clone, Copy, Debug, Eq, Ord, PartialEq, PartialOrd)]
-pub(crate) enum PhaseGateTarget {
+pub enum PhaseGateTarget {
     /// No acceptance gate is required before Phase 0.
     Phase0,
     /// Gate required before Phase 1 begins.
@@ -33,8 +33,17 @@ pub(crate) enum PhaseGateTarget {
 }
 
 impl PhaseGateTarget {
+    /// Returns the stable string label used in CLI output and policy files.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use zamburak::phase_gate_contract::PhaseGateTarget;
+    ///
+    /// assert_eq!(PhaseGateTarget::Phase1.as_str(), "phase1");
+    /// ```
     #[must_use]
-    pub(crate) const fn as_str(self) -> &'static str {
+    pub const fn as_str(self) -> &'static str {
         match self {
             Self::Phase0 => "phase0",
             Self::Phase1 => "phase1",
@@ -49,7 +58,7 @@ impl PhaseGateTarget {
 
 /// Gate status outcome for a target phase.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub(crate) enum PhaseGateStatus {
+pub enum PhaseGateStatus {
     /// All required suites exist and passed.
     Passed,
     /// One or more required suites are missing from the catalog.
@@ -60,21 +69,21 @@ pub(crate) enum PhaseGateStatus {
 
 /// Deterministic gate report used by CLI output and tests.
 #[derive(Debug, Eq, PartialEq)]
-pub(crate) struct PhaseGateReport {
+pub struct PhaseGateReport {
     /// Evaluated phase target.
-    pub(crate) target: PhaseGateTarget,
+    pub target: PhaseGateTarget,
     /// Final gate status.
-    pub(crate) status: PhaseGateStatus,
+    pub status: PhaseGateStatus,
     /// Required suite ids for the target in deterministic order.
-    pub(crate) required_suite_ids: Vec<&'static str>,
+    pub required_suite_ids: Vec<&'static str>,
     /// Missing suite ids for the target in deterministic order.
-    pub(crate) missing_suite_ids: Vec<&'static str>,
+    pub missing_suite_ids: Vec<&'static str>,
     /// Failing suite ids for the target in deterministic order.
-    pub(crate) failing_suite_ids: Vec<&'static str>,
+    pub failing_suite_ids: Vec<&'static str>,
 }
 
 /// Release-blocking causes from the verification target policy.
-pub(crate) const RELEASE_BLOCKING_CAUSES: [&str; 4] = [
+pub const RELEASE_BLOCKING_CAUSES: [&str; 4] = [
     "security invariant enforcement",
     "policy decision determinism",
     "fail-closed semantics",
@@ -82,7 +91,7 @@ pub(crate) const RELEASE_BLOCKING_CAUSES: [&str; 4] = [
 ];
 
 /// Escalation steps from the verification target policy.
-pub(crate) const ESCALATION_STEPS: [&str; 3] = [
+pub const ESCALATION_STEPS: [&str; 3] = [
     "freeze merges affecting the failing subsystem",
     "add or update a regression test reproducing the failure",
     "restore gate green status before continuing feature work",
@@ -174,8 +183,18 @@ const COMPLETION_SUITES: [VerificationSuite; 2] = [
     },
 ];
 
+/// Parses a raw phase-gate label into a typed target.
+///
+/// # Examples
+///
+/// ```rust
+/// use zamburak::phase_gate_contract::{PhaseGateTarget, parse_phase_gate_target};
+///
+/// assert_eq!(parse_phase_gate_target("phase1"), Some(PhaseGateTarget::Phase1));
+/// assert_eq!(parse_phase_gate_target("invalid"), None);
+/// ```
 #[must_use]
-pub(crate) fn parse_phase_gate_target(raw_target: &str) -> Option<PhaseGateTarget> {
+pub fn parse_phase_gate_target(raw_target: &str) -> Option<PhaseGateTarget> {
     match raw_target.trim() {
         "phase0" | "0" => Some(PhaseGateTarget::Phase0),
         "phase1" | "1" => Some(PhaseGateTarget::Phase1),
@@ -188,10 +207,18 @@ pub(crate) fn parse_phase_gate_target(raw_target: &str) -> Option<PhaseGateTarge
     }
 }
 
+/// Returns the ordered verification suites mandated for the given target.
+///
+/// # Examples
+///
+/// ```rust
+/// use zamburak::phase_gate_contract::{PhaseGateTarget, required_suites_for_target};
+///
+/// assert_eq!(required_suites_for_target(PhaseGateTarget::Phase0).len(), 0);
+/// assert_eq!(required_suites_for_target(PhaseGateTarget::Phase1).len(), 4);
+/// ```
 #[must_use]
-pub(crate) const fn required_suites_for_target(
-    target: PhaseGateTarget,
-) -> &'static [VerificationSuite] {
+pub const fn required_suites_for_target(target: PhaseGateTarget) -> &'static [VerificationSuite] {
     match target {
         PhaseGateTarget::Phase0 => &[],
         PhaseGateTarget::Phase1 => &PHASE1_SUITES,
@@ -203,8 +230,19 @@ pub(crate) const fn required_suites_for_target(
     }
 }
 
+/// Resolves a suite by its stable identifier.
+///
+/// # Examples
+///
+/// ```rust
+/// use zamburak::phase_gate_contract::suite_by_id;
+///
+/// let suite = suite_by_id("authority-lifecycle")
+///     .expect("authority lifecycle suite should exist");
+/// assert_eq!(suite.id, "authority-lifecycle");
+/// ```
 #[must_use]
-pub(crate) fn suite_by_id(suite_id: &str) -> Option<&'static VerificationSuite> {
+pub fn suite_by_id(suite_id: &str) -> Option<&'static VerificationSuite> {
     required_suites_for_target(PhaseGateTarget::Phase1)
         .iter()
         .chain(required_suites_for_target(PhaseGateTarget::Phase2))
@@ -215,8 +253,19 @@ pub(crate) fn suite_by_id(suite_id: &str) -> Option<&'static VerificationSuite> 
         .find(|suite| suite.id == suite_id)
 }
 
+/// Evaluates whether a phase target passes, is missing suites, or has failures.
+///
+/// # Examples
+///
+/// ```rust
+/// use std::collections::BTreeSet;
+/// use zamburak::phase_gate_contract::{PhaseGateStatus, PhaseGateTarget, evaluate_phase_gate};
+///
+/// let report = evaluate_phase_gate(PhaseGateTarget::Phase0, &[], &BTreeSet::new());
+/// assert_eq!(report.status, PhaseGateStatus::Passed);
+/// ```
 #[must_use]
-pub(crate) fn evaluate_phase_gate(
+pub fn evaluate_phase_gate(
     target: PhaseGateTarget,
     available_test_names: &[String],
     failing_suite_id_set: &BTreeSet<&'static str>,

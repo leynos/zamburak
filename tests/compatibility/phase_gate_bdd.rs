@@ -1,16 +1,13 @@
 //! Behavioural tests for phase-gate CI enforcement contracts.
 
-#[path = "../../src/phase_gate_contract.rs"]
-mod phase_gate_contract;
-
 use std::collections::BTreeSet;
 
-use phase_gate_contract::{
-    ESCALATION_STEPS, PhaseGateReport, PhaseGateStatus, RELEASE_BLOCKING_CAUSES,
-    evaluate_phase_gate, parse_phase_gate_target, suite_by_id,
-};
 use rstest::fixture;
 use rstest_bdd_macros::{given, scenario, then, when};
+use zamburak::phase_gate_contract::{
+    self, ESCALATION_STEPS, PhaseGateReport, PhaseGateStatus, RELEASE_BLOCKING_CAUSES,
+    evaluate_phase_gate, parse_phase_gate_target, suite_by_id,
+};
 
 #[derive(Default)]
 struct PhaseGateWorld {
@@ -166,13 +163,9 @@ fn policy_constants_and_suite_lookup_are_exposed_for_ci_output() {
     assert_eq!(RELEASE_BLOCKING_CAUSES.len(), 4);
     assert_eq!(ESCALATION_STEPS.len(), 3);
 
-    let Some(suite) = suite_by_id("authority-lifecycle") else {
-        panic!("authority lifecycle suite should exist");
-    };
+    let suite = suite_by_id("authority-lifecycle").expect("authority lifecycle suite should exist");
     assert_eq!(suite.id, "authority-lifecycle");
 
-    let Some(target) = parse_phase_gate_target("phase1") else {
-        panic!("phase1 target should parse");
-    };
+    let target = parse_phase_gate_target("phase1").expect("phase1 target should parse");
     assert_eq!(target.as_str(), "phase1");
 }
