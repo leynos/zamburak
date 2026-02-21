@@ -1,7 +1,7 @@
-"""Unit tests for ``scripts/verify_script_baseline.py``.
+"""Validation-focused tests for ``scripts/verify_script_baseline.py``.
 
 These tests validate script-baseline rule enforcement for discovery, metadata,
-command invocation, explicit-path handling, and matching-test contracts.
+forbidden-command patterns, matching-test contracts, and explicit-path handling.
 
 Usage
 -----
@@ -42,17 +42,8 @@ with scoped(allowlist=frozenset([TOFU])):
 
 @dataclass
 class ValidationScenario:
-    """Parameters for a script baseline validation test scenario.
+    """Parameters for a script baseline validation test scenario."""
 
-    Attributes
-    ----------
-    script_name : str
-        Script file name to create under scripts_root.
-    script_content : str
-        Full script source text to validate.
-    expected_fragment : str
-        Message fragment expected in at least one validation issue.
-    """
     script_name: str
     script_content: str
     expected_fragment: str
@@ -64,24 +55,7 @@ def _validate_script_with_issue_assertion(
     create_matching_test: Callable[[Path, Path], Path],
     scenario: ValidationScenario,
 ) -> None:
-    """Validate a script and assert that a specific issue fragment is reported.
-
-    Parameters
-    ----------
-    scripts_root : Path
-        Temporary scripts root fixture.
-    write_text : Callable[[Path, str], None]
-        Text-writing helper fixture.
-    create_matching_test : Callable[[Path, Path], Path]
-        Matching-test creation helper fixture.
-    scenario : ValidationScenario
-        Validation scenario parameters.
-
-    Returns
-    -------
-    None
-        This helper asserts expected validation output.
-    """
+    """Validate a script and assert a specific issue fragment is reported."""
     script_path = scripts_root / scenario.script_name
     write_text(script_path, scenario.script_content)
     create_matching_test(script_path, scripts_root)
@@ -312,38 +286,6 @@ with scoped(allowlist=frozenset([TOFU])):
     ), "expected issue fragment not found: run_sync()"
 
 
-def test_main_returns_non_zero_and_renders_relative_paths(
-    scripts_root: Path,
-    write_text: Callable[[Path, str], None],
-    capsys: pytest.CaptureFixture[str],
-) -> None:
-    """Verify CLI output includes relative paths for failures.
-
-    Parameters
-    ----------
-    scripts_root : Path
-        Temporary scripts root fixture.
-    write_text : Callable[[Path, str], None]
-        Text-writing helper fixture.
-    capsys : pytest.CaptureFixture[str]
-        Captured stdout fixture.
-
-    Returns
-    -------
-    None
-        This test asserts exit code and rendered output.
-    """
-    script_path = scripts_root / "broken.py"
-    write_text(script_path, VALID_SCRIPT)
-
-    exit_code = baseline.main(["--root", str(scripts_root)])
-    output = capsys.readouterr().out
-
-    assert exit_code == 1, "baseline checker should fail when matching test is missing"
-    assert "broken.py" in output, "output should include the failing script path"
-    assert "missing matching test" in output, "output should report missing matching tests"
-
-
 @pytest.mark.parametrize(
     "test_case",
     [
@@ -431,40 +373,6 @@ def test_validate_script_reports_missing_file_read_error(scripts_root: Path) -> 
     assert any(
         "unable to read script" in issue.message for issue in issues
     ), "expected issue fragment not found: unable to read script"
-
-
-def test_main_reports_non_roadmap_explicit_path(
-    scripts_root: Path,
-    write_text: Callable[[Path, str], None],
-    capsys: pytest.CaptureFixture[str],
-) -> None:
-    """Verify explicit non-roadmap paths are rejected by the CLI.
-
-    Parameters
-    ----------
-    scripts_root : Path
-        Temporary scripts root fixture.
-    write_text : Callable[[Path, str], None]
-        Text-writing helper fixture.
-    capsys : pytest.CaptureFixture[str]
-        Captured stdout fixture.
-
-    Returns
-    -------
-    None
-        This test asserts explicit-path failure handling.
-    """
-    non_roadmap_path = scripts_root / "tests" / "test_helper.py"
-    write_text(non_roadmap_path, "def test_helper() -> None:\n    assert True\n")
-
-    exit_code = baseline.main(
-        ["--root", str(scripts_root), str(non_roadmap_path)]
-    )
-    output = capsys.readouterr().out
-    assert exit_code == 1, "non-roadmap explicit paths should fail validation"
-    assert "not a roadmap-delivered script entrypoint" in output, (
-        "output should explain why explicit test paths are rejected"
-    )
 
 
 def test_expected_test_path_avoids_collisions_for_nested_scripts(
