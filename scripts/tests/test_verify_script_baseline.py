@@ -16,6 +16,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from pathlib import Path
+from typing import NamedTuple
 
 import pytest
 
@@ -39,11 +40,19 @@ with scoped(allowlist=frozenset([TOFU])):
 """
 
 
+class ScriptValidationParams(NamedTuple):
+    """Named parameters for script validation issue assertions."""
+
+    script_name: str
+    script_content: str
+    expected_fragment: str
+
+
 def _validate_script_with_issue_assertion(
     scripts_root: Path,
     write_text: Callable[[Path, str], None],
     create_matching_test: Callable[[Path, Path], Path],
-    validation_params: tuple[str, str, str],
+    validation_params: ScriptValidationParams,
 ) -> None:
     """Validate a script and assert that a specific issue fragment is reported.
 
@@ -55,15 +64,17 @@ def _validate_script_with_issue_assertion(
         Text-writing helper fixture.
     create_matching_test : Callable[[Path, Path], Path]
         Matching-test creation helper fixture.
-    validation_params : tuple[str, str, str]
-        Tuple of (script_name, script_content, expected_fragment).
+    validation_params : ScriptValidationParams
+        Named script-name/content/expected-fragment bundle.
 
     Returns
     -------
     None
         This helper asserts expected validation output.
     """
-    script_name, script_content, expected_fragment = validation_params
+    script_name = validation_params.script_name
+    script_content = validation_params.script_content
+    expected_fragment = validation_params.expected_fragment
     script_path = scripts_root / script_name
     write_text(script_path, script_content)
     create_matching_test(script_path, scripts_root)
@@ -241,7 +252,11 @@ def test_validate_script_reports_forbidden_command_patterns(
         scripts_root,
         write_text,
         create_matching_test,
-        ("forbidden.py", VALID_SCRIPT + "\n" + snippet, expected_fragment),
+        ScriptValidationParams(
+            script_name="forbidden.py",
+            script_content=VALID_SCRIPT + "\n" + snippet,
+            expected_fragment=expected_fragment,
+        ),
     )
 
 
@@ -383,7 +398,11 @@ def test_validate_script_reports_metadata_edge_cases(
         scripts_root,
         write_text,
         create_matching_test,
-        ("metadata_case.py", source, expected_message_fragment),
+        ScriptValidationParams(
+            script_name="metadata_case.py",
+            script_content=source,
+            expected_fragment=expected_message_fragment,
+        ),
     )
 
 
