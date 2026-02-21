@@ -95,8 +95,7 @@ def _create_script_with_test(
     scenario_state: ScenarioState,
     write_text: Callable[[Path, str], None],
     create_matching_test: Callable[[Path, Path], Path],
-    script_name: str,
-    script_content: str,
+    script_params: tuple[str, str],
 ) -> None:
     """Create a roadmap script file and its matching test.
 
@@ -108,16 +107,15 @@ def _create_script_with_test(
         Text-writing helper fixture.
     create_matching_test : Callable[[Path, Path], Path]
         Matching-test creation helper fixture.
-    script_name : str
-        Script file name to create under ``scripts_root``.
-    script_content : str
-        Script source text to write to disk.
+    script_params : tuple[str, str]
+        Tuple of (script_name, script_content) for the script to create.
 
     Returns
     -------
     None
         This helper only prepares fixture state.
     """
+    script_name, script_content = script_params
     script_path = scenario_state.scripts_root / script_name
     write_text(script_path, script_content)
     create_matching_test(script_path, scenario_state.scripts_root)
@@ -134,8 +132,7 @@ def given_compliant_tree(
         scenario_state,
         write_text,
         create_matching_test,
-        "release.py",
-        VALID_SCRIPT,
+        ("release.py", VALID_SCRIPT),
     )
 
 
@@ -173,8 +170,7 @@ def given_missing_uv_metadata(
         scenario_state,
         write_text,
         create_matching_test,
-        "metadata_missing.py",
-        "from __future__ import annotations\nprint('broken')\n",
+        ("metadata_missing.py", "from __future__ import annotations\nprint('broken')\n"),
     )
 
 
@@ -189,14 +185,16 @@ def given_incorrect_requires_python(
         scenario_state,
         write_text,
         create_matching_test,
-        "requires_python_bad.py",
-        """#!/usr/bin/env -S uv run python
+        (
+            "requires_python_bad.py",
+            """#!/usr/bin/env -S uv run python
 # /// script
 # requires-python = ">=3.12"
 # dependencies = ["cuprum==0.1.0"]
 # ///
 print("hello")
 """,
+        ),
     )
 
 
@@ -211,8 +209,7 @@ def given_forbidden_imports(
         scenario_state,
         write_text,
         create_matching_test,
-        "forbidden_import.py",
-        VALID_SCRIPT + "\nimport plumbum\n",
+        ("forbidden_import.py", VALID_SCRIPT + "\nimport plumbum\n"),
     )
 
 
