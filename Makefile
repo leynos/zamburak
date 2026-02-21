@@ -1,4 +1,4 @@
-.PHONY: help all clean test build release lint fmt check-fmt markdownlint nixie phase-gate
+.PHONY: help all clean test build release lint typecheck fmt check-fmt markdownlint nixie phase-gate script-baseline script-test
 
 
 TARGET ?= libzamburak.rlib
@@ -12,6 +12,7 @@ TEST_FLAGS ?= $(CARGO_FLAGS)
 MDLINT ?= markdownlint-cli2
 NIXIE ?= nixie
 PHASE_GATE_TARGET_FILE ?= .github/phase-gate-target.txt
+SCRIPT_UV_DEPS ?= --with pytest --with pytest-bdd --with pytest-mock --with cmd-mox --with astroid
 
 build: target/debug/$(TARGET) ## Build debug binary
 release: target/release/$(TARGET) ## Build release binary
@@ -34,6 +35,9 @@ lint: ## Run Clippy with warnings denied
 	RUSTDOCFLAGS="$(RUSTDOC_FLAGS)" $(CARGO) doc --no-deps
 	$(CARGO) clippy $(CLIPPY_FLAGS)
 
+typecheck: ## Run compile-time type checks
+	$(CARGO) check --workspace $(CARGO_FLAGS) $(BUILD_JOBS)
+
 fmt: ## Format Rust and Markdown sources
 	$(CARGO) fmt --all
 	mdformat-all
@@ -46,6 +50,12 @@ markdownlint: ## Lint Markdown files
 
 nixie: ## Validate Mermaid diagrams
 	$(NIXIE) --no-sandbox
+
+script-baseline: ## Validate roadmap script baseline contracts
+	uv run $(SCRIPT_UV_DEPS) scripts/verify_script_baseline.py
+
+script-test: ## Run script baseline test suite
+	uv run $(SCRIPT_UV_DEPS) pytest scripts/tests
 
 help: ## Show available targets
 	@grep -E '^[a-zA-Z_-]+:.*?##' $(MAKEFILE_LIST) | \

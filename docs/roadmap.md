@@ -107,7 +107,7 @@ completion criteria so the work can be sequenced and assessed without ambiguity.
   - Out of scope: release-train orchestration outside repository CI.
   - Completion criteria: CI blocks phase advancement when mandated verification
     suites are missing or failing.
-- [ ] Task 0.2.3: Establish automation script baseline for roadmap-delivered
+- [x] Task 0.2.3: Establish automation script baseline for roadmap-delivered
       scripts.
   - Requirement signposts:
     - `docs/scripting-standards.md` sections "Language and runtime",
@@ -667,11 +667,11 @@ completion criteria so the work can be sequenced and assessed without ambiguity.
 ### Step 5.3: Scripted automation quality and CI integration
 
 - [ ] Task 5.3.1: Implement benchmark and verification helper scripts using
-      Cyclopts, Plumbum, and Pathlib conventions.
+      Cyclopts, Cuprum, and Pathlib conventions.
   - Requirement signposts:
     - `docs/scripting-standards.md` sections
       "Cyclopts CLI pattern (environment-first)",
-      "Plumbum: command calling and pipelines", and
+      "Cuprum: command invocation and capability-scoped execution", and
       "Pathlib: robust path manipulation",
     - `docs/repository-layout.md` section "Root and operational files"
       (`scripts/`),
@@ -704,7 +704,7 @@ completion criteria so the work can be sequenced and assessed without ambiguity.
       "Policy evaluation semantics",
     - `docs/scripting-standards.md` sections
       "Cyclopts CLI pattern (environment-first)" and
-      "Plumbum: command calling and pipelines",
+      "Cuprum: command invocation and capability-scoped execution",
     - `docs/repository-layout.md` section "Root and operational files"
       (`scripts/`).
   - Dependencies: Task 0.1.1, Task 5.3.1, and Task 5.3.2.
@@ -841,7 +841,7 @@ when the task is complete.
 | 5.1.2 | `crates/zamburak-policy/src/audit_chain.rs`, `tests/integration/`, `tests/security/`                                                      | Tamper-evident chaining and retention enforcement are active.          |
 | 5.2.1 | `.github/workflows/`, `tests/property/`, `tests/security/`                                                                                | Mechanistic and regression suites are merge-blocking gates.            |
 | 5.2.2 | `tests/benchmarks/`, `scripts/`, `.github/workflows/`                                                                                     | Model-in-loop adversarial benchmark trends are produced in CI.         |
-| 5.3.1 | `scripts/`, `scripts/tests/`                                                                                                              | New scripts comply with Cyclopts, Plumbum, and Pathlib standards.      |
+| 5.3.1 | `scripts/`, `scripts/tests/`                                                                                                              | New scripts comply with Cyclopts, Cuprum, and Pathlib standards.       |
 | 5.3.2 | `scripts/tests/`, `.github/workflows/`, `docs/scripting-standards.md`                                                                     | Script tests and CI wiring are deterministic and enforced.             |
 | 5.3.3 | `scripts/`, `scripts/tests/`, `docs/generated/`, `.github/workflows/`                                                                     | Policy diagrams are auto-generated via mmdr and CI-enforced.           |
 | 6.1.1 | `crates/zamburak-core/src/i18n/mod.rs`, `crates/zamburak-core/src/i18n/localizer.rs`, `tests/integration/`                                | Core localization contracts enforce explicit localizer injection.      |

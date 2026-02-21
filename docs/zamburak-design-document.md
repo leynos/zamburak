@@ -1114,9 +1114,35 @@ exist and pass for:
   tests proving explicit `Localizer` injection, deterministic fallback ordering
   (`host -> bundled locale -> bundled en-US -> caller fallback`), and absence
   of global mutable loader state.
+- automation script baseline:
+  tests proving roadmap-delivered scripts in `scripts/` (excluding helper
+  modules and test files) use uv runtime metadata, follow Cuprum-first command
+  invocation posture, and include matching tests in `scripts/tests/`.
 
 If any contract conformance suite is missing or failing, phase-1 build work is
 blocked.
+
+### Automation script delivery baseline
+
+Roadmap-delivered automation scripts are constrained by a delivery baseline to
+keep operational tooling deterministic and reviewable.
+
+- discovery rule:
+  roadmap-delivered scripts are Python entrypoint files under `scripts/`,
+  excluding underscore-prefixed helper modules and `scripts/tests/` content.
+- runtime metadata:
+  each roadmap-delivered script must include the uv shebang and uv metadata
+  block with `requires-python = ">=3.13"` plus explicit dependencies.
+- command invocation posture:
+  scripts must not use Plumbum or ad hoc shell execution paths such as
+  `subprocess`, `os.system`, or `os.popen`; command execution must follow
+  Cuprum patterns from `docs/scripting-standards.md`.
+- test pairing:
+  each roadmap-delivered script must have a matching pytest file in
+  `scripts/tests/` using the naming contract
+  `scripts/tests/<relative_script_parent>/test_<script_stem>.py`.
+- enforcement path:
+  local and CI checks run `make script-baseline` and `make script-test`.
 
 Repository CI enforces this phase-gate contract through `make phase-gate` and
 the merge-blocking `phase-gate` workflow job. The advancement target is set in

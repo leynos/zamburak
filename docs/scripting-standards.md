@@ -606,5 +606,14 @@ def test_spy_and_record(cmd_mox, monkeypatch, tmp_path):
 - On Windows, newline‑separated lists are recommended for `list[Path]` to
   sidestep `;`/`:` semantics.
 
+## Baseline enforcement in this repository
+
+The repository enforces script baseline contracts through two Make targets:
+
+- `make script-baseline` validates script runtime metadata, command invocation
+  posture, and script-test pairing for roadmap-delivered scripts.
+- `make script-test` runs the Python script test suite under `scripts/tests/`
+  including behavioural scenarios.
+
 This document should be referenced when introducing or updating automation
 scripts to maintain a consistent developer experience across the repository.
