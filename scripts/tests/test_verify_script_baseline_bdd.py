@@ -80,6 +80,27 @@ def scenario_state(scripts_root: Path) -> ScenarioState:
     return ScenarioState(scripts_root=scripts_root)
 
 
+def _assert_output_contains(
+    scenario_state: ScenarioState,
+    expected_text: str,
+    error_context: str,
+) -> None:
+    """Assert that checker output contains expected text.
+
+    Parameters
+    ----------
+    scenario_state : ScenarioState
+        Shared scenario state.
+    expected_text : str
+        Text that must appear in output.
+    error_context : str
+        Human-readable context for the assertion error.
+    """
+    assert expected_text in scenario_state.output, (
+        f"expected output to report {error_context}"
+    )
+
+
 @given("a compliant roadmap script tree")
 def given_compliant_tree(
     scenario_state: ScenarioState,
@@ -234,12 +255,12 @@ def when_run_checker(scenario_state: ScenarioState) -> None:
     None
         This step captures exit code and output for assertions.
     """
-    with StringIO() as output_stream:
-        with redirect_stdout(output_stream):
-            scenario_state.exit_code = baseline.main(
-                ["--root", str(scenario_state.scripts_root)]
-            )
-        scenario_state.output = output_stream.getvalue()
+    output_stream = StringIO()
+    with redirect_stdout(output_stream):
+        scenario_state.exit_code = baseline.main(
+            ["--root", str(scenario_state.scripts_root)]
+        )
+    scenario_state.output = output_stream.getvalue()
 
 
 @then("the checker exits successfully")
@@ -281,75 +302,39 @@ def then_checker_fails(scenario_state: ScenarioState) -> None:
 
 @then("the output mentions missing matching test")
 def then_output_mentions_missing_test(scenario_state: ScenarioState) -> None:
-    """Assert output reports missing matching tests.
-
-    Parameters
-    ----------
-    scenario_state : ScenarioState
-        Shared scenario state.
-
-    Returns
-    -------
-    None
-        This step asserts expected error text.
-    """
-    assert "missing matching test" in scenario_state.output, (
-        "expected output to report missing matching test"
+    """Assert output reports missing matching tests."""
+    _assert_output_contains(
+        scenario_state,
+        "missing matching test",
+        "missing matching test",
     )
 
 
 @then("the output mentions missing uv metadata")
 def then_output_mentions_missing_metadata(scenario_state: ScenarioState) -> None:
-    """Assert output reports missing uv metadata block.
-
-    Parameters
-    ----------
-    scenario_state : ScenarioState
-        Shared scenario state.
-
-    Returns
-    -------
-    None
-        This step asserts expected error text.
-    """
-    assert "missing uv metadata block" in scenario_state.output, (
-        "expected output to report missing uv metadata"
+    """Assert output reports missing uv metadata block."""
+    _assert_output_contains(
+        scenario_state,
+        "missing uv metadata block",
+        "missing uv metadata",
     )
 
 
 @then("the output mentions invalid requires-python")
 def then_output_mentions_invalid_requires_python(scenario_state: ScenarioState) -> None:
-    """Assert output reports invalid requires-python declaration.
-
-    Parameters
-    ----------
-    scenario_state : ScenarioState
-        Shared scenario state.
-
-    Returns
-    -------
-    None
-        This step asserts expected error text.
-    """
-    assert "requires-python" in scenario_state.output, (
-        "expected output to report requires-python violations"
+    """Assert output reports invalid requires-python declaration."""
+    _assert_output_contains(
+        scenario_state,
+        "requires-python",
+        "requires-python violations",
     )
 
 
 @then("the output mentions forbidden command imports")
 def then_output_mentions_forbidden_imports(scenario_state: ScenarioState) -> None:
-    """Assert output reports forbidden command imports.
-
-    Parameters
-    ----------
-    scenario_state : ScenarioState
-        Shared scenario state.
-
-    Returns
-    -------
-    None
-        This step asserts expected error text.
-    """
-    assert "Plumbum imports are forbidden" in scenario_state.output, (
-        "expected output to report forbidden import usage"
+    """Assert output reports forbidden command imports."""
+    _assert_output_contains(
+        scenario_state,
+        "Plumbum imports are forbidden",
+        "forbidden import usage",
     )
