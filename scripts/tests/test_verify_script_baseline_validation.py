@@ -212,6 +212,18 @@ def test_validate_script_reports_missing_uv_metadata(
             "import subprocess\nsubprocess.run(['echo'])\n",
             "subprocess invocation is forbidden",
         ),
+        (
+            "import subprocess\nsubprocess.call(['echo'])\n",
+            "subprocess invocation is forbidden",
+        ),
+        (
+            "import subprocess\nsubprocess.Popen(['echo'])\n",
+            "subprocess invocation is forbidden",
+        ),
+        (
+            "import subprocess\nsubprocess.check_output(['echo'])\n",
+            "subprocess invocation is forbidden",
+        ),
     ],
 )
 def test_validate_script_reports_forbidden_command_patterns(

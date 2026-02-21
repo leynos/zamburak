@@ -110,7 +110,22 @@ def given_compliant_tree(
     write_text: Callable[[Path, str], None],
     create_matching_test: Callable[[Path, Path], Path],
 ) -> None:
-    """Create a valid roadmap script and matching test."""
+    """Create a valid roadmap script and matching test.
+
+    Parameters
+    ----------
+    scenario_state : ScenarioState
+        Shared scenario state.
+    write_text : Callable[[Path, str], None]
+        Text-writing helper fixture.
+    create_matching_test : Callable[[Path, Path], Path]
+        Matching-test creation helper fixture.
+
+    Returns
+    -------
+    None
+        This step only prepares fixture state.
+    """
     _create_script_with_test(
         scenario_state,
         write_text,
@@ -148,7 +163,22 @@ def given_missing_uv_metadata(
     write_text: Callable[[Path, str], None],
     create_matching_test: Callable[[Path, Path], Path],
 ) -> None:
-    """Create a script missing uv metadata with a matching test."""
+    """Create a script missing uv metadata with a matching test.
+
+    Parameters
+    ----------
+    scenario_state : ScenarioState
+        Shared scenario state.
+    write_text : Callable[[Path, str], None]
+        Text-writing helper fixture.
+    create_matching_test : Callable[[Path, Path], Path]
+        Matching-test creation helper fixture.
+
+    Returns
+    -------
+    None
+        This step only prepares fixture state.
+    """
     _create_script_with_test(
         scenario_state,
         write_text,
@@ -163,7 +193,22 @@ def given_incorrect_requires_python(
     write_text: Callable[[Path, str], None],
     create_matching_test: Callable[[Path, Path], Path],
 ) -> None:
-    """Create a script with an incorrect requires-python declaration."""
+    """Create a script with an incorrect requires-python declaration.
+
+    Parameters
+    ----------
+    scenario_state : ScenarioState
+        Shared scenario state.
+    write_text : Callable[[Path, str], None]
+        Text-writing helper fixture.
+    create_matching_test : Callable[[Path, Path], Path]
+        Matching-test creation helper fixture.
+
+    Returns
+    -------
+    None
+        This step only prepares fixture state.
+    """
     _create_script_with_test(
         scenario_state,
         write_text,
@@ -187,7 +232,22 @@ def given_forbidden_imports(
     write_text: Callable[[Path, str], None],
     create_matching_test: Callable[[Path, Path], Path],
 ) -> None:
-    """Create a script using forbidden command imports."""
+    """Create a script using forbidden command imports.
+
+    Parameters
+    ----------
+    scenario_state : ScenarioState
+        Shared scenario state.
+    write_text : Callable[[Path, str], None]
+        Text-writing helper fixture.
+    create_matching_test : Callable[[Path, Path], Path]
+        Matching-test creation helper fixture.
+
+    Returns
+    -------
+    None
+        This step only prepares fixture state.
+    """
     _create_script_with_test(
         scenario_state,
         write_text,
@@ -257,7 +317,18 @@ def then_checker_fails(scenario_state: ScenarioState) -> None:
 
 @then("the output mentions missing matching test")
 def then_output_mentions_missing_test(scenario_state: ScenarioState) -> None:
-    """Assert output reports missing matching tests."""
+    """Assert output reports missing matching tests.
+
+    Parameters
+    ----------
+    scenario_state : ScenarioState
+        Shared scenario state.
+
+    Returns
+    -------
+    None
+        This step asserts missing-test output.
+    """
     _assert_output_contains(
         scenario_state,
         "missing matching test",
@@ -267,7 +338,18 @@ def then_output_mentions_missing_test(scenario_state: ScenarioState) -> None:
 
 @then("the output mentions missing uv metadata")
 def then_output_mentions_missing_metadata(scenario_state: ScenarioState) -> None:
-    """Assert output reports missing uv metadata block."""
+    """Assert output reports missing uv metadata block.
+
+    Parameters
+    ----------
+    scenario_state : ScenarioState
+        Shared scenario state.
+
+    Returns
+    -------
+    None
+        This step asserts metadata output.
+    """
     _assert_output_contains(
         scenario_state,
         "missing uv metadata block",
@@ -277,7 +359,18 @@ def then_output_mentions_missing_metadata(scenario_state: ScenarioState) -> None
 
 @then("the output mentions invalid requires-python")
 def then_output_mentions_invalid_requires_python(scenario_state: ScenarioState) -> None:
-    """Assert output reports invalid requires-python declaration."""
+    """Assert output reports invalid requires-python declaration.
+
+    Parameters
+    ----------
+    scenario_state : ScenarioState
+        Shared scenario state.
+
+    Returns
+    -------
+    None
+        This step asserts requires-python output.
+    """
     _assert_output_contains(
         scenario_state,
         "requires-python",
@@ -287,7 +380,18 @@ def then_output_mentions_invalid_requires_python(scenario_state: ScenarioState) 
 
 @then("the output mentions forbidden command imports")
 def then_output_mentions_forbidden_imports(scenario_state: ScenarioState) -> None:
-    """Assert output reports forbidden command imports."""
+    """Assert output reports forbidden command imports.
+
+    Parameters
+    ----------
+    scenario_state : ScenarioState
+        Shared scenario state.
+
+    Returns
+    -------
+    None
+        This step asserts forbidden-import output.
+    """
     _assert_output_contains(
         scenario_state,
         "Plumbum imports are forbidden",
