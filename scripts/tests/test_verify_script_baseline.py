@@ -43,9 +43,7 @@ def _validate_script_with_issue_assertion(
     scripts_root: Path,
     write_text: Callable[[Path, str], None],
     create_matching_test: Callable[[Path, Path], Path],
-    script_name: str,
-    script_content: str,
-    expected_fragment: str,
+    validation_params: tuple[str, str, str],
 ) -> None:
     """Validate a script and assert that a specific issue fragment is reported.
 
@@ -57,18 +55,15 @@ def _validate_script_with_issue_assertion(
         Text-writing helper fixture.
     create_matching_test : Callable[[Path, Path], Path]
         Matching-test creation helper fixture.
-    script_name : str
-        Script file name to create under ``scripts_root``.
-    script_content : str
-        Script source text to validate.
-    expected_fragment : str
-        Message fragment expected to appear in at least one validation issue.
+    validation_params : tuple[str, str, str]
+        Tuple of (script_name, script_content, expected_fragment).
 
     Returns
     -------
     None
         This helper asserts expected validation output.
     """
+    script_name, script_content, expected_fragment = validation_params
     script_path = scripts_root / script_name
     write_text(script_path, script_content)
     create_matching_test(script_path, scripts_root)
@@ -246,9 +241,7 @@ def test_validate_script_reports_forbidden_command_patterns(
         scripts_root,
         write_text,
         create_matching_test,
-        "forbidden.py",
-        VALID_SCRIPT + "\n" + snippet,
-        expected_fragment,
+        ("forbidden.py", VALID_SCRIPT + "\n" + snippet, expected_fragment),
     )
 
 
@@ -390,9 +383,7 @@ def test_validate_script_reports_metadata_edge_cases(
         scripts_root,
         write_text,
         create_matching_test,
-        "metadata_case.py",
-        source,
-        expected_message_fragment,
+        ("metadata_case.py", source, expected_message_fragment),
     )
 
 
