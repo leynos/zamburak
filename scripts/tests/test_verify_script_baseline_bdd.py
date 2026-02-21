@@ -91,13 +91,13 @@ def _assert_output_contains(
     )
 
 
-@given("a compliant roadmap script tree")
-def given_compliant_tree(
+def _create_script_with_test(
     scenario_state: ScenarioState,
     write_text: Callable[[Path, str], None],
     create_matching_test: Callable[[Path, Path], Path],
+    script_params: tuple[str, str],
 ) -> None:
-    """Create a valid roadmap script and matching test.
+    """Create a roadmap script file and its matching test.
 
     Parameters
     ----------
@@ -107,15 +107,33 @@ def given_compliant_tree(
         Text-writing helper fixture.
     create_matching_test : Callable[[Path, Path], Path]
         Matching-test creation helper fixture.
+    script_params : tuple[str, str]
+        Tuple of (script_name, script_content) for the script to create.
 
     Returns
     -------
     None
-        This step only prepares fixture state.
+        This helper only prepares fixture state.
     """
-    script_path = scenario_state.scripts_root / "release.py"
-    write_text(script_path, VALID_SCRIPT)
+    script_name, script_content = script_params
+    script_path = scenario_state.scripts_root / script_name
+    write_text(script_path, script_content)
     create_matching_test(script_path, scenario_state.scripts_root)
+
+
+@given("a compliant roadmap script tree")
+def given_compliant_tree(
+    scenario_state: ScenarioState,
+    write_text: Callable[[Path, str], None],
+    create_matching_test: Callable[[Path, Path], Path],
+) -> None:
+    """Create a valid roadmap script and matching test."""
+    _create_script_with_test(
+        scenario_state,
+        write_text,
+        create_matching_test,
+        ("release.py", VALID_SCRIPT),
+    )
 
 
 @given("a roadmap script without matching tests")
@@ -147,25 +165,13 @@ def given_missing_uv_metadata(
     write_text: Callable[[Path, str], None],
     create_matching_test: Callable[[Path, Path], Path],
 ) -> None:
-    """Create a script missing uv metadata with a matching test.
-
-    Parameters
-    ----------
-    scenario_state : ScenarioState
-        Shared scenario state.
-    write_text : Callable[[Path, str], None]
-        Text-writing helper fixture.
-    create_matching_test : Callable[[Path, Path], Path]
-        Matching-test creation helper fixture.
-
-    Returns
-    -------
-    None
-        This step only prepares fixture state.
-    """
-    script_path = scenario_state.scripts_root / "metadata_missing.py"
-    write_text(script_path, "from __future__ import annotations\nprint('broken')\n")
-    create_matching_test(script_path, scenario_state.scripts_root)
+    """Create a script missing uv metadata with a matching test."""
+    _create_script_with_test(
+        scenario_state,
+        write_text,
+        create_matching_test,
+        ("metadata_missing.py", "from __future__ import annotations\nprint('broken')\n"),
+    )
 
 
 @given("a roadmap script with incorrect requires-python")
@@ -174,34 +180,22 @@ def given_incorrect_requires_python(
     write_text: Callable[[Path, str], None],
     create_matching_test: Callable[[Path, Path], Path],
 ) -> None:
-    """Create a script with an incorrect requires-python declaration.
-
-    Parameters
-    ----------
-    scenario_state : ScenarioState
-        Shared scenario state.
-    write_text : Callable[[Path, str], None]
-        Text-writing helper fixture.
-    create_matching_test : Callable[[Path, Path], Path]
-        Matching-test creation helper fixture.
-
-    Returns
-    -------
-    None
-        This step only prepares fixture state.
-    """
-    script_path = scenario_state.scripts_root / "requires_python_bad.py"
-    write_text(
-        script_path,
-        """#!/usr/bin/env -S uv run python
+    """Create a script with an incorrect requires-python declaration."""
+    _create_script_with_test(
+        scenario_state,
+        write_text,
+        create_matching_test,
+        (
+            "requires_python_bad.py",
+            """#!/usr/bin/env -S uv run python
 # /// script
 # requires-python = ">=3.12"
 # dependencies = ["cuprum==0.1.0"]
 # ///
 print("hello")
 """,
+        ),
     )
-    create_matching_test(script_path, scenario_state.scripts_root)
 
 
 @given("a roadmap script with forbidden command imports")
@@ -210,25 +204,13 @@ def given_forbidden_imports(
     write_text: Callable[[Path, str], None],
     create_matching_test: Callable[[Path, Path], Path],
 ) -> None:
-    """Create a script using forbidden command imports.
-
-    Parameters
-    ----------
-    scenario_state : ScenarioState
-        Shared scenario state.
-    write_text : Callable[[Path, str], None]
-        Text-writing helper fixture.
-    create_matching_test : Callable[[Path, Path], Path]
-        Matching-test creation helper fixture.
-
-    Returns
-    -------
-    None
-        This step only prepares fixture state.
-    """
-    script_path = scenario_state.scripts_root / "forbidden_import.py"
-    write_text(script_path, VALID_SCRIPT + "\nimport plumbum\n")
-    create_matching_test(script_path, scenario_state.scripts_root)
+    """Create a script using forbidden command imports."""
+    _create_script_with_test(
+        scenario_state,
+        write_text,
+        create_matching_test,
+        ("forbidden_import.py", VALID_SCRIPT + "\nimport plumbum\n"),
+    )
 
 
 @when("I run the script baseline checker")
