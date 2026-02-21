@@ -42,7 +42,17 @@ with scoped(allowlist=frozenset([TOFU])):
 
 @dataclass
 class ValidationScenario:
-    """Parameters for a script baseline validation test scenario."""
+    """Parameters for a script baseline validation test scenario.
+
+    Attributes
+    ----------
+    script_name : str
+        Script filename to create under scripts_root.
+    script_content : str
+        Full script source text used for validation.
+    expected_fragment : str
+        Substring expected in at least one validation issue message.
+    """
 
     script_name: str
     script_content: str
@@ -356,18 +366,7 @@ def test_validate_script_reports_metadata_edge_cases(
 
 
 def test_validate_script_reports_missing_file_read_error(scripts_root: Path) -> None:
-    """Verify missing explicit script files report read errors.
-
-    Parameters
-    ----------
-    scripts_root : Path
-        Temporary scripts root fixture.
-
-    Returns
-    -------
-    None
-        This test asserts missing-file diagnostics.
-    """
+    """Verify missing explicit script files report read errors."""
     script_path = scripts_root / "missing.py"
     issues = baseline.validate_script(script_path, scripts_root)
     assert any(
@@ -378,18 +377,7 @@ def test_validate_script_reports_missing_file_read_error(scripts_root: Path) -> 
 def test_expected_test_path_avoids_collisions_for_nested_scripts(
     scripts_root: Path,
 ) -> None:
-    """Verify nested and flat script names map to distinct test paths.
-
-    Parameters
-    ----------
-    scripts_root : Path
-        Temporary scripts root fixture.
-
-    Returns
-    -------
-    None
-        This test asserts mapping uniqueness.
-    """
+    """Verify nested and flat script names map to distinct test paths."""
     flat_script = scripts_root / "a_b.py"
     nested_script = scripts_root / "a" / "b.py"
     flat_test = baseline.expected_test_path(flat_script, scripts_root)

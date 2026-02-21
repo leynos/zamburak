@@ -97,24 +97,7 @@ def _create_script_with_test(
     create_matching_test: Callable[[Path, Path], Path],
     script_params: tuple[str, str],
 ) -> None:
-    """Create a roadmap script file and its matching test.
-
-    Parameters
-    ----------
-    scenario_state : ScenarioState
-        Shared scenario state.
-    write_text : Callable[[Path, str], None]
-        Text-writing helper fixture.
-    create_matching_test : Callable[[Path, Path], Path]
-        Matching-test creation helper fixture.
-    script_params : tuple[str, str]
-        Tuple of (script_name, script_content) for the script to create.
-
-    Returns
-    -------
-    None
-        This helper only prepares fixture state.
-    """
+    """Create a roadmap script file and its matching test."""
     script_name, script_content = script_params
     script_path = scenario_state.scripts_root / script_name
     write_text(script_path, script_content)
