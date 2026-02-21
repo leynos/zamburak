@@ -124,10 +124,10 @@ decision record is updated, and roadmap task `0.2.3` is marked done.
 ## Surprises & Discoveries
 
 - Observation: no Qdrant Model Context Protocol (MCP) note tools are exposed
-  in this session.
-  Evidence: `list_mcp_resources` and `list_mcp_resource_templates` returned
-  empty results. Impact: this planning pass cannot retrieve or store
-  project-memory notes via Qdrant; rely on repository docs only.
+  in this session. Evidence: `list_mcp_resources` and
+  `list_mcp_resource_templates` returned empty results. Impact: this planning
+  pass cannot retrieve or store project-memory notes via Qdrant; rely on
+  repository docs only.
 
 - Observation: `scripts/` currently contains only `scripts/_cuprum_helpers.py`.
   Evidence: repository tree inspection. Impact: baseline discovery rules must
