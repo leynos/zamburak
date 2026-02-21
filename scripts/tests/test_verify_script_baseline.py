@@ -39,11 +39,40 @@ with scoped(allowlist=frozenset([TOFU])):
 """
 
 
-def _assert_validation_issue_contains(
-    issues: list[baseline.BaselineIssue],
+def _validate_script_with_issue_assertion(
+    scripts_root: Path,
+    write_text: Callable[[Path, str], None],
+    create_matching_test: Callable[[Path, Path], Path],
+    script_name: str,
+    script_content: str,
     expected_fragment: str,
 ) -> None:
-    """Assert that at least one validation issue contains the expected text."""
+    """Validate a script and assert that a specific issue fragment is reported.
+
+    Parameters
+    ----------
+    scripts_root : Path
+        Temporary scripts root fixture.
+    write_text : Callable[[Path, str], None]
+        Text-writing helper fixture.
+    create_matching_test : Callable[[Path, Path], Path]
+        Matching-test creation helper fixture.
+    script_name : str
+        Script file name to create under ``scripts_root``.
+    script_content : str
+        Script source text to validate.
+    expected_fragment : str
+        Message fragment expected to appear in at least one validation issue.
+
+    Returns
+    -------
+    None
+        This helper asserts expected validation output.
+    """
+    script_path = scripts_root / script_name
+    write_text(script_path, script_content)
+    create_matching_test(script_path, scripts_root)
+    issues = baseline.validate_script(script_path, scripts_root)
     assert any(
         expected_fragment in issue.message for issue in issues
     ), f"expected issue fragment not found: {expected_fragment}"
@@ -130,7 +159,9 @@ def test_validate_script_reports_missing_matching_test(
     write_text(script_path, VALID_SCRIPT)
 
     issues = baseline.validate_script(script_path, scripts_root)
-    _assert_validation_issue_contains(issues, "missing matching test")
+    assert any(
+        "missing matching test" in issue.message for issue in issues
+    ), "expected issue fragment not found: missing matching test"
 
 
 def test_validate_script_reports_missing_uv_metadata(
@@ -162,8 +193,12 @@ def test_validate_script_reports_missing_uv_metadata(
     create_matching_test(script_path, scripts_root)
 
     issues = baseline.validate_script(script_path, scripts_root)
-    _assert_validation_issue_contains(issues, "uv shebang")
-    _assert_validation_issue_contains(issues, "uv metadata block")
+    assert any(
+        "uv shebang" in issue.message for issue in issues
+    ), "expected issue fragment not found: uv shebang"
+    assert any(
+        "uv metadata block" in issue.message for issue in issues
+    ), "expected issue fragment not found: uv metadata block"
 
 
 @pytest.mark.parametrize(
@@ -207,15 +242,14 @@ def test_validate_script_reports_forbidden_command_patterns(
         This test asserts forbidden-pattern diagnostics.
     """
     snippet, expected_fragment = test_case
-    script_path = scripts_root / "forbidden.py"
-    write_text(
-        script_path,
+    _validate_script_with_issue_assertion(
+        scripts_root,
+        write_text,
+        create_matching_test,
+        "forbidden.py",
         VALID_SCRIPT + "\n" + snippet,
+        expected_fragment,
     )
-    create_matching_test(script_path, scripts_root)
-
-    issues = baseline.validate_script(script_path, scripts_root)
-    _assert_validation_issue_contains(issues, expected_fragment)
 
 
 def test_validate_script_requires_run_sync_or_run_for_cuprum_programs(
@@ -258,7 +292,9 @@ with scoped(allowlist=frozenset([TOFU])):
     create_matching_test(script_path, scripts_root)
 
     issues = baseline.validate_script(script_path, scripts_root)
-    _assert_validation_issue_contains(issues, "run_sync()")
+    assert any(
+        "run_sync()" in issue.message for issue in issues
+    ), "expected issue fragment not found: run_sync()"
 
 
 def test_main_returns_non_zero_and_renders_relative_paths(
@@ -350,12 +386,14 @@ def test_validate_script_reports_metadata_edge_cases(
         This test asserts metadata diagnostics.
     """
     source, expected_message_fragment = test_case
-    script_path = scripts_root / "metadata_case.py"
-    write_text(script_path, source)
-    create_matching_test(script_path, scripts_root)
-
-    issues = baseline.validate_script(script_path, scripts_root)
-    _assert_validation_issue_contains(issues, expected_message_fragment)
+    _validate_script_with_issue_assertion(
+        scripts_root,
+        write_text,
+        create_matching_test,
+        "metadata_case.py",
+        source,
+        expected_message_fragment,
+    )
 
 
 def test_validate_script_reports_missing_file_read_error(scripts_root: Path) -> None:
@@ -373,7 +411,9 @@ def test_validate_script_reports_missing_file_read_error(scripts_root: Path) -> 
     """
     script_path = scripts_root / "missing.py"
     issues = baseline.validate_script(script_path, scripts_root)
-    _assert_validation_issue_contains(issues, "unable to read script")
+    assert any(
+        "unable to read script" in issue.message for issue in issues
+    ), "expected issue fragment not found: unable to read script"
 
 
 def test_main_reports_non_roadmap_explicit_path(
