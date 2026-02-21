@@ -85,17 +85,7 @@ def _assert_output_contains(
     expected_text: str,
     error_context: str,
 ) -> None:
-    """Assert that checker output contains expected text.
-
-    Parameters
-    ----------
-    scenario_state : ScenarioState
-        Shared scenario state.
-    expected_text : str
-        Text that must appear in output.
-    error_context : str
-        Human-readable context for the assertion error.
-    """
+    """Assert that scenario_state.output contains expected_text."""
     assert expected_text in scenario_state.output, (
         f"expected output to report {error_context}"
     )
