@@ -15,8 +15,8 @@ make script-test
 from __future__ import annotations
 
 from collections.abc import Callable
+from dataclasses import dataclass
 from pathlib import Path
-from typing import NamedTuple
 
 import pytest
 
@@ -40,9 +40,19 @@ with scoped(allowlist=frozenset([TOFU])):
 """
 
 
-class ScriptValidationParams(NamedTuple):
-    """Named parameters for script validation issue assertions."""
+@dataclass
+class ValidationScenario:
+    """Parameters for a script baseline validation test scenario.
 
+    Attributes
+    ----------
+    script_name : str
+        Script file name to create under scripts_root.
+    script_content : str
+        Full script source text to validate.
+    expected_fragment : str
+        Message fragment expected in at least one validation issue.
+    """
     script_name: str
     script_content: str
     expected_fragment: str
@@ -52,7 +62,7 @@ def _validate_script_with_issue_assertion(
     scripts_root: Path,
     write_text: Callable[[Path, str], None],
     create_matching_test: Callable[[Path, Path], Path],
-    validation_params: ScriptValidationParams,
+    scenario: ValidationScenario,
 ) -> None:
     """Validate a script and assert that a specific issue fragment is reported.
 
@@ -64,24 +74,21 @@ def _validate_script_with_issue_assertion(
         Text-writing helper fixture.
     create_matching_test : Callable[[Path, Path], Path]
         Matching-test creation helper fixture.
-    validation_params : ScriptValidationParams
-        Named script-name/content/expected-fragment bundle.
+    scenario : ValidationScenario
+        Validation scenario parameters.
 
     Returns
     -------
     None
         This helper asserts expected validation output.
     """
-    script_name = validation_params.script_name
-    script_content = validation_params.script_content
-    expected_fragment = validation_params.expected_fragment
-    script_path = scripts_root / script_name
-    write_text(script_path, script_content)
+    script_path = scripts_root / scenario.script_name
+    write_text(script_path, scenario.script_content)
     create_matching_test(script_path, scripts_root)
     issues = baseline.validate_script(script_path, scripts_root)
     assert any(
-        expected_fragment in issue.message for issue in issues
-    ), f"expected issue fragment not found: {expected_fragment}"
+        scenario.expected_fragment in issue.message for issue in issues
+    ), f"expected issue fragment not found: {scenario.expected_fragment}"
 
 
 def test_discover_roadmap_scripts_skips_helpers_and_tests(
@@ -252,7 +259,7 @@ def test_validate_script_reports_forbidden_command_patterns(
         scripts_root,
         write_text,
         create_matching_test,
-        ScriptValidationParams(
+        ValidationScenario(
             script_name="forbidden.py",
             script_content=VALID_SCRIPT + "\n" + snippet,
             expected_fragment=expected_fragment,
@@ -398,7 +405,7 @@ def test_validate_script_reports_metadata_edge_cases(
         scripts_root,
         write_text,
         create_matching_test,
-        ScriptValidationParams(
+        ValidationScenario(
             script_name="metadata_case.py",
             script_content=source,
             expected_fragment=expected_message_fragment,
