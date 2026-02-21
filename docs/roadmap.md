@@ -126,7 +126,7 @@ completion criteria so the work can be sequenced and assessed without ambiguity.
 
 ### Step 0.3: Pre-phase contract conformance gate
 
-- [ ] Task 0.3.1: Enforce design-level conformance suites before Phase 1 build
+- [x] Task 0.3.1: Enforce design-level conformance suites before Phase 1 build
       work.
   - Requirement signposts:
     - `docs/zamburak-design-document.md` section

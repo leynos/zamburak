@@ -826,6 +826,18 @@ classDiagram
 
 _Figure 4: Localization contract and adapter class relationships._
 
+### LocalizationArgs type at design-contract phase
+
+The class diagram above shows `LocalizationArgs` as a parameter to `lookup()`
+and `message()`. ADR-002 sketches this as `HashMap<&str, FluentValue<'a>>`,
+which would couple `zamburak-core` to the `fluent-bundle` crate at the
+design-contract phase. To avoid this coupling, the design-contract
+implementation (Task 0.3.1) defines `LocalizationArgs<'a>` as
+`HashMap<&'a str, String>`. The `FluentLocalizerAdapter` introduced in Phase 6
+(Task 6.1.2) will convert `String` values to `FluentValue` internally, so
+downstream consumers of the `Localizer` trait are unaffected by this
+substitution.
+
 ## Policy evaluation semantics
 
 ### Inputs
