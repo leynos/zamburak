@@ -68,22 +68,22 @@ fn quarantined_request_with_ids(
     });
 }
 
-#[given("a transport guard check with redaction applied")]
-fn transport_check_with_redaction(world: &mut SinkEnforcementWorld) {
-    world.transport_check = Some(TransportGuardCheck {
+fn build_transport_check(redaction_applied: bool) -> TransportGuardCheck {
+    TransportGuardCheck {
         execution_id: ExecutionId::new("exec_default"),
         call_id: CallId::new("call_default"),
-        redaction_applied: true,
-    });
+        redaction_applied,
+    }
+}
+
+#[given("a transport guard check with redaction applied")]
+fn transport_check_with_redaction(world: &mut SinkEnforcementWorld) {
+    world.transport_check = Some(build_transport_check(true));
 }
 
 #[given("a transport guard check without redaction applied")]
 fn transport_check_without_redaction(world: &mut SinkEnforcementWorld) {
-    world.transport_check = Some(TransportGuardCheck {
-        execution_id: ExecutionId::new("exec_default"),
-        call_id: CallId::new("call_default"),
-        redaction_applied: false,
-    });
+    world.transport_check = Some(build_transport_check(false));
 }
 
 #[given("redaction is applied")]

@@ -28,10 +28,11 @@ seeing all four Phase 1 suites listed, executed, and passing. Running
 `make test` confirms the new BDD suites exercise both the LLM sink enforcement
 and localization contract types.
 
-This task introduces the *design-contract types* (traits, structs, enums, and
-contract functions) that express the design-document API shapes and writes BDD
-tests proving those shapes exist and behave correctly. Actual runtime logic
-(policy evaluation, Fluent loading, real LLM adapter dispatch) comes later in
+This task introduces the *design-contract types* (traits, structs,
+enums, and contract functions) that express the design-document API
+shapes and writes behaviour-driven development (BDD) tests proving
+those shapes exist and behave correctly. Actual runtime logic (policy
+evaluation, Fluent loading, real LLM adapter dispatch) comes later in
 Phase 1, Phase 4, and Phase 6.
 
 ## Constraints
