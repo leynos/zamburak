@@ -78,7 +78,7 @@ completion criteria so the work can be sequenced and assessed without ambiguity.
 
 ### Step 0.2: Baseline tools, verification gates, and script standards
 
-- [ ] Task 0.2.1: Align toolchain and quality-gate baseline with repository
+- [x] Task 0.2.1: Align toolchain and quality-gate baseline with repository
       configuration.
   - Requirement signposts:
     - `docs/tech-baseline.md` sections "Canonical version baseline" and

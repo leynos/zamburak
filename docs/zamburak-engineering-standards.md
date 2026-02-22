@@ -117,6 +117,13 @@ make lint | tee /tmp/lint-zamburak-$(git branch --show-current).out
 make test | tee /tmp/test-zamburak-$(git branch --show-current).out
 ```
 
+For script-affecting changes, run:
+
+```sh
+make script-baseline | tee /tmp/script-baseline-zamburak-$(git branch --show-current).out
+make script-test | tee /tmp/script-test-zamburak-$(git branch --show-current).out
+```
+
 For phase-advancement pull requests, CI must also run:
 
 ```sh

@@ -121,27 +121,29 @@ project:
   - `make check-fmt` executes:
 
     ```sh
-    cargo fmt --workspace -- --check
+    cargo fmt --all -- --check
     ```
 
     validating formatting across the entire workspace without modifying files.
   - `make lint` executes:
 
     ```sh
+    RUSTDOCFLAGS="-D warnings" cargo doc --workspace --no-deps
     cargo clippy --workspace --all-targets --all-features -- -D warnings
     ```
 
-    linting every target with all features enabled and denying all Clippy
-    warnings.
+    building documentation with warnings denied and linting every target
+    with all features enabled, denying all Clippy warnings.
   - `make test` executes:
 
     ```sh
-    cargo test --workspace
+    RUSTFLAGS="-D warnings" cargo test --workspace --all-targets --all-features
     ```
 
-    running the full workspace test suite. Use `make fmt`
-    (`cargo fmt --workspace`) to apply formatting fixes reported by the
-    formatter check.
+    running the full workspace test suite with all targets and features,
+    treating warnings as errors. Use `make fmt` (`cargo fmt --all` followed
+    by `mdformat-all`) to apply formatting fixes reported by the formatter
+    check.
 - Clippy warnings MUST be disallowed.
 - Fix any warnings emitted during tests in the code itself rather than
   silencing them.
