@@ -105,44 +105,41 @@ fn delegation_rejects_non_strict_scope_subset(
     Ok(())
 }
 
-#[expect(
-    clippy::too_many_arguments,
-    reason = "parameter count driven by rstest case captures and fixtures"
-)]
 #[rstest]
-#[case::non_strict_lifetime(20, 200, |err: &AuthorityLifecycleError| {
-    matches!(
-        err,
-        AuthorityLifecycleError::DelegationLifetimeNotStrictSubset {
-            delegated_expires_at: 200,
-            parent_expires_at: 200,
-        }
-    )
-})]
-#[case::before_parent_issuance(5, 120, |err: &AuthorityLifecycleError| {
-    matches!(
-        err,
-        AuthorityLifecycleError::DelegationBeforeParentIssuance {
-            delegated_at: 5,
-            parent_issued_at: 10,
-        }
-    )
-})]
+#[case::non_strict_lifetime(
+    DelegationTiming { delegated_at: 20, expires_at: 200 },
+    |err: &AuthorityLifecycleError| {
+        matches!(
+            err,
+            AuthorityLifecycleError::DelegationLifetimeNotStrictSubset {
+                delegated_expires_at: 200,
+                parent_expires_at: 200,
+            }
+        )
+    },
+)]
+#[case::before_parent_issuance(
+    DelegationTiming { delegated_at: 5, expires_at: 120 },
+    |err: &AuthorityLifecycleError| {
+        matches!(
+            err,
+            AuthorityLifecycleError::DelegationBeforeParentIssuance {
+                delegated_at: 5,
+                parent_issued_at: 10,
+            }
+        )
+    },
+)]
 fn delegation_rejects_invalid_timing<F>(
     token_parent: Result<AuthorityToken, AuthorityLifecycleError>,
     scope_send_email: Result<super::AuthorityScope, AuthorityLifecycleError>,
-    #[case] delegated_at: u64,
-    #[case] expires_at: u64,
+    #[case] timing: DelegationTiming,
     #[case] predicate: F,
 ) -> Result<(), AuthorityLifecycleError>
 where
     F: Fn(&AuthorityLifecycleError) -> bool,
 {
     let child_id = token_id(TOKEN_NAME_CHILD)?;
-    let timing = DelegationTiming {
-        delegated_at,
-        expires_at,
-    };
     assert_delegation_fails(
         &token_parent?,
         delegation_request_with_scope(&child_id, &scope_send_email?, &timing)?,

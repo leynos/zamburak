@@ -6,6 +6,7 @@ TARGET ?= libzamburak.rlib
 CARGO ?= cargo
 BUILD_JOBS ?=
 RUST_FLAGS ?= -D warnings
+RUSTDOC_FLAGS ?= -D warnings
 CARGO_FLAGS ?= --all-targets --all-features
 CLIPPY_FLAGS ?= $(CARGO_FLAGS) -- $(RUST_FLAGS)
 TEST_FLAGS ?= $(CARGO_FLAGS)
@@ -32,8 +33,8 @@ target/%/$(TARGET): ## Build binary in debug or release mode
 	$(CARGO) build $(BUILD_JOBS) $(if $(findstring release,$(@)),--release)
 
 lint: ## Run Clippy with warnings denied
-	RUSTDOCFLAGS="$(RUSTDOC_FLAGS)" $(CARGO) doc --no-deps
-	$(CARGO) clippy $(CLIPPY_FLAGS)
+	RUSTDOCFLAGS="$(RUSTDOC_FLAGS)" $(CARGO) doc --workspace --no-deps
+	$(CARGO) clippy --workspace $(CLIPPY_FLAGS)
 
 typecheck: ## Run compile-time type checks
 	$(CARGO) check --workspace $(CARGO_FLAGS) $(BUILD_JOBS)

@@ -194,13 +194,13 @@ _Table 9: CLI crate file-purpose mapping._
 
 ### `policies/`
 
-| Path                                         | Purpose                                         |
-| -------------------------------------------- | ----------------------------------------------- |
-| `policies/default.yaml`                      | Baseline policy profile for assistant workflows |
-| `policies/strict.yaml`                       | High-restriction profile with tighter defaults  |
-| `policies/examples/email_triage.yaml`        | Example policy for inbox workflows              |
-| `policies/examples/calendar_scheduling.yaml` | Example policy for scheduling workflows         |
-| `policies/schema.json`                       | Policy schema for structural validation         |
+| Path                                         | Purpose                                                  |
+| -------------------------------------------- | -------------------------------------------------------- |
+| `policies/default.yaml`                      | Baseline policy profile for assistant workflows          |
+| `policies/schema.json`                       | Policy schema for structural validation                  |
+| `policies/strict.yaml`                       | (planned) High-restriction profile with tighter defaults |
+| `policies/examples/email_triage.yaml`        | (planned) Example policy for inbox workflows             |
+| `policies/examples/calendar_scheduling.yaml` | (planned) Example policy for scheduling workflows        |
 
 _Table 10: Policy directory artefacts and purposes._
 
@@ -208,54 +208,74 @@ _Table 10: Policy directory artefacts and purposes._
 
 | Path                   | Purpose                                                     |
 | ---------------------- | ----------------------------------------------------------- |
-| `tests/integration/`   | End-to-end crate integration and call-path tests            |
-| `tests/security/`      | Prompt-injection, exfiltration, and bypass regression tests |
-| `tests/property/`      | Property tests for monotonicity and closure invariants      |
 | `tests/compatibility/` | Behavioural comparisons against upstream Monty              |
-| `tests/benchmarks/`    | Performance and overhead measurement tests                  |
+| `tests/security/`      | Prompt-injection, exfiltration, and bypass regression tests |
+| `tests/test_utils/`    | Shared test utilities, fixtures, and policy data            |
+| `tests/integration/`   | (planned) End-to-end crate integration and call-path tests  |
+| `tests/property/`      | (planned) Property tests for monotonicity and closure       |
+| `tests/benchmarks/`    | (planned) Performance and overhead measurement tests        |
 
 _Table 11: Test suite directories and purposes._
 
 ### `fuzz/`
 
-| Path                                 | Purpose                             |
-| ------------------------------------ | ----------------------------------- |
-| `fuzz/fuzz_targets/fuzz_parser.rs`   | Parser fuzz target                  |
-| `fuzz/fuzz_targets/fuzz_bytecode.rs` | VM and opcode execution fuzz target |
-| `fuzz/fuzz_targets/fuzz_policy.rs`   | Policy evaluation fuzz target       |
-| `fuzz/Cargo.toml`                    | Fuzz target workspace configuration |
+| Path                                 | Purpose                                       |
+| ------------------------------------ | --------------------------------------------- |
+| `fuzz/fuzz_targets/fuzz_parser.rs`   | (planned) Parser fuzz target                  |
+| `fuzz/fuzz_targets/fuzz_bytecode.rs` | (planned) VM and opcode execution fuzz target |
+| `fuzz/fuzz_targets/fuzz_policy.rs`   | (planned) Policy evaluation fuzz target       |
+| `fuzz/Cargo.toml`                    | (planned) Fuzz target workspace configuration |
 
 _Table 12: Fuzzing artefacts and purposes._
 
 ### `docs/`
 
-| Path                                     | Purpose                                                  |
-| ---------------------------------------- | -------------------------------------------------------- |
-| `docs/zamburak-design-document.md`       | Authoritative system semantics and interfaces            |
-| `docs/adr-001-monty-ifc-vm-hooks.md`     | ADR for `full-monty` hooks and two-track constraints     |
-| `docs/monty-fork-policy.md`              | Fork governance rules and `full-monty` patch budget      |
-| `docs/roadmap.md`                        | High-level implementation phases, steps, and tasks       |
-| `docs/zamburak-engineering-standards.md` | Project-specific engineering standards                   |
-| `docs/repository-layout.md`              | Proposed repository structure and file-purpose reference |
-| `docs/tech-baseline.md`                  | Toolchain and quality-gate baseline with rationale       |
-| `docs/verification-targets.md`           | Verification target matrix and evidence requirements     |
+| Path                                                                | Purpose                                                  |
+| ------------------------------------------------------------------- | -------------------------------------------------------- |
+| `docs/zamburak-design-document.md`                                  | Authoritative system semantics and interfaces            |
+| `docs/zamburak-engineering-standards.md`                            | Project-specific engineering standards                   |
+| `docs/roadmap.md`                                                   | High-level implementation phases, steps, and tasks       |
+| `docs/repository-layout.md`                                         | Proposed repository structure and file-purpose reference |
+| `docs/tech-baseline.md`                                             | Toolchain and quality-gate baseline with rationale       |
+| `docs/verification-targets.md`                                      | Verification target matrix and evidence requirements     |
+| `docs/contents.md`                                                  | Central index for all documentation files                |
+| `docs/documentation-style-guide.md`                                 | Authoring and formatting conventions                     |
+| `docs/users-guide.md`                                               | Consumer-facing behaviour and API guidance               |
+| `docs/scripting-standards.md`                                       | Script clarity and dependency management standards       |
+| `docs/policy-examples.md`                                           | Worked examples of policy configurations                 |
+| `docs/policy-examples-financial-services-scenarios.md`              | Financial services policy traces                         |
+| `docs/adr-001-monty-ifc-vm-hooks.md`                                | ADR for `full-monty` hooks and two-track constraints     |
+| `docs/adr-002-localization-and-internationalization-with-fluent.md` | ADR for Fluent localization                              |
+| `docs/complexity-antipatterns-and-refactoring-strategies.md`        | Complexity anti-patterns guide                           |
+| `docs/reliable-testing-in-rust-via-dependency-injection.md`         | Dependency-injection testing patterns                    |
+| `docs/rstest-bdd-users-guide.md`                                    | `rstest-bdd` user guide                                  |
+| `docs/rust-doctest-dry-guide.md`                                    | DRY doctest techniques                                   |
+| `docs/rust-testing-with-rstest-fixtures.md`                         | `rstest` fixture guide                                   |
+| `docs/localizable-rust-libraries-with-fluent.md`                    | Fluent library integration guidance                      |
+| `docs/execplans/`                                                   | Execution plans for roadmap tasks                        |
 
 _Table 13: Core documentation artefacts and ownership._
 
 ### Root and operational files
 
-| Path                            | Purpose                                             |
-| ------------------------------- | --------------------------------------------------- |
-| `Cargo.toml`                    | Workspace member registration and shared settings   |
-| `Cargo.lock`                    | Reproducible dependency resolution                  |
-| `rust-toolchain.toml`           | Toolchain pinning and compatibility                 |
-| `.env.example`                  | Configuration template for local integrations       |
-| `README.md`                     | Project entry document and orientation              |
-| `LICENSE`                       | Project licence                                     |
-| `third_party/full-monty/`       | `full-monty` submodule checkout for Track A work    |
-| `scripts/`                      | Operational helper scripts for local workflows      |
-| `.github/workflows/`            | CI and automation workflow definitions              |
-| `.github/phase-gate-target.txt` | Phase-advancement target consumed by CI gate checks |
+| Path                            | Purpose                                                 |
+| ------------------------------- | ------------------------------------------------------- |
+| `Cargo.toml`                    | Workspace member registration and shared settings       |
+| `Cargo.lock`                    | Reproducible dependency resolution                      |
+| `rust-toolchain.toml`           | Toolchain pinning and compatibility                     |
+| `Makefile`                      | Build orchestration and quality-gate definitions        |
+| `AGENTS.md`                     | Repository-wide process and quality rules               |
+| `clippy.toml`                   | Clippy threshold configuration                          |
+| `.markdownlint-cli2.jsonc`      | Markdown linting configuration                          |
+| `.gitignore`                    | Version control ignore rules                            |
+| `codecov.yml`                   | Code coverage reporting configuration                   |
+| `README.md`                     | Project entry document and orientation                  |
+| `LICENSE`                       | Project licence                                         |
+| `scripts/`                      | Operational helper scripts for local workflows          |
+| `.github/workflows/`            | CI and automation workflow definitions                  |
+| `.github/phase-gate-target.txt` | Phase-advancement target consumed by CI gate checks     |
+| `.env.example`                  | (planned) Configuration template for local integrations |
+| `third_party/full-monty/`       | (planned) `full-monty` submodule checkout for Track A   |
 
 _Table 14: Root and operational artefacts with purposes._
 
