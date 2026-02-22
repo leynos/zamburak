@@ -270,6 +270,14 @@ mod tests {
         }
     }
 
+    fn transport_guard_check(redaction_applied: bool) -> TransportGuardCheck {
+        TransportGuardCheck {
+            execution_id: "exec_test".to_owned(),
+            call_id: "call_test".to_owned(),
+            redaction_applied,
+        }
+    }
+
     #[test]
     fn pre_dispatch_allows_with_redaction() {
         let decision = evaluate_pre_dispatch(&planner_request(true));
@@ -284,26 +292,16 @@ mod tests {
 
     #[test]
     fn transport_guard_passes_with_redaction() {
-        let check = TransportGuardCheck {
-            execution_id: "exec_test".to_owned(),
-            call_id: "call_test".to_owned(),
-            redaction_applied: true,
-        };
         assert_eq!(
-            evaluate_transport_guard(&check),
+            evaluate_transport_guard(&transport_guard_check(true)),
             TransportGuardOutcome::Passed
         );
     }
 
     #[test]
     fn transport_guard_blocks_without_redaction() {
-        let check = TransportGuardCheck {
-            execution_id: "exec_test".to_owned(),
-            call_id: "call_test".to_owned(),
-            redaction_applied: false,
-        };
         assert_eq!(
-            evaluate_transport_guard(&check),
+            evaluate_transport_guard(&transport_guard_check(false)),
             TransportGuardOutcome::Blocked
         );
     }
