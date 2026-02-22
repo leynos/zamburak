@@ -24,24 +24,23 @@ fn world() -> SinkEnforcementWorld {
 
 // ── Given steps ─────────────────────────────────────────────────────
 
-#[given("a planner LLM sink call request with redaction applied")]
-fn planner_request_with_redaction(world: &mut SinkEnforcementWorld) {
-    world.request = Some(SinkPreDispatchRequest {
+fn build_planner_request(redaction_applied: bool) -> SinkPreDispatchRequest {
+    SinkPreDispatchRequest {
         execution_id: ExecutionId::new("exec_default"),
         call_id: CallId::new("call_default"),
         call_path: LlmCallPath::Planner,
-        redaction_applied: true,
-    });
+        redaction_applied,
+    }
+}
+
+#[given("a planner LLM sink call request with redaction applied")]
+fn planner_request_with_redaction(world: &mut SinkEnforcementWorld) {
+    world.request = Some(build_planner_request(true));
 }
 
 #[given("a planner LLM sink call request without redaction applied")]
 fn planner_request_without_redaction(world: &mut SinkEnforcementWorld) {
-    world.request = Some(SinkPreDispatchRequest {
-        execution_id: ExecutionId::new("exec_default"),
-        call_id: CallId::new("call_default"),
-        call_path: LlmCallPath::Planner,
-        redaction_applied: false,
-    });
+    world.request = Some(build_planner_request(false));
 }
 
 #[given("a planner LLM sink call request with execution id {exec_id} and call id {call_id}")]

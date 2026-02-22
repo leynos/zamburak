@@ -1,3 +1,7 @@
+//! Unit tests for LLM sink enforcement contract functions
+//! (`evaluate_pre_dispatch`, `evaluate_transport_guard`, and
+//! `emit_audit_record`) and their decision/outcome types.
+
 use rstest::{fixture, rstest};
 
 use super::{
