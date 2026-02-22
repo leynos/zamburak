@@ -2,10 +2,16 @@
 
 use rstest::fixture;
 use rstest_bdd_macros::{given, scenario, then, when};
-use zamburak_core::i18n::{LocalizedDiagnostic, Localizer, NoOpLocalizer};
+use zamburak_core::i18n::{LocalizationArgs, LocalizedDiagnostic, Localizer, NoOpLocalizer};
 
-/// Tracks whether a lookup was performed and whether it returned a value.
+/// Tracks the result of a localizer lookup attempt.
 enum LookupOutcome {
+    /// Lookup returned a translated string.
+    #[expect(
+        dead_code,
+        reason = "variant exists for future localizer impls that return translations"
+    )]
+    Present(String),
     /// Lookup returned `None`.
     Absent,
 }
@@ -76,15 +82,29 @@ fn when_message_requested(world: &mut LocalizationWorld, id: String, fallback: S
     world.message_result = Some(result);
 }
 
+#[when("a message with interpolation arguments is requested for id {id} and fallback {fallback}")]
+fn when_message_requested_with_args(world: &mut LocalizationWorld, id: String, fallback: String) {
+    let Some(localizer) = world.localizer.as_ref() else {
+        panic!("localizer must be set before requesting a message");
+    };
+    let mut args = LocalizationArgs::new();
+    args.insert("name", "World".to_owned());
+    args.insert("count", "42".to_owned());
+    let result = localizer.message(
+        id.trim_matches('"'),
+        Some(&args),
+        fallback.trim_matches('"'),
+    );
+    world.message_result = Some(result);
+}
+
 #[when("a lookup is performed for id {id}")]
 fn when_lookup_performed(world: &mut LocalizationWorld, id: String) {
     let Some(localizer) = world.localizer.as_ref() else {
         panic!("localizer must be set before performing lookup");
     };
     let result = localizer.lookup(id.trim_matches('"'), None);
-    if result.is_none() {
-        world.lookup_outcome = Some(LookupOutcome::Absent);
-    }
+    world.lookup_outcome = Some(result.map_or(LookupOutcome::Absent, LookupOutcome::Present));
 }
 
 #[when("a message is requested through the trait object with fallback {fallback}")]
@@ -107,7 +127,7 @@ fn when_diagnostic_rendered(world: &mut LocalizationWorld) {
     world.diagnostic_result = Some(diagnostic.render_localized(localizer));
 }
 
-#[when("messages are requested from both localizers concurrently")]
+#[when("messages are requested from both localizers independently")]
 fn when_both_localizers_used(world: &mut LocalizationWorld) {
     let Some(first) = world.localizer.as_ref() else {
         panic!("first localizer must be set");
@@ -188,6 +208,14 @@ fn trait_object_safe(world: LocalizationWorld) {
 )]
 fn diagnostic_renders(world: LocalizationWorld) {
     assert!(world.diagnostic_result.is_some());
+}
+
+#[scenario(
+    path = "tests/compatibility/features/localization_contract.feature",
+    name = "Message request with non-empty interpolation arguments"
+)]
+fn interpolation_args(world: LocalizationWorld) {
+    assert!(world.message_result.is_some());
 }
 
 #[scenario(

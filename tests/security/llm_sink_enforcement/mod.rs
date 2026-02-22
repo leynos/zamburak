@@ -3,9 +3,9 @@
 use rstest::fixture;
 use rstest_bdd_macros::{given, scenario, then, when};
 use zamburak_policy::sink_enforcement::{
-    LlmCallPath, SinkAuditRecord, SinkPreDispatchDecision, SinkPreDispatchRequest,
-    TransportGuardCheck, TransportGuardOutcome, emit_audit_record, evaluate_pre_dispatch,
-    evaluate_transport_guard,
+    CallId, ExecutionId, LlmCallPath, SinkAuditRecord, SinkPreDispatchDecision,
+    SinkPreDispatchRequest, TransportGuardCheck, TransportGuardOutcome, emit_audit_record,
+    evaluate_pre_dispatch, evaluate_transport_guard,
 };
 
 #[derive(Default)]
@@ -27,8 +27,8 @@ fn world() -> SinkEnforcementWorld {
 #[given("a planner LLM sink call request with redaction applied")]
 fn planner_request_with_redaction(world: &mut SinkEnforcementWorld) {
     world.request = Some(SinkPreDispatchRequest {
-        execution_id: "exec_default".to_owned(),
-        call_id: "call_default".to_owned(),
+        execution_id: ExecutionId::new("exec_default"),
+        call_id: CallId::new("call_default"),
         call_path: LlmCallPath::Planner,
         redaction_applied: true,
     });
@@ -37,8 +37,8 @@ fn planner_request_with_redaction(world: &mut SinkEnforcementWorld) {
 #[given("a planner LLM sink call request without redaction applied")]
 fn planner_request_without_redaction(world: &mut SinkEnforcementWorld) {
     world.request = Some(SinkPreDispatchRequest {
-        execution_id: "exec_default".to_owned(),
-        call_id: "call_default".to_owned(),
+        execution_id: ExecutionId::new("exec_default"),
+        call_id: CallId::new("call_default"),
         call_path: LlmCallPath::Planner,
         redaction_applied: false,
     });
@@ -47,8 +47,8 @@ fn planner_request_without_redaction(world: &mut SinkEnforcementWorld) {
 #[given("a planner LLM sink call request with execution id {exec_id} and call id {call_id}")]
 fn planner_request_with_ids(world: &mut SinkEnforcementWorld, exec_id: String, call_id: String) {
     world.request = Some(SinkPreDispatchRequest {
-        execution_id: exec_id.trim_matches('"').to_owned(),
-        call_id: call_id.trim_matches('"').to_owned(),
+        execution_id: ExecutionId::new(exec_id.trim_matches('"')),
+        call_id: CallId::new(call_id.trim_matches('"')),
         call_path: LlmCallPath::Planner,
         redaction_applied: false,
     });
@@ -61,8 +61,8 @@ fn quarantined_request_with_ids(
     call_id: String,
 ) {
     world.request = Some(SinkPreDispatchRequest {
-        execution_id: exec_id.trim_matches('"').to_owned(),
-        call_id: call_id.trim_matches('"').to_owned(),
+        execution_id: ExecutionId::new(exec_id.trim_matches('"')),
+        call_id: CallId::new(call_id.trim_matches('"')),
         call_path: LlmCallPath::Quarantined,
         redaction_applied: false,
     });
@@ -71,8 +71,8 @@ fn quarantined_request_with_ids(
 #[given("a transport guard check with redaction applied")]
 fn transport_check_with_redaction(world: &mut SinkEnforcementWorld) {
     world.transport_check = Some(TransportGuardCheck {
-        execution_id: "exec_default".to_owned(),
-        call_id: "call_default".to_owned(),
+        execution_id: ExecutionId::new("exec_default"),
+        call_id: CallId::new("call_default"),
         redaction_applied: true,
     });
 }
@@ -80,8 +80,8 @@ fn transport_check_with_redaction(world: &mut SinkEnforcementWorld) {
 #[given("a transport guard check without redaction applied")]
 fn transport_check_without_redaction(world: &mut SinkEnforcementWorld) {
     world.transport_check = Some(TransportGuardCheck {
-        execution_id: "exec_default".to_owned(),
-        call_id: "call_default".to_owned(),
+        execution_id: ExecutionId::new("exec_default"),
+        call_id: CallId::new("call_default"),
         redaction_applied: false,
     });
 }
@@ -161,7 +161,7 @@ fn then_audit_execution_id(world: &SinkEnforcementWorld, expected: String) {
     let Some(record) = world.audit_record.as_ref() else {
         panic!("audit record must be emitted before assertion");
     };
-    assert_eq!(record.execution_id, expected.trim_matches('"'));
+    assert_eq!(record.execution_id.as_str(), expected.trim_matches('"'));
 }
 
 #[then("the audit record call id is {expected}")]
@@ -169,7 +169,7 @@ fn then_audit_call_id(world: &SinkEnforcementWorld, expected: String) {
     let Some(record) = world.audit_record.as_ref() else {
         panic!("audit record must be emitted before assertion");
     };
-    assert_eq!(record.call_id, expected.trim_matches('"'));
+    assert_eq!(record.call_id.as_str(), expected.trim_matches('"'));
 }
 
 #[then("the audit record decision is Allow")]
@@ -178,6 +178,22 @@ fn then_audit_decision_allow(world: &SinkEnforcementWorld) {
         panic!("audit record must be emitted before assertion");
     };
     assert_eq!(record.decision, SinkPreDispatchDecision::Allow);
+}
+
+#[then("the audit record decision is Deny")]
+fn then_audit_decision_deny(world: &SinkEnforcementWorld) {
+    let Some(record) = world.audit_record.as_ref() else {
+        panic!("audit record must be emitted before assertion");
+    };
+    assert_eq!(record.decision, SinkPreDispatchDecision::Deny);
+}
+
+#[then("the audit record redaction applied flag is false")]
+fn then_audit_redaction_false(world: &SinkEnforcementWorld) {
+    let Some(record) = world.audit_record.as_ref() else {
+        panic!("audit record must be emitted before assertion");
+    };
+    assert!(!record.redaction_applied);
 }
 
 #[then("the audit record call path is Quarantined")]
@@ -227,6 +243,14 @@ fn transport_guard_blocks(world: SinkEnforcementWorld) {
     name = "Post-dispatch audit record links execution and call identifiers"
 )]
 fn audit_record_linkage(world: SinkEnforcementWorld) {
+    assert!(world.audit_record.is_some());
+}
+
+#[scenario(
+    path = "tests/security/features/llm_sink_enforcement.feature",
+    name = "Denied pre-dispatch decision emits audit record with Deny"
+)]
+fn denied_audit_record(world: SinkEnforcementWorld) {
     assert!(world.audit_record.is_some());
 }
 

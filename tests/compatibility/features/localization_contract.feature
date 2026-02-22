@@ -21,7 +21,12 @@ Feature: Localization contract
     When the diagnostic is rendered with the localizer
     Then the rendered diagnostic text is "test fallback"
 
+  Scenario: Message request with non-empty interpolation arguments
+    Given a no-op localizer
+    When a message with interpolation arguments is requested for id "greeting" and fallback "Hello, {name}!"
+    Then the rendered message is "Hello, {name}!"
+
   Scenario: No global mutable localizer state exists
     Given two independent no-op localizer instances
-    When messages are requested from both localizers concurrently
+    When messages are requested from both localizers independently
     Then both produce deterministic fallback results without shared state

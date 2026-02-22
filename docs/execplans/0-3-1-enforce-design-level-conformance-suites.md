@@ -18,7 +18,8 @@ Phase 0 of the Zamburak roadmap requires all four Phase 1 conformance suites to
 pass before Phase 1 build work starts. Two of the four suites already exist and
 pass: policy-schema-contract (test filter `policy_schema_bdd::`) and
 authority-lifecycle (test filter `authority_lifecycle_bdd::`). Two are missing:
-LLM sink enforcement (test filter `llm_sink_enforcement::`) and localization
+large language model (LLM) sink enforcement (test filter
+`llm_sink_enforcement::`) and localization
 contract (test filter `localization_contract::`). The phase-gate target in
 `.github/phase-gate-target.txt` currently reads `phase0`.
 
@@ -192,7 +193,7 @@ Rust workspace with two member crates and one root crate:
   `PHASE1_SUITES` (lines 100–121) with four verification suites and their test
   filters.
 
-Tests are organised as integration test binaries:
+Tests are organized as integration test binaries:
 
 - `tests/compatibility/main.rs` — compatibility tests, currently contains
   `mod phase_gate_bdd;` and `mod policy_schema_bdd;`.
@@ -252,7 +253,7 @@ Stage D: documentation, roadmap closure, and full validation. Record the
 `LocalizationArgs` type decision in `docs/zamburak-design-document.md`. Mark
 Task 0.3.1 as done in `docs/roadmap.md`. Run all code and documentation gates.
 
-Go/no-go for Stage D: all required gates pass, documentation is synchronised,
+Go/no-go for Stage D: all required gates pass, documentation is synchronized,
 and roadmap status is updated.
 
 ## Concrete steps
@@ -386,7 +387,7 @@ Acceptance criteria for Task 0.3.1:
   covering pre-dispatch allow/deny, transport guard pass/block, and audit
   linkage for both P-LLM and Q-LLM paths.
 - Localization contract conformance suite exists and passes, with BDD scenarios
-  covering explicit localiser injection, `NoOpLocalizer` fallback, object
+  covering explicit localizer injection, `NoOpLocalizer` fallback, object
   safety, `LocalizedDiagnostic` rendering, and no-global-state proof.
 - Phase-gate target reads `phase1` and `make phase-gate` passes with all four
   mandated suites present and green.

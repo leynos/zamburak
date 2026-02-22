@@ -13,6 +13,67 @@
 //! design-contract minimum: calls without redaction are denied. Full
 //! budget and context evaluation belongs to Phase 4 (Task 4.1.2).
 
+/// Newtype for execution identifiers linking calls to the audit chain.
+///
+/// Prevents accidental mix-up between execution and call identifiers
+/// at downstream call sites.
+///
+/// # Examples
+///
+/// ```rust
+/// use zamburak_policy::sink_enforcement::ExecutionId;
+///
+/// let id = ExecutionId::new("exec_01");
+/// assert_eq!(id.as_str(), "exec_01");
+/// ```
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct ExecutionId(String);
+
+impl ExecutionId {
+    /// Create a new execution identifier.
+    #[must_use]
+    pub fn new(id: impl Into<String>) -> Self {
+        Self(id.into())
+    }
+
+    /// View the identifier as a string slice.
+    #[must_use]
+    pub fn as_str(&self) -> &str {
+        &self.0
+    }
+}
+
+/// Newtype for per-call identifiers linking pre-dispatch to
+/// post-dispatch audit records.
+///
+/// Prevents accidental mix-up between call and execution identifiers
+/// at downstream call sites.
+///
+/// # Examples
+///
+/// ```rust
+/// use zamburak_policy::sink_enforcement::CallId;
+///
+/// let id = CallId::new("call_01");
+/// assert_eq!(id.as_str(), "call_01");
+/// ```
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct CallId(String);
+
+impl CallId {
+    /// Create a new call identifier.
+    #[must_use]
+    pub fn new(id: impl Into<String>) -> Self {
+        Self(id.into())
+    }
+
+    /// View the identifier as a string slice.
+    #[must_use]
+    pub fn as_str(&self) -> &str {
+        &self.0
+    }
+}
+
 /// Discriminant for LLM call path classification.
 ///
 /// P-LLM calls are trusted planner queries; Q-LLM calls are
@@ -26,6 +87,7 @@
 /// assert_ne!(LlmCallPath::Planner, LlmCallPath::Quarantined);
 /// ```
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[non_exhaustive]
 pub enum LlmCallPath {
     /// Planner LLM path: trusted query decomposition and plan
     /// synthesis.
@@ -43,11 +105,13 @@ pub enum LlmCallPath {
 /// # Examples
 ///
 /// ```rust
-/// use zamburak_policy::sink_enforcement::{LlmCallPath, SinkPreDispatchRequest};
+/// use zamburak_policy::sink_enforcement::{
+///     CallId, ExecutionId, LlmCallPath, SinkPreDispatchRequest,
+/// };
 ///
 /// let request = SinkPreDispatchRequest {
-///     execution_id: "exec_01".to_owned(),
-///     call_id: "call_01".to_owned(),
+///     execution_id: ExecutionId::new("exec_01"),
+///     call_id: CallId::new("call_01"),
 ///     call_path: LlmCallPath::Planner,
 ///     redaction_applied: true,
 /// };
@@ -56,9 +120,9 @@ pub enum LlmCallPath {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct SinkPreDispatchRequest {
     /// Execution identifier linking this call to the audit chain.
-    pub execution_id: String,
+    pub execution_id: ExecutionId,
     /// Per-call identifier for audit linkage.
-    pub call_id: String,
+    pub call_id: CallId,
     /// LLM call path classification.
     pub call_path: LlmCallPath,
     /// Whether required minimization and redaction transforms have been
@@ -68,6 +132,7 @@ pub struct SinkPreDispatchRequest {
 
 /// Decision from the pre-dispatch policy check.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[non_exhaustive]
 pub enum SinkPreDispatchDecision {
     /// Call is permitted to proceed.
     Allow,
@@ -85,11 +150,13 @@ pub enum SinkPreDispatchDecision {
 /// # Examples
 ///
 /// ```rust
-/// use zamburak_policy::sink_enforcement::TransportGuardCheck;
+/// use zamburak_policy::sink_enforcement::{
+///     CallId, ExecutionId, TransportGuardCheck,
+/// };
 ///
 /// let check = TransportGuardCheck {
-///     execution_id: "exec_01".to_owned(),
-///     call_id: "call_01".to_owned(),
+///     execution_id: ExecutionId::new("exec_01"),
+///     call_id: CallId::new("call_01"),
 ///     redaction_applied: true,
 /// };
 /// assert!(check.redaction_applied);
@@ -97,15 +164,16 @@ pub enum SinkPreDispatchDecision {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct TransportGuardCheck {
     /// Execution identifier for audit linkage.
-    pub execution_id: String,
+    pub execution_id: ExecutionId,
     /// Per-call identifier for audit linkage.
-    pub call_id: String,
+    pub call_id: CallId,
     /// Whether required redaction transforms were applied.
     pub redaction_applied: bool,
 }
 
 /// Outcome of the transport guard check.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[non_exhaustive]
 pub enum TransportGuardOutcome {
     /// Payload passes the transport guard.
     Passed,
@@ -124,24 +192,25 @@ pub enum TransportGuardOutcome {
 ///
 /// ```rust
 /// use zamburak_policy::sink_enforcement::{
-///     LlmCallPath, SinkAuditRecord, SinkPreDispatchDecision,
+///     CallId, ExecutionId, LlmCallPath, SinkAuditRecord,
+///     SinkPreDispatchDecision,
 /// };
 ///
 /// let record = SinkAuditRecord {
-///     execution_id: "exec_7f2c".to_owned(),
-///     call_id: "call_0192".to_owned(),
+///     execution_id: ExecutionId::new("exec_7f2c"),
+///     call_id: CallId::new("call_0192"),
 ///     decision: SinkPreDispatchDecision::Allow,
 ///     redaction_applied: true,
 ///     call_path: LlmCallPath::Planner,
 /// };
-/// assert_eq!(record.execution_id, "exec_7f2c");
+/// assert_eq!(record.execution_id, ExecutionId::new("exec_7f2c"));
 /// ```
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct SinkAuditRecord {
     /// Execution identifier linking to the broader execution context.
-    pub execution_id: String,
+    pub execution_id: ExecutionId,
     /// Per-call identifier linking pre-dispatch to post-dispatch.
-    pub call_id: String,
+    pub call_id: CallId,
     /// Pre-dispatch decision code.
     pub decision: SinkPreDispatchDecision,
     /// Whether redaction was applied before transport.
@@ -161,13 +230,13 @@ pub struct SinkAuditRecord {
 ///
 /// ```rust
 /// use zamburak_policy::sink_enforcement::{
-///     LlmCallPath, SinkPreDispatchDecision, SinkPreDispatchRequest,
-///     evaluate_pre_dispatch,
+///     CallId, ExecutionId, LlmCallPath, SinkPreDispatchDecision,
+///     SinkPreDispatchRequest, evaluate_pre_dispatch,
 /// };
 ///
 /// let request = SinkPreDispatchRequest {
-///     execution_id: "exec_01".to_owned(),
-///     call_id: "call_01".to_owned(),
+///     execution_id: ExecutionId::new("exec_01"),
+///     call_id: CallId::new("call_01"),
 ///     call_path: LlmCallPath::Planner,
 ///     redaction_applied: true,
 /// };
@@ -191,13 +260,13 @@ pub fn evaluate_pre_dispatch(request: &SinkPreDispatchRequest) -> SinkPreDispatc
 ///
 /// ```rust
 /// use zamburak_policy::sink_enforcement::{
-///     TransportGuardCheck, TransportGuardOutcome,
-///     evaluate_transport_guard,
+///     CallId, ExecutionId, TransportGuardCheck,
+///     TransportGuardOutcome, evaluate_transport_guard,
 /// };
 ///
 /// let check = TransportGuardCheck {
-///     execution_id: "exec_01".to_owned(),
-///     call_id: "call_01".to_owned(),
+///     execution_id: ExecutionId::new("exec_01"),
+///     call_id: CallId::new("call_01"),
 ///     redaction_applied: true,
 /// };
 /// assert_eq!(
@@ -224,20 +293,20 @@ pub fn evaluate_transport_guard(check: &TransportGuardCheck) -> TransportGuardOu
 ///
 /// ```rust
 /// use zamburak_policy::sink_enforcement::{
-///     LlmCallPath, SinkPreDispatchDecision, SinkPreDispatchRequest,
+///     CallId, ExecutionId, LlmCallPath, SinkPreDispatchRequest,
 ///     emit_audit_record, evaluate_pre_dispatch,
 /// };
 ///
 /// let request = SinkPreDispatchRequest {
-///     execution_id: "exec_01".to_owned(),
-///     call_id: "call_01".to_owned(),
+///     execution_id: ExecutionId::new("exec_01"),
+///     call_id: CallId::new("call_01"),
 ///     call_path: LlmCallPath::Planner,
 ///     redaction_applied: true,
 /// };
 /// let decision = evaluate_pre_dispatch(&request);
 /// let audit = emit_audit_record(&request, decision);
-/// assert_eq!(audit.execution_id, "exec_01");
-/// assert_eq!(audit.call_id, "call_01");
+/// assert_eq!(audit.execution_id, ExecutionId::new("exec_01"));
+/// assert_eq!(audit.call_id, CallId::new("call_01"));
 /// assert_eq!(audit.call_path, LlmCallPath::Planner);
 /// ```
 #[must_use]
@@ -256,79 +325,86 @@ pub fn emit_audit_record(
 
 #[cfg(test)]
 mod tests {
+    use rstest::{fixture, rstest};
+
     use super::{
-        LlmCallPath, SinkPreDispatchDecision, SinkPreDispatchRequest, TransportGuardCheck,
-        TransportGuardOutcome, emit_audit_record, evaluate_pre_dispatch, evaluate_transport_guard,
+        CallId, ExecutionId, LlmCallPath, SinkPreDispatchDecision, SinkPreDispatchRequest,
+        TransportGuardCheck, TransportGuardOutcome, emit_audit_record, evaluate_pre_dispatch,
+        evaluate_transport_guard,
     };
 
-    fn planner_request(redaction_applied: bool) -> SinkPreDispatchRequest {
+    #[fixture]
+    fn planner_request() -> SinkPreDispatchRequest {
         SinkPreDispatchRequest {
-            execution_id: "exec_test".to_owned(),
-            call_id: "call_test".to_owned(),
+            execution_id: ExecutionId::new("exec_test"),
+            call_id: CallId::new("call_test"),
             call_path: LlmCallPath::Planner,
-            redaction_applied,
+            redaction_applied: true,
         }
     }
 
-    fn transport_guard_check(redaction_applied: bool) -> TransportGuardCheck {
+    #[fixture]
+    fn transport_guard_check() -> TransportGuardCheck {
         TransportGuardCheck {
-            execution_id: "exec_test".to_owned(),
-            call_id: "call_test".to_owned(),
-            redaction_applied,
+            execution_id: ExecutionId::new("exec_test"),
+            call_id: CallId::new("call_test"),
+            redaction_applied: true,
         }
     }
 
-    #[test]
-    fn pre_dispatch_allows_with_redaction() {
-        let decision = evaluate_pre_dispatch(&planner_request(true));
+    #[rstest]
+    fn pre_dispatch_allows_with_redaction(planner_request: SinkPreDispatchRequest) {
+        let decision = evaluate_pre_dispatch(&planner_request);
         assert_eq!(decision, SinkPreDispatchDecision::Allow);
     }
 
-    #[test]
-    fn pre_dispatch_denies_without_redaction() {
-        let decision = evaluate_pre_dispatch(&planner_request(false));
+    #[rstest]
+    fn pre_dispatch_denies_without_redaction(mut planner_request: SinkPreDispatchRequest) {
+        planner_request.redaction_applied = false;
+        let decision = evaluate_pre_dispatch(&planner_request);
         assert_eq!(decision, SinkPreDispatchDecision::Deny);
     }
 
-    #[test]
-    fn transport_guard_passes_with_redaction() {
+    #[rstest]
+    fn transport_guard_passes_with_redaction(transport_guard_check: TransportGuardCheck) {
         assert_eq!(
-            evaluate_transport_guard(&transport_guard_check(true)),
+            evaluate_transport_guard(&transport_guard_check),
             TransportGuardOutcome::Passed
         );
     }
 
-    #[test]
-    fn transport_guard_blocks_without_redaction() {
+    #[rstest]
+    fn transport_guard_blocks_without_redaction(mut transport_guard_check: TransportGuardCheck) {
+        transport_guard_check.redaction_applied = false;
         assert_eq!(
-            evaluate_transport_guard(&transport_guard_check(false)),
+            evaluate_transport_guard(&transport_guard_check),
             TransportGuardOutcome::Blocked
         );
     }
 
-    #[test]
+    #[rstest]
     fn audit_record_preserves_linkage_fields() {
         let request = SinkPreDispatchRequest {
-            execution_id: "exec_7f2c".to_owned(),
-            call_id: "call_0192".to_owned(),
+            execution_id: ExecutionId::new("exec_7f2c"),
+            call_id: CallId::new("call_0192"),
             call_path: LlmCallPath::Planner,
             redaction_applied: true,
         };
         let decision = evaluate_pre_dispatch(&request);
         let audit = emit_audit_record(&request, decision);
 
-        assert_eq!(audit.execution_id, "exec_7f2c");
-        assert_eq!(audit.call_id, "call_0192");
+        assert_eq!(audit.execution_id, ExecutionId::new("exec_7f2c"));
+        assert_eq!(audit.call_id, CallId::new("call_0192"));
         assert_eq!(audit.decision, SinkPreDispatchDecision::Allow);
         assert_eq!(audit.call_path, LlmCallPath::Planner);
         assert!(audit.redaction_applied);
     }
 
-    #[test]
+    #[rstest]
     fn quarantined_path_discrimination() {
         let request = SinkPreDispatchRequest {
-            execution_id: "exec_q".to_owned(),
-            call_id: "call_q".to_owned(),
+            execution_id: ExecutionId::new("exec_q"),
+            call_id: CallId::new("call_q"),
             call_path: LlmCallPath::Quarantined,
             redaction_applied: true,
         };

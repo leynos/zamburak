@@ -29,6 +29,13 @@ Feature: LLM sink enforcement
     And the audit record call id is "call_0192"
     And the audit record decision is Allow
 
+  Scenario: Denied pre-dispatch decision emits audit record with Deny
+    Given a planner LLM sink call request without redaction applied
+    When the pre-dispatch policy check is evaluated
+    And an audit record is emitted
+    Then the audit record decision is Deny
+    And the audit record redaction applied flag is false
+
   Scenario: Quarantined LLM call emits linked audit record
     Given a quarantined LLM sink call request with execution id "exec_ab01" and call id "call_0500"
     And redaction is applied
@@ -36,3 +43,5 @@ Feature: LLM sink enforcement
     And an audit record is emitted
     Then the audit record call path is Quarantined
     And the audit record execution id is "exec_ab01"
+    And the audit record call id is "call_0500"
+    And the audit record decision is Allow
