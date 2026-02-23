@@ -1,9 +1,11 @@
-//! Policy schema loading, explicit migrations, and runtime policy-engine entrypoints.
+//! Policy schema loading, explicit migrations, sink enforcement contracts, and
+//! runtime policy-engine entrypoints.
 
 mod engine;
 mod load_outcome;
 mod migration;
 mod policy_def;
+pub mod sink_enforcement;
 
 pub use engine::{PolicyEngine, PolicyEngineLoadOutcome};
 pub use migration::{MigrationAuditRecord, MigrationError, MigrationStepRecord};

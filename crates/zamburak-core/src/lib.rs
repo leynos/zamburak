@@ -1,6 +1,7 @@
-//! Core runtime contracts for authority lifecycle validation.
+//! Core runtime contracts for authority lifecycle and localization.
 
 pub mod authority;
+pub mod i18n;
 
 pub use authority::{
     AuthorityBoundaryValidation, AuthorityCapability, AuthorityIssuer, AuthorityLifecycleError,
