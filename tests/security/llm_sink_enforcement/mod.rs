@@ -104,173 +104,112 @@ fn set_redaction_applied(world: &mut SinkEnforcementWorld) {
 
 // ── When steps ──────────────────────────────────────────────────────
 
-#[expect(
-    clippy::expect_used,
-    reason = "BDD step requires diagnostic panic on missing world state"
-)]
 #[when("the pre-dispatch policy check is evaluated")]
 fn when_pre_dispatch_evaluated(world: &mut SinkEnforcementWorld) {
-    let request = world
-        .request
-        .as_ref()
-        .expect("request must be set before pre-dispatch evaluation");
+    let Some(request) = world.request.as_ref() else {
+        panic!("request must be set before pre-dispatch evaluation");
+    };
     world.pre_dispatch_decision = Some(evaluate_pre_dispatch(request));
 }
 
-#[expect(
-    clippy::expect_used,
-    reason = "BDD step requires diagnostic panic on missing world state"
-)]
 #[when("the transport guard is evaluated")]
 fn when_transport_guard_evaluated(world: &mut SinkEnforcementWorld) {
-    let check = world
-        .transport_check
-        .as_ref()
-        .expect("transport check must be set before evaluation");
+    let Some(check) = world.transport_check.as_ref() else {
+        panic!("transport check must be set before evaluation");
+    };
     world.transport_outcome = Some(evaluate_transport_guard(check));
 }
 
-#[expect(
-    clippy::expect_used,
-    reason = "BDD step requires diagnostic panic on missing world state"
-)]
 #[when("an audit record is emitted")]
 fn when_audit_record_emitted(world: &mut SinkEnforcementWorld) {
-    let request = world
-        .request
-        .as_ref()
-        .expect("request must be set before emitting audit record");
-    let decision = world
-        .pre_dispatch_decision
-        .expect("pre-dispatch decision must exist before emitting audit");
+    let Some(request) = world.request.as_ref() else {
+        panic!("request must be set before emitting audit record");
+    };
+    let Some(decision) = world.pre_dispatch_decision else {
+        panic!("pre-dispatch decision must exist before emitting audit");
+    };
     world.audit_record = Some(emit_audit_record(request, decision));
 }
 
 // ── Then steps ──────────────────────────────────────────────────────
 
-#[expect(
-    clippy::expect_used,
-    reason = "BDD step requires diagnostic panic on missing world state"
-)]
 #[then("the pre-dispatch decision is Allow")]
 fn then_decision_allow(world: &SinkEnforcementWorld) {
-    let decision = world
-        .pre_dispatch_decision
-        .expect("pre-dispatch evaluation must run before assertion");
+    let Some(decision) = world.pre_dispatch_decision else {
+        panic!("pre-dispatch evaluation must run before assertion");
+    };
     assert_eq!(decision, SinkPreDispatchDecision::Allow);
 }
 
-#[expect(
-    clippy::expect_used,
-    reason = "BDD step requires diagnostic panic on missing world state"
-)]
 #[then("the pre-dispatch decision is Deny")]
 fn then_decision_deny(world: &SinkEnforcementWorld) {
-    let decision = world
-        .pre_dispatch_decision
-        .expect("pre-dispatch evaluation must run before assertion");
+    let Some(decision) = world.pre_dispatch_decision else {
+        panic!("pre-dispatch evaluation must run before assertion");
+    };
     assert_eq!(decision, SinkPreDispatchDecision::Deny);
 }
 
-#[expect(
-    clippy::expect_used,
-    reason = "BDD step requires diagnostic panic on missing world state"
-)]
 #[then("the transport guard outcome is Passed")]
 fn then_transport_passed(world: &SinkEnforcementWorld) {
-    let outcome = world
-        .transport_outcome
-        .expect("transport guard must be evaluated before assertion");
+    let Some(outcome) = world.transport_outcome else {
+        panic!("transport guard must be evaluated before assertion");
+    };
     assert_eq!(outcome, TransportGuardOutcome::Passed);
 }
 
-#[expect(
-    clippy::expect_used,
-    reason = "BDD step requires diagnostic panic on missing world state"
-)]
 #[then("the transport guard outcome is Blocked")]
 fn then_transport_blocked(world: &SinkEnforcementWorld) {
-    let outcome = world
-        .transport_outcome
-        .expect("transport guard must be evaluated before assertion");
+    let Some(outcome) = world.transport_outcome else {
+        panic!("transport guard must be evaluated before assertion");
+    };
     assert_eq!(outcome, TransportGuardOutcome::Blocked);
 }
 
-#[expect(
-    clippy::expect_used,
-    reason = "BDD step requires diagnostic panic on missing world state"
-)]
 #[then("the audit record execution id is {expected}")]
 fn then_audit_execution_id(world: &SinkEnforcementWorld, expected: String) {
-    let record = world
-        .audit_record
-        .as_ref()
-        .expect("audit record must be emitted before assertion");
+    let Some(record) = world.audit_record.as_ref() else {
+        panic!("audit record must be emitted before assertion");
+    };
     assert_eq!(record.execution_id.as_str(), expected.trim_matches('"'));
 }
 
-#[expect(
-    clippy::expect_used,
-    reason = "BDD step requires diagnostic panic on missing world state"
-)]
 #[then("the audit record call id is {expected}")]
 fn then_audit_call_id(world: &SinkEnforcementWorld, expected: String) {
-    let record = world
-        .audit_record
-        .as_ref()
-        .expect("audit record must be emitted before assertion");
+    let Some(record) = world.audit_record.as_ref() else {
+        panic!("audit record must be emitted before assertion");
+    };
     assert_eq!(record.call_id.as_str(), expected.trim_matches('"'));
 }
 
-#[expect(
-    clippy::expect_used,
-    reason = "BDD step requires diagnostic panic on missing world state"
-)]
 #[then("the audit record decision is Allow")]
 fn then_audit_decision_allow(world: &SinkEnforcementWorld) {
-    let record = world
-        .audit_record
-        .as_ref()
-        .expect("audit record must be emitted before assertion");
+    let Some(record) = world.audit_record.as_ref() else {
+        panic!("audit record must be emitted before assertion");
+    };
     assert_eq!(record.decision, SinkPreDispatchDecision::Allow);
 }
 
-#[expect(
-    clippy::expect_used,
-    reason = "BDD step requires diagnostic panic on missing world state"
-)]
 #[then("the audit record decision is Deny")]
 fn then_audit_decision_deny(world: &SinkEnforcementWorld) {
-    let record = world
-        .audit_record
-        .as_ref()
-        .expect("audit record must be emitted before assertion");
+    let Some(record) = world.audit_record.as_ref() else {
+        panic!("audit record must be emitted before assertion");
+    };
     assert_eq!(record.decision, SinkPreDispatchDecision::Deny);
 }
 
-#[expect(
-    clippy::expect_used,
-    reason = "BDD step requires diagnostic panic on missing world state"
-)]
 #[then("the audit record redaction applied flag is false")]
 fn then_audit_redaction_false(world: &SinkEnforcementWorld) {
-    let record = world
-        .audit_record
-        .as_ref()
-        .expect("audit record must be emitted before assertion");
+    let Some(record) = world.audit_record.as_ref() else {
+        panic!("audit record must be emitted before assertion");
+    };
     assert!(!record.redaction_applied);
 }
 
-#[expect(
-    clippy::expect_used,
-    reason = "BDD step requires diagnostic panic on missing world state"
-)]
 #[then("the audit record call path is Quarantined")]
 fn then_audit_call_path_quarantined(world: &SinkEnforcementWorld) {
-    let record = world
-        .audit_record
-        .as_ref()
-        .expect("audit record must be emitted before assertion");
+    let Some(record) = world.audit_record.as_ref() else {
+        panic!("audit record must be emitted before assertion");
+    };
     assert_eq!(record.call_path, LlmCallPath::Quarantined);
 }
 
