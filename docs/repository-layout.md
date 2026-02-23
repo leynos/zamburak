@@ -230,29 +230,30 @@ _Table 12: Fuzzing artefacts and purposes._
 
 ### `docs/`
 
-| Path                                                                | Purpose                                                  |
-| ------------------------------------------------------------------- | -------------------------------------------------------- |
-| `docs/zamburak-design-document.md`                                  | Authoritative system semantics and interfaces            |
-| `docs/zamburak-engineering-standards.md`                            | Project-specific engineering standards                   |
-| `docs/roadmap.md`                                                   | High-level implementation phases, steps, and tasks       |
-| `docs/repository-layout.md`                                         | Proposed repository structure and file-purpose reference |
-| `docs/tech-baseline.md`                                             | Toolchain and quality-gate baseline with rationale       |
-| `docs/verification-targets.md`                                      | Verification target matrix and evidence requirements     |
-| `docs/contents.md`                                                  | Central index for all documentation files                |
-| `docs/documentation-style-guide.md`                                 | Authoring and formatting conventions                     |
-| `docs/users-guide.md`                                               | Consumer-facing behaviour and API guidance               |
-| `docs/scripting-standards.md`                                       | Script clarity and dependency management standards       |
-| `docs/policy-examples.md`                                           | Worked examples of policy configurations                 |
-| `docs/policy-examples-financial-services-scenarios.md`              | Financial services policy traces                         |
-| `docs/adr-001-monty-ifc-vm-hooks.md`                                | ADR for `full-monty` hooks and two-track constraints     |
-| `docs/adr-002-localization-and-internationalization-with-fluent.md` | ADR for Fluent localization                              |
-| `docs/complexity-antipatterns-and-refactoring-strategies.md`        | Complexity anti-patterns guide                           |
-| `docs/reliable-testing-in-rust-via-dependency-injection.md`         | Dependency-injection testing patterns                    |
-| `docs/rstest-bdd-users-guide.md`                                    | `rstest-bdd` user guide                                  |
-| `docs/rust-doctest-dry-guide.md`                                    | DRY doctest techniques                                   |
-| `docs/rust-testing-with-rstest-fixtures.md`                         | `rstest` fixture guide                                   |
-| `docs/localizable-rust-libraries-with-fluent.md`                    | Fluent library integration guidance                      |
-| `docs/execplans/`                                                   | Execution plans for roadmap tasks                        |
+| Path                                                                | Purpose                                                   |
+| ------------------------------------------------------------------- | --------------------------------------------------------- |
+| `docs/zamburak-design-document.md`                                  | Authoritative system semantics and interfaces             |
+| `docs/zamburak-engineering-standards.md`                            | Project-specific engineering standards                    |
+| `docs/roadmap.md`                                                   | High-level implementation phases, steps, and tasks        |
+| `docs/repository-layout.md`                                         | Proposed repository structure and file-purpose reference  |
+| `docs/tech-baseline.md`                                             | Toolchain and quality-gate baseline with rationale        |
+| `docs/verification-targets.md`                                      | Verification target matrix and evidence requirements      |
+| `docs/contents.md`                                                  | Central index for all documentation files                 |
+| `docs/documentation-style-guide.md`                                 | Authoring and formatting conventions                      |
+| `docs/users-guide.md`                                               | Consumer-facing behaviour and API guidance                |
+| `docs/scripting-standards.md`                                       | Script clarity and dependency management standards        |
+| `docs/policy-examples.md`                                           | Worked examples of policy configurations                  |
+| `docs/policy-examples-financial-services-scenarios.md`              | Financial services policy traces                          |
+| `docs/adr-001-monty-ifc-vm-hooks.md`                                | ADR for `full-monty` hooks and two-track constraints      |
+| `docs/monty-fork-policy.md`                                         | Allowed `full-monty` fork delta classes and review checks |
+| `docs/adr-002-localization-and-internationalization-with-fluent.md` | ADR for Fluent localization                               |
+| `docs/complexity-antipatterns-and-refactoring-strategies.md`        | Complexity anti-patterns guide                            |
+| `docs/reliable-testing-in-rust-via-dependency-injection.md`         | Dependency-injection testing patterns                     |
+| `docs/rstest-bdd-users-guide.md`                                    | `rstest-bdd` user guide                                   |
+| `docs/rust-doctest-dry-guide.md`                                    | DRY doctest techniques                                    |
+| `docs/rust-testing-with-rstest-fixtures.md`                         | `rstest` fixture guide                                    |
+| `docs/localizable-rust-libraries-with-fluent.md`                    | Fluent library integration guidance                       |
+| `docs/execplans/`                                                   | Execution plans for roadmap tasks                         |
 
 _Table 13: Core documentation artefacts and ownership._
 
@@ -267,7 +268,9 @@ _Table 13: Core documentation artefacts and ownership._
 | `AGENTS.md`                     | Repository-wide process and quality rules               |
 | `clippy.toml`                   | Clippy threshold configuration                          |
 | `.markdownlint-cli2.jsonc`      | Markdown linting configuration                          |
+| `.fdignore`                     | Exclusions for `fd`-driven formatting and lint sweeps   |
 | `.gitignore`                    | Version control ignore rules                            |
+| `.gitmodules`                   | Git submodule declarations and remote URLs              |
 | `codecov.yml`                   | Code coverage reporting configuration                   |
 | `README.md`                     | Project entry document and orientation                  |
 | `LICENSE`                       | Project licence                                         |
@@ -275,7 +278,7 @@ _Table 13: Core documentation artefacts and ownership._
 | `.github/workflows/`            | CI and automation workflow definitions                  |
 | `.github/phase-gate-target.txt` | Phase-advancement target consumed by CI gate checks     |
 | `.env.example`                  | (planned) Configuration template for local integrations |
-| `third_party/full-monty/`       | (planned) `full-monty` submodule checkout for Track A   |
+| `third_party/full-monty/`       | `full-monty` submodule checkout for Track A             |
 
 _Table 14: Root and operational artefacts with purposes._
 

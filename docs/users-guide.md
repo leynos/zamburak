@@ -36,6 +36,22 @@ Audit outcomes include:
 - source and target canonicalized SHA-256 document hashes,
 - ordered per-step transform records (`policy_schema_v0_to_v1`).
 
+## Source checkout requirement for `full-monty`
+
+This repository vendors the Track A runtime substrate as a Git submodule at
+`third_party/full-monty/`.
+
+If you consume Zamburak from source, initialize and update submodules before
+building:
+
+```sh
+git submodule update --init --recursive
+```
+
+Track A changes are constrained by `docs/monty-fork-policy.md`. Zamburak
+semantics are prohibited in fork API surface, and pull requests that violate
+that policy are rejected by automated review checks.
+
 ## Example: canonical policy (schema v1)
 
 ```yaml

@@ -4,7 +4,7 @@ This ExecPlan is a living document. The sections `Constraints`, `Tolerances`,
 `Risks`, `Progress`, `Surprises & Discoveries`, `Decision Log`, and
 `Outcomes & Retrospective` must be kept up to date as work proceeds.
 
-Status: DRAFT
+Status: COMPLETE
 
 `PLANS.md` is not present in this repository at draft time, so this document is
 the governing execution plan for this task.
@@ -93,14 +93,18 @@ hook-substrate internals.
 
 - [x] (2026-02-23 19:00Z) Reviewed requirements, signpost docs, and existing
   ExecPlan conventions; drafted this plan.
-- [ ] Add `full-monty` submodule at `third_party/full-monty/` and commit
-  `.gitmodules` wiring.
-- [ ] Implement review-policy contract and CLI enforcement for fork deltas.
-- [ ] Add unit tests and `rstest-bdd` behavioural tests for happy, unhappy, and
-  edge-path enforcement.
-- [ ] Update design, repository-layout, users-guide, and docs index documents.
-- [ ] Run all required quality gates and capture logs.
-- [ ] Mark roadmap Task 0.4.1 done.
+- [x] (2026-02-23 19:12Z) Added `full-monty` submodule at
+  `third_party/full-monty/` and created `.gitmodules`.
+- [x] (2026-02-23 19:27Z) Implemented review-policy contract module and
+  `monty_fork_review` CLI enforcement path.
+- [x] (2026-02-23 19:31Z) Added unit tests and `rstest-bdd` behavioural tests
+  for happy, unhappy, and edge paths.
+- [x] (2026-02-23 19:36Z) Updated design, repository-layout, users-guide,
+  contents index, and added `docs/monty-fork-policy.md`.
+- [x] (2026-02-23 19:45Z) Ran required quality gates:
+  `make check-fmt`, `make lint`, `make test`, `make markdownlint`,
+  `make nixie`, and `make fmt`.
+- [x] (2026-02-23 19:46Z) Marked roadmap Task 0.4.1 done.
 
 ## Surprises & Discoveries
 
@@ -113,6 +117,13 @@ hook-substrate internals.
   not available in this runtime session. Evidence: MCP resource listing
   returned no servers or templates. Impact: plan drafting used repository docs
   directly as source-of-truth.
+
+- Observation: introducing the `full-monty` submodule caused Markdown format
+  and lint sweeps to traverse vendored docs and fail repository gates.
+  Evidence: `make fmt` and `make markdownlint` emitted errors from
+  `third_party/full-monty/*.md`. Impact: added `.fdignore` and a markdownlint
+  ignore rule for `**/third_party/**` to keep quality gates scoped to this
+  repository's authored documentation.
 
 ## Decision Log
 
@@ -131,29 +142,50 @@ hook-substrate internals.
   building from source need clone and sync guidance once submodules are
   required. Date/Author: 2026-02-23 / Codex.
 
+- Decision: exclude `third_party/` from repository Markdown formatting and lint
+  sweeps. Rationale: vendored upstream docs are outside local ownership and
+  should not fail local style gates. Date/Author: 2026-02-23 / Codex.
+
 ## Outcomes & Retrospective
 
-Pending implementation. Success for this task is:
+Task 0.4.1 is complete.
 
-- `third_party/full-monty/` exists as a Git submodule and is documented.
-- Fork policy document exists and defines allowed change categories.
-- Automated review policy rejects non-generic fork deltas.
-- Unit and behavioural tests cover pass and fail paths.
-- Required gates pass and roadmap Task 0.4.1 is marked done.
+Delivered outcomes:
+
+- Added `third_party/full-monty/` as a pinned Git submodule and committed
+  `.gitmodules`.
+- Added `docs/monty-fork-policy.md` with allowed categories, forbidden
+  semantics, and fail-closed review controls.
+- Added `src/monty_fork_policy_contract.rs` plus unit tests for semantic-token
+  rejection logic.
+- Added `src/bin/monty_fork_review.rs` to evaluate patch text or submodule
+  pointer deltas between superproject revisions.
+- Added `rstest-bdd` behavioural coverage in
+  `tests/compatibility/monty_fork_policy/mod.rs`.
+- Wired CI to run review-policy checks and to initialize submodules.
+- Updated design and consumer documentation, and marked roadmap Task 0.4.1 as
+  done.
+
+Retrospective:
+
+- The enforcement split worked as intended: deterministic machine checks for
+  forbidden semantics plus policy prose for category review.
+- Submodule introduction required explicit gate scoping (`.fdignore` and
+  markdownlint ignores) to prevent vendor documentation from breaking local
+  formatting and lint gates.
 
 ## Context and orientation
 
 Current repository state relevant to this task:
 
-- There is no existing submodule checkout. `third_party/` does not exist and
-  `.gitmodules` is absent.
-- Roadmap Task 0.4.1 is open in `docs/roadmap.md` under
+- `third_party/full-monty/` is now present as a pinned Git submodule and
+  `.gitmodules` is tracked in the repository root.
+- Roadmap Task 0.4.1 is now marked done in `docs/roadmap.md` under
   "Step 0.4: `full-monty` repository mechanics and guardrails".
 - ADR-001 requires a constrained `full-monty` fork with generic Track A APIs
   and no Zamburak semantics in that API surface.
-- `docs/repository-layout.md` already declares
-  `third_party/full-monty/ (git submodule)` as planned, so this task turns that
-  into current state.
+- `docs/repository-layout.md` now records `third_party/full-monty/` as an
+  active root artefact and includes `docs/monty-fork-policy.md`.
 - CI currently checks formatting, linting, script baseline/tests, full tests,
   and phase-gate suites via `.github/workflows/ci.yml`.
 - Behavioural tests use `rstest-bdd` patterns under `tests/compatibility/` and
@@ -379,3 +411,10 @@ Dependencies:
   it.
 - Reuse existing workspace crates (`camino`, `cap_std`, and `rstest-bdd` test
   stack) where possible.
+
+## Revision note
+
+- Updated status from `DRAFT` to `COMPLETE`.
+- Recorded implemented milestones and validation evidence.
+- Added a discovery and decision about excluding `third_party/` from markdown
+  formatting and lint gates.

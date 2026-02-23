@@ -1,5 +1,6 @@
 //! `Zamburak` library.
 
+pub mod monty_fork_policy_contract;
 pub mod phase_gate_contract;
 
 pub use zamburak_policy::{
