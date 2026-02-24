@@ -111,7 +111,7 @@ hook-substrate internals.
 
 - Observation: this repository currently has no `third_party/` directory,
   `.gitmodules` file, or existing submodule entries. Evidence: `ls third_party`
-  fails and `git submodule status` returns no rows. Impact: this task needs
+  fails and `git submodule status` returns no rows. Impact: this task needs a
   first-time submodule bootstrap, not an update.
 
 - Observation: Model Context Protocol (MCP) project-memory tools
@@ -295,7 +295,7 @@ Run from repository root (`/home/user/project`). Use `set -o pipefail` and
     set -o pipefail
     RUSTFLAGS="-D warnings" cargo test --workspace --all-targets \
       --all-features monty_fork_policy \
-      | tee /tmp/test-monty-fork-policy.out
+      | tee /tmp/test-monty-fork-policy.out |
 
    Expected evidence includes passing unit tests and behavioural scenarios for
    happy and unhappy paths.

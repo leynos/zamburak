@@ -5,6 +5,7 @@ use std::io::{self, Write};
 use std::process::{Command, ExitCode};
 
 use camino::{Utf8Path, Utf8PathBuf};
+use thiserror::Error;
 use zamburak::monty_fork_policy_contract::{MontyForkViolation, evaluate_patch_text};
 
 #[path = "monty_fork_review/io_utils.rs"]
@@ -61,56 +62,36 @@ struct CliArgs {
     show_help: bool,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Error)]
 enum ReviewError {
+    #[error("unsupported argument `{0}`")]
     InvalidArgument(Box<str>),
+    #[error("missing value for argument `{0}`")]
     MissingArgumentValue(Box<str>),
+    #[error(
+        "either --diff-file or both --base-superproject-rev and --head-superproject-rev are required"
+    )]
     MissingRevisionPair,
+    #[error("I/O error for `{path}`: {source}")]
     Io {
         path: Utf8PathBuf,
+        #[source]
         source: io::Error,
     },
+    #[error("failed to run command `{cmd}`: {source}")]
     Command {
         cmd: Box<str>,
+        #[source]
         source: io::Error,
     },
-    CommandFailed {
-        cmd: Box<str>,
-        stderr: Box<str>,
-    },
+    #[error("command `{cmd}` failed: {stderr}")]
+    CommandFailed { cmd: Box<str>, stderr: Box<str> },
+    #[error("found {count} fork-policy violation(s)")]
     Violations {
+        count: usize,
         violations: Vec<MontyForkViolation>,
     },
 }
-
-impl std::fmt::Display for ReviewError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::InvalidArgument(flag) => write!(f, "unsupported argument `{flag}`"),
-            Self::MissingArgumentValue(flag) => {
-                write!(f, "missing value for argument `{flag}`")
-            }
-            Self::MissingRevisionPair => {
-                write!(
-                    f,
-                    "either --diff-file or both --base-superproject-rev and --head-superproject-rev are required"
-                )
-            }
-            Self::Io { path, source } => write!(f, "I/O error for `{path}`: {source}"),
-            Self::Command { cmd, source } => {
-                write!(f, "failed to run command `{cmd}`: {source}")
-            }
-            Self::CommandFailed { cmd, stderr } => {
-                write!(f, "command `{cmd}` failed: {stderr}")
-            }
-            Self::Violations { violations } => {
-                write!(f, "found {} fork-policy violation(s)", violations.len())
-            }
-        }
-    }
-}
-
-impl std::error::Error for ReviewError {}
 
 fn main() -> ExitCode {
     match run() {
@@ -118,7 +99,7 @@ fn main() -> ExitCode {
         Err(error) => {
             let mut stderr = io::stderr().lock();
             output::discard_write_result(writeln!(stderr, "monty-fork-review error: {error}"));
-            if let ReviewError::Violations { violations } = error {
+            if let ReviewError::Violations { violations, .. } = error {
                 emit_violations(&mut stderr, &violations);
             }
             ExitCode::FAILURE
@@ -139,8 +120,19 @@ fn run() -> Result<(), ReviewError> {
         output::discard_write_result(writeln!(stdout, "monty-fork-review: pass (0 violation(s))"));
         Ok(())
     } else {
-        Err(ReviewError::Violations { violations })
+        Err(ReviewError::Violations {
+            count: violations.len(),
+            violations,
+        })
     }
+}
+
+fn take_next_arg(
+    args: &mut impl Iterator<Item = String>,
+    flag: &str,
+) -> Result<String, ReviewError> {
+    args.next()
+        .ok_or_else(|| ReviewError::MissingArgumentValue(flag.into()))
 }
 
 fn parse_cli_args(raw_args: Vec<String>) -> Result<CliArgs, ReviewError> {
@@ -153,27 +145,19 @@ fn parse_cli_args(raw_args: Vec<String>) -> Result<CliArgs, ReviewError> {
     while let Some(flag) = args.next() {
         match flag.as_str() {
             "--diff-file" => {
-                let Some(path) = args.next() else {
-                    return Err(ReviewError::MissingArgumentValue(flag.into_boxed_str()));
-                };
+                let path = take_next_arg(&mut args, flag.as_str())?;
                 diff_file = Some(Utf8PathBuf::from(path));
             }
             "--submodule-path" => {
-                let Some(path) = args.next() else {
-                    return Err(ReviewError::MissingArgumentValue(flag.into_boxed_str()));
-                };
+                let path = take_next_arg(&mut args, flag.as_str())?;
                 submodule_path = Utf8PathBuf::from(path);
             }
             "--base-superproject-rev" => {
-                let Some(rev) = args.next() else {
-                    return Err(ReviewError::MissingArgumentValue(flag.into_boxed_str()));
-                };
+                let rev = take_next_arg(&mut args, flag.as_str())?;
                 base_superproject_rev = Some(GitRevision::new(rev));
             }
             "--head-superproject-rev" => {
-                let Some(rev) = args.next() else {
-                    return Err(ReviewError::MissingArgumentValue(flag.into_boxed_str()));
-                };
+                let rev = take_next_arg(&mut args, flag.as_str())?;
                 head_superproject_rev = Some(GitRevision::new(rev));
             }
             "--help" | "-h" => {

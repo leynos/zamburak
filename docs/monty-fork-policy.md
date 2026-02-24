@@ -65,4 +65,5 @@ Exit behaviour:
 - exits `0` when no violations are found,
 - exits non-zero when violations exist or when the diff cannot be resolved.
 
-CI executes this checker on pull requests and blocks merges on failure.
+Continuous Integration (CI) executes this checker on pull requests and blocks
+merges on failure.

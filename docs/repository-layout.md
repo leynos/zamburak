@@ -264,29 +264,29 @@ _Table 13: Core documentation artefacts and ownership._
 
 ### Root and operational files
 
-| Path                                | Purpose                                                 |
-| ----------------------------------- | ------------------------------------------------------- |
-| `Cargo.toml`                        | Workspace member registration and shared settings       |
-| `Cargo.lock`                        | Reproducible dependency resolution                      |
-| `rust-toolchain.toml`               | Toolchain pinning and compatibility                     |
-| `Makefile`                          | Build orchestration and quality-gate definitions        |
-| `AGENTS.md`                         | Repository-wide process and quality rules               |
-| `clippy.toml`                       | Clippy threshold configuration                          |
-| `.markdownlint-cli2.jsonc`          | Markdown linting configuration                          |
-| `.fdignore`                         | Exclusions for `fd`-driven formatting and lint sweeps   |
-| `.gitignore`                        | Version control ignore rules                            |
-| `.gitmodules`                       | Git submodule declarations and remote URLs              |
-| `codecov.yml`                       | Code coverage reporting configuration                   |
-| `README.md`                         | Project entry document and orientation                  |
-| `LICENSE`                           | Project licence                                         |
-| `scripts/`                          | Operational helper scripts for local workflows          |
-| `src/lib.rs`                        | Root crate exports for policy contracts and phase gates |
-| `src/monty_fork_policy_contract.rs` | Fork-policy semantic-token contract checks              |
-| `src/bin/monty_fork_review.rs`      | CLI checker for `full-monty` fork-policy delta review   |
-| `.github/workflows/`                | CI and automation workflow definitions                  |
-| `.github/phase-gate-target.txt`     | Phase-advancement target consumed by CI gate checks     |
-| `.env.example`                      | (planned) Configuration template for local integrations |
-| `third_party/full-monty/`           | `full-monty` submodule checkout for Track A             |
+| Path                                | Purpose                                                         |
+| ----------------------------------- | --------------------------------------------------------------- |
+| `Cargo.toml`                        | Workspace member registration and shared settings               |
+| `Cargo.lock`                        | Reproducible dependency resolution                              |
+| `rust-toolchain.toml`               | Toolchain pinning and compatibility                             |
+| `Makefile`                          | Build orchestration and quality-gate definitions                |
+| `AGENTS.md`                         | Repository-wide process and quality rules                       |
+| `clippy.toml`                       | Clippy threshold configuration                                  |
+| `.markdownlint-cli2.jsonc`          | Markdown linting configuration                                  |
+| `.fdignore`                         | Exclusions for `fd`-driven formatting and lint sweeps           |
+| `.gitignore`                        | Version control ignore rules                                    |
+| `.gitmodules`                       | Git submodule declarations and remote URLs                      |
+| `codecov.yml`                       | Code coverage reporting configuration                           |
+| `README.md`                         | Project entry document and orientation                          |
+| `LICENSE`                           | Project licence                                                 |
+| `scripts/`                          | Operational helper scripts for local workflows                  |
+| `src/lib.rs`                        | Root crate exports for policy contracts and phase gates         |
+| `src/monty_fork_policy_contract.rs` | Fork-policy semantic-token contract checks                      |
+| `src/bin/monty_fork_review.rs`      | CLI checker for `full-monty` fork-policy delta review           |
+| `.github/workflows/`                | Continuous Integration (CI) and automation workflow definitions |
+| `.github/phase-gate-target.txt`     | Phase-advancement target consumed by CI gate checks             |
+| `.env.example`                      | (planned) Configuration template for local integrations         |
+| `third_party/full-monty/`           | `full-monty` submodule checkout for Track A                     |
 
 _Table 14: Root and operational artefacts with purposes._
 

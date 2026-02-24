@@ -1355,6 +1355,7 @@ dependencies = [
  "rstest",
  "rstest-bdd",
  "rstest-bdd-macros",
+ "thiserror 2.0.18",
  "zamburak-core",
  "zamburak-policy",
 ]
