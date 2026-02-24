@@ -2,6 +2,7 @@
 
 use std::io::{self, Write};
 
+/// Writes command usage text for `monty_fork_review` to standard output.
 pub(crate) fn print_usage() {
     let mut stdout = io::stdout().lock();
     discard_write_result(writeln!(
@@ -15,6 +16,6 @@ pub(crate) fn print_usage() {
     ));
 }
 
-pub(crate) fn discard_write_result(write_result: io::Result<()>) {
-    drop(write_result);
-}
+/// Drops a write result when usage/error output should not fail the process.
+#[rustfmt::skip]
+pub(crate) fn discard_write_result(write_result: io::Result<()>) { drop(write_result); }

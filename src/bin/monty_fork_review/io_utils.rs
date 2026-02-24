@@ -7,6 +7,13 @@ use cap_std::{ambient_authority, fs_utf8};
 
 use super::ReviewError;
 
+/// Reads a unified patch file from either an absolute or relative path.
+///
+/// Absolute paths are resolved by opening the path's parent directory and then
+/// reading the file by name. Relative paths are resolved against the current
+/// working directory (`.`), not an inferred repository root. Missing files,
+/// unreadable files, and invalid absolute-path shapes (for example, no parent
+/// directory or file name) are reported as [`ReviewError::Io`].
 pub(super) fn read_patch_from_file(path: &Utf8Path) -> Result<String, ReviewError> {
     if path.is_absolute() {
         return read_patch_from_absolute_path(path);

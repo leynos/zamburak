@@ -1,8 +1,8 @@
 # Add `full-monty` as a Git submodule and enforce fork guardrails (Task 0.4.1)
 
 This ExecPlan is a living document. The sections `Constraints`, `Tolerances`,
-`Risks`, `Progress`, `Surprises & Discoveries`, `Decision Log`, and
-`Outcomes & Retrospective` must be kept up to date as work proceeds.
+`Risks`, `Progress`, `Surprises & discoveries`, `Decision log`, and
+`Outcomes & retrospective` must be kept up to date as work proceeds.
 
 Status: COMPLETE
 
@@ -71,9 +71,10 @@ hook-substrate internals.
 
 ## Risks
 
-- Risk: submodule checkout drift in CI if checkout does not initialize
-  submodules. Severity: high Likelihood: medium Mitigation: update CI checkout
-  configuration and include explicit submodule validation in acceptance steps.
+- Risk: submodule checkout drift in Continuous Integration (CI) if checkout
+  does not initialize submodules. Severity: high Likelihood: medium Mitigation:
+  update CI checkout configuration and include explicit submodule validation in
+  acceptance steps.
 
 - Risk: policy checker false positives for benign identifiers or comments.
   Severity: medium Likelihood: medium Mitigation: constrain checks to added
@@ -106,7 +107,7 @@ hook-substrate internals.
   `make nixie`, and `make fmt`.
 - [x] (2026-02-23 19:46Z) Marked roadmap Task 0.4.1 done.
 
-## Surprises & Discoveries
+## Surprises & discoveries
 
 - Observation: this repository currently has no `third_party/` directory,
   `.gitmodules` file, or existing submodule entries. Evidence: `ls third_party`
@@ -125,7 +126,7 @@ hook-substrate internals.
   ignore rule for `**/third_party/**` to keep quality gates scoped to this
   repository's authored documentation.
 
-## Decision Log
+## Decision log
 
 - Decision: implement review rejection as code, not policy prose alone.
   Rationale: completion criteria requires rejection of non-generic fork
@@ -146,7 +147,7 @@ hook-substrate internals.
   sweeps. Rationale: vendored upstream docs are outside local ownership and
   should not fail local style gates. Date/Author: 2026-02-23 / Codex.
 
-## Outcomes & Retrospective
+## Outcomes & retrospective
 
 Task 0.4.1 is complete.
 
@@ -294,7 +295,7 @@ Run from repository root (`/home/user/project`). Use `set -o pipefail` and
     set -o pipefail
     RUSTFLAGS="-D warnings" cargo test --workspace --all-targets \
       --all-features monty_fork_policy \
-      | tee /tmp/test-monty-fork-policy.out
+      | tee /tmp/test-monty-fork-policy.out |
 
    Expected evidence includes passing unit tests and behavioural scenarios for
    happy and unhappy paths.

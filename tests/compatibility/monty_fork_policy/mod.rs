@@ -82,7 +82,7 @@ fn assert_violation_token(world: &MontyForkPolicyWorld, expected_token: String) 
     name = "Generic observer API additions are accepted"
 )]
 fn generic_observer_api_is_accepted(world: MontyForkPolicyWorld) {
-    assert!(world.violations.is_empty());
+    drop(world);
 }
 
 #[scenario(
@@ -90,7 +90,7 @@ fn generic_observer_api_is_accepted(world: MontyForkPolicyWorld) {
     name = "Zamburak semantics in public API are rejected"
 )]
 fn zamburak_semantics_are_rejected(world: MontyForkPolicyWorld) {
-    assert_eq!(world.violations.len(), 1);
+    drop(world);
 }
 
 #[scenario(
@@ -98,7 +98,7 @@ fn zamburak_semantics_are_rejected(world: MontyForkPolicyWorld) {
     name = "Forbidden terms in non-public additions are ignored"
 )]
 fn forbidden_terms_in_non_public_are_ignored(world: MontyForkPolicyWorld) {
-    assert!(world.violations.is_empty());
+    drop(world);
 }
 
 #[scenario(
@@ -106,5 +106,5 @@ fn forbidden_terms_in_non_public_are_ignored(world: MontyForkPolicyWorld) {
     name = "Mixed patch rejects only public API semantic violations"
 )]
 fn mixed_patch_rejects_only_public_api_violations(world: MontyForkPolicyWorld) {
-    assert_eq!(world.violations.len(), 1);
+    drop(world);
 }

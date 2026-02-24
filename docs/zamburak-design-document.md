@@ -233,7 +233,8 @@ Track A governance is fail-closed and repository-local:
 - Added Track A API surface lines that include Zamburak semantic tokens are
   rejected by automated review policy checks.
 
-The canonical process contract is defined in `docs/monty-fork-policy.md`.
+The canonical process contract is defined in
+[Monty fork policy](docs/monty-fork-policy.md).
 
 For screen readers: The following diagram shows trusted query flow entering the
 planner, code running in Monty with IFC, and all side effects traversing policy

@@ -4,7 +4,8 @@ This document defines the governance contract for Track A changes in
 `third_party/full-monty/`.
 
 The normative architecture split is defined in
-`docs/adr-001-monty-ifc-vm-hooks.md` and `docs/zamburak-design-document.md`.
+[ADR 001: Monty IFC VM hooks](docs/adr-001-monty-ifc-vm-hooks.md) and the
+[Zamburak design document](docs/zamburak-design-document.md).
 
 ## Scope and intent
 

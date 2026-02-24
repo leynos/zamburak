@@ -30,7 +30,7 @@ jobs:
         if: ${{ github.event_name != 'pull_request' }}
         run: >
           cargo run --bin monty_fork_review --
-          --base-superproject-rev HEAD
+          --base-superproject-rev HEAD~1
           --head-superproject-rev HEAD
       - name: Setup uv
         run: |

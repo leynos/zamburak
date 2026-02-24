@@ -163,6 +163,8 @@ fn is_api_surface_line(line: &str) -> bool {
 
 #[cfg(test)]
 mod tests {
+    use rstest::rstest;
+
     use super::{
         MontyForkViolationCode, allowed_change_categories, evaluate_added_lines,
         evaluate_patch_text,
@@ -174,101 +176,87 @@ mod tests {
         assert_eq!(categories.len(), 4);
     }
 
-    #[test]
-    fn generic_observer_api_addition_passes() {
-        let patch = concat!(
-            "diff --git a/src/run.rs b/src/run.rs\n",
-            "+++ b/src/run.rs\n",
-            "+pub enum RuntimeEvent { ValueCreated }\n",
-        );
-
+    #[rstest]
+    #[case::generic_observer_patch(concat!(
+        "diff --git a/src/run.rs b/src/run.rs\n",
+        "+++ b/src/run.rs\n",
+        "+pub enum RuntimeEvent { ValueCreated }\n",
+    ))]
+    #[case::non_api_forbidden_term(concat!(
+        "diff --git a/src/run.rs b/src/run.rs\n",
+        "+++ b/src/run.rs\n",
+        "+let zamburak_marker = 1_u8;\n",
+    ))]
+    #[case::private_trait_forbidden_term(concat!(
+        "diff --git a/src/run.rs b/src/run.rs\n",
+        "+++ b/src/run.rs\n",
+        "+trait PolicyHook {}\n",
+    ))]
+    fn no_violation_inputs_are_accepted(#[case] patch: &str) {
         assert!(evaluate_patch_text(patch).is_empty());
     }
 
-    #[test]
-    fn non_api_addition_with_forbidden_term_is_ignored() {
-        let patch = concat!(
-            "diff --git a/src/run.rs b/src/run.rs\n",
-            "+++ b/src/run.rs\n",
-            "+let zamburak_marker = 1_u8;\n",
-        );
-
-        assert!(evaluate_patch_text(patch).is_empty());
+    enum ViolationInput<'a> {
+        Patch(&'a str),
+        AddedLines(&'a [&'a str]),
     }
 
-    #[test]
-    fn public_api_addition_with_zamburak_term_is_rejected() {
-        let patch = concat!(
+    #[rstest]
+    #[case::zamburak_public_api(
+        ViolationInput::Patch(concat!(
             "diff --git a/src/run.rs b/src/run.rs\n",
             "+++ b/src/run.rs\n",
             "+pub struct ZamburakObserver;\n",
-        );
+        )),
+        "zamburak",
+        Some("src/run.rs"),
+    )]
+    #[case::case_insensitive_policy_token(
+        ViolationInput::AddedLines(&["pub fn ApplyPolicy() {}"]),
+        "policy",
+        None,
+    )]
+    #[case::capability_doc_comment(
+        ViolationInput::Patch(concat!(
+            "diff --git a/src/run.rs b/src/run.rs\n",
+            "+++ b/src/run.rs\n",
+            "+/// Capability mapping for host integration.\n",
+        )),
+        "capabilit",
+        Some("src/run.rs"),
+    )]
+    #[case::mixed_patch(
+        ViolationInput::Patch(concat!(
+            "diff --git a/src/run.rs b/src/run.rs\n",
+            "+++ b/src/run.rs\n",
+            "+let zamburak_marker = 1_u8;\n",
+            "+pub enum PolicyEvent { Started }\n",
+        )),
+        "policy",
+        Some("src/run.rs"),
+    )]
+    fn violation_inputs_are_reported(
+        #[case] input: ViolationInput<'_>,
+        #[case] expected_token: &str,
+        #[case] expected_path: Option<&str>,
+    ) {
+        let violations = match input {
+            ViolationInput::Patch(patch) => evaluate_patch_text(patch),
+            ViolationInput::AddedLines(added_lines) => evaluate_added_lines(added_lines),
+        };
 
-        let violations = evaluate_patch_text(patch);
         assert_eq!(violations.len(), 1);
         let Some(first_violation) = violations.first() else {
-            panic!("expected one violation for zamburak term");
+            panic!("expected one violation");
         };
         assert_eq!(
             first_violation.code,
             MontyForkViolationCode::ForbiddenSemanticTokenInApi
         );
-        assert_eq!(first_violation.matched_token, "zamburak");
-    }
+        assert_eq!(first_violation.matched_token, expected_token);
 
-    #[test]
-    fn check_is_case_insensitive_for_policy_token() {
-        let added_lines = ["pub fn ApplyPolicy() {}"];
-        let violations = evaluate_added_lines(&added_lines);
-        assert_eq!(violations.len(), 1);
-        let Some(first_violation) = violations.first() else {
-            panic!("expected one violation for policy token");
-        };
-        assert_eq!(first_violation.matched_token, "policy");
-    }
-
-    #[test]
-    fn api_doc_comment_with_capability_term_is_rejected() {
-        let patch = concat!(
-            "diff --git a/src/run.rs b/src/run.rs\n",
-            "+++ b/src/run.rs\n",
-            "+/// Capability mapping for host integration.\n",
-        );
-
-        let violations = evaluate_patch_text(patch);
-        assert_eq!(violations.len(), 1);
-        let Some(first_violation) = violations.first() else {
-            panic!("expected one violation for capability token");
-        };
-        assert_eq!(first_violation.matched_token, "capabilit");
-    }
-
-    #[test]
-    fn private_trait_with_forbidden_term_is_ignored() {
-        let patch = concat!(
-            "diff --git a/src/run.rs b/src/run.rs\n",
-            "+++ b/src/run.rs\n",
-            "+trait PolicyHook {}\n",
-        );
-
-        assert!(evaluate_patch_text(patch).is_empty());
-    }
-
-    #[test]
-    fn mixed_patch_reports_only_api_surface_violations() {
-        let patch = concat!(
-            "diff --git a/src/run.rs b/src/run.rs\n",
-            "+++ b/src/run.rs\n",
-            "+let zamburak_marker = 1_u8;\n",
-            "+pub enum PolicyEvent { Started }\n",
-        );
-
-        let violations = evaluate_patch_text(patch);
-        assert_eq!(violations.len(), 1);
-        let Some(first_violation) = violations.first() else {
-            panic!("expected one violation for mixed patch");
-        };
-        assert_eq!(first_violation.matched_token, "policy");
-        assert_eq!(first_violation.path.as_ref(), "src/run.rs");
+        if let Some(path) = expected_path {
+            assert_eq!(first_violation.path.as_ref(), path);
+        }
     }
 }
