@@ -372,8 +372,9 @@ Expected command transcript snippets at completion:
     monty-fork-review: pass (0 violation(s))
 
     $ cargo run --bin monty_fork_review -- --diff-file /tmp/non_generic.diff
-    monty-fork-review: fail (1 violation)
-    - forbidden semantic token in added API line: "Zamburak…"
+    monty-fork-review: fail (1 violation(s))
+    - ForbiddenSemanticTokenInApi at src/lib.rs:3 matched `zamburak` in
+      `pub fn zamburak_semantic_hook() {}`
 
     $ make test
     …

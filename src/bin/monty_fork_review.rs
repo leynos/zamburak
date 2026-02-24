@@ -20,6 +20,12 @@ const DEFAULT_SUBMODULE_PATH: &str = "third_party/full-monty";
     reason = "newt-hype macro expansion emits explicit Clone for Copy wrappers"
 )]
 mod review_newtypes {
+    //! Newtype helpers for review-specific revision and pointer values.
+    //!
+    //! This module defines the `ReviewNewtype` base wrapper and exports
+    //! `GitRevision` and `SubmodulePointer` aliases created via
+    //! `base_newtype!` and `newtype!` to avoid stringly-typed arguments.
+
     use newt_hype::{base_newtype, newtype};
 
     base_newtype!(ReviewNewtype);
@@ -82,9 +88,20 @@ fn main() -> ExitCode {
         Ok(()) => ExitCode::SUCCESS,
         Err(error) => {
             let mut stderr = io::stderr().lock();
-            output::discard_write_result(writeln!(stderr, "monty-fork-review error: {error}"));
-            if let ReviewError::Violations { violations, .. } = error {
-                emit_violations(&mut stderr, &violations);
+            match error {
+                ReviewError::Violations { count, violations } => {
+                    output::discard_write_result(writeln!(
+                        stderr,
+                        "monty-fork-review: fail ({count} violation(s))"
+                    ));
+                    emit_violations(&mut stderr, &violations);
+                }
+                other => {
+                    output::discard_write_result(writeln!(
+                        stderr,
+                        "monty-fork-review error: {other}"
+                    ));
+                }
             }
             ExitCode::FAILURE
         }
@@ -252,10 +269,36 @@ fn pointer_not_present_in_revision(stderr: &str) -> bool {
     stderr.contains("exists on disk, but not in") || stderr.contains("does not exist in")
 }
 
-fn run_git_command_in_submodule(
+fn run_git_command_in_submodule_for_side_effects(
     submodule_path: &Utf8Path,
     args: &[&str],
-    capture_stdout: bool,
+) -> Result<(), ReviewError> {
+    let submodule_arg = submodule_path.as_str();
+    let joined_args = args.join(" ");
+    let cmd = format!("git -C {submodule_arg} {joined_args}");
+    let output = Command::new("git")
+        .arg("-C")
+        .arg(submodule_arg)
+        .args(args)
+        .output()
+        .map_err(|source| ReviewError::Command {
+            cmd: cmd.clone().into_boxed_str(),
+            source,
+        })?;
+
+    if !output.status.success() {
+        return Err(ReviewError::CommandFailed {
+            cmd: cmd.into_boxed_str(),
+            stderr: String::from_utf8_lossy(&output.stderr).trim().into(),
+        });
+    }
+
+    Ok(())
+}
+
+fn run_git_command_in_submodule_capture_stdout(
+    submodule_path: &Utf8Path,
+    args: &[&str],
 ) -> Result<String, ReviewError> {
     let submodule_arg = submodule_path.as_str();
     let joined_args = args.join(" ");
@@ -277,11 +320,7 @@ fn run_git_command_in_submodule(
         });
     }
 
-    if capture_stdout {
-        Ok(String::from_utf8_lossy(&output.stdout).into_owned())
-    } else {
-        Ok(String::new())
-    }
+    Ok(String::from_utf8_lossy(&output.stdout).into_owned())
 }
 
 fn fetch_submodule_commits(
@@ -297,7 +336,7 @@ fn fetch_submodule_commits(
         base_pointer.as_str(),
         head_pointer.as_str(),
     ];
-    run_git_command_in_submodule(submodule_path, &fetch_args, false).map(|_| ())
+    run_git_command_in_submodule_for_side_effects(submodule_path, &fetch_args)
 }
 
 fn diff_submodule_commits(
@@ -311,16 +350,10 @@ fn diff_submodule_commits(
         base_pointer.as_str(),
         head_pointer.as_str(),
     ];
-    run_git_command_in_submodule(submodule_path, &diff_args, true)
+    run_git_command_in_submodule_capture_stdout(submodule_path, &diff_args)
 }
 
 fn emit_violations(stderr: &mut io::StderrLock<'_>, violations: &[MontyForkViolation]) {
-    output::discard_write_result(writeln!(
-        stderr,
-        "monty-fork-review: fail ({})",
-        violations.len()
-    ));
-
     for violation in violations {
         output::discard_write_result(writeln!(
             stderr,

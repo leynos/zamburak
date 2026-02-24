@@ -29,12 +29,28 @@ impl TokenTimestamp {
 mod authority_newtypes {
     use newt_hype::{base_newtype, newtype};
 
-    base_newtype!(AuthorityStringNewtype);
-    newtype!(AuthorityTokenId, AuthorityStringNewtype, String);
+    base_newtype!(AuthorityTokenIdNewtype);
+    newtype!(AuthorityTokenId, AuthorityTokenIdNewtype, String);
+    base_newtype!(AuthorityIssuerNewtype);
+    newtype!(AuthorityIssuer, AuthorityIssuerNewtype, String);
+    base_newtype!(AuthoritySubjectNewtype);
+    newtype!(AuthoritySubject, AuthoritySubjectNewtype, String);
+    base_newtype!(AuthorityCapabilityNewtype);
+    newtype!(AuthorityCapability, AuthorityCapabilityNewtype, String);
+    base_newtype!(ScopeResourceNewtype);
+    newtype!(ScopeResource, ScopeResourceNewtype, String);
 }
 
 /// Stable identifier for an authority token.
 pub type AuthorityTokenId = authority_newtypes::AuthorityTokenId;
+/// Validated issuer identity for minting and delegation provenance.
+pub type AuthorityIssuer = authority_newtypes::AuthorityIssuer;
+/// Subject for whom authority is granted.
+pub type AuthoritySubject = authority_newtypes::AuthoritySubject;
+/// Capability encoded by an authority token.
+pub type AuthorityCapability = authority_newtypes::AuthorityCapability;
+/// Scope entry that an authority token may permit.
+pub type ScopeResource = authority_newtypes::ScopeResource;
 
 impl TryFrom<&str> for AuthorityTokenId {
     type Error = AuthorityLifecycleError;
@@ -45,42 +61,12 @@ impl TryFrom<&str> for AuthorityTokenId {
     }
 }
 
-/// Validated issuer identity for minting and delegation provenance.
-#[derive(Clone, Debug, Eq, Ord, PartialEq, PartialOrd, Hash)]
-pub struct AuthorityIssuer(String);
-
-impl AuthorityIssuer {
-    /// Return the issuer as a string slice.
-    #[must_use]
-    pub fn as_str(&self) -> &str {
-        &self.0
-    }
-}
-
-impl std::fmt::Display for AuthorityIssuer {
-    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        formatter.write_str(&self.0)
-    }
-}
-
 impl TryFrom<&str> for AuthorityIssuer {
     type Error = AuthorityLifecycleError;
 
     fn try_from(value: &str) -> Result<Self, Self::Error> {
         non_empty(value, "issuer")?;
-        Ok(Self(value.to_owned()))
-    }
-}
-
-/// Subject for whom authority is granted.
-#[derive(Clone, Debug, Eq, Ord, PartialEq, PartialOrd, Hash)]
-pub struct AuthoritySubject(String);
-
-impl AuthoritySubject {
-    /// Return the subject as a string slice.
-    #[must_use]
-    pub fn as_str(&self) -> &str {
-        &self.0
+        Ok(Self::new(value.to_owned()))
     }
 }
 
@@ -89,19 +75,7 @@ impl TryFrom<&str> for AuthoritySubject {
 
     fn try_from(value: &str) -> Result<Self, Self::Error> {
         non_empty(value, "subject")?;
-        Ok(Self(value.to_owned()))
-    }
-}
-
-/// Capability encoded by an authority token.
-#[derive(Clone, Debug, Eq, Ord, PartialEq, PartialOrd, Hash)]
-pub struct AuthorityCapability(String);
-
-impl AuthorityCapability {
-    /// Return the capability as a string slice.
-    #[must_use]
-    pub fn as_str(&self) -> &str {
-        &self.0
+        Ok(Self::new(value.to_owned()))
     }
 }
 
@@ -110,19 +84,7 @@ impl TryFrom<&str> for AuthorityCapability {
 
     fn try_from(value: &str) -> Result<Self, Self::Error> {
         non_empty(value, "capability")?;
-        Ok(Self(value.to_owned()))
-    }
-}
-
-/// Scope entry that an authority token may permit.
-#[derive(Clone, Debug, Eq, Ord, PartialEq, PartialOrd, Hash)]
-pub struct ScopeResource(String);
-
-impl ScopeResource {
-    /// Return the scope resource as a string slice.
-    #[must_use]
-    pub fn as_str(&self) -> &str {
-        &self.0
+        Ok(Self::new(value.to_owned()))
     }
 }
 
@@ -131,7 +93,7 @@ impl TryFrom<&str> for ScopeResource {
 
     fn try_from(value: &str) -> Result<Self, Self::Error> {
         non_empty(value, "scope_resource")?;
-        Ok(Self(value.to_owned()))
+        Ok(Self::new(value.to_owned()))
     }
 }
 

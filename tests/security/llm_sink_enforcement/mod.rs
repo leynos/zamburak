@@ -27,8 +27,8 @@ fn world() -> SinkEnforcementWorld {
 #[fixture]
 fn planner_request() -> SinkPreDispatchRequest {
     SinkPreDispatchRequest {
-        execution_id: ExecutionId::new("exec_default".to_owned()),
-        call_id: CallId::new("call_default"),
+        execution_id: ExecutionId::from("exec_default"),
+        call_id: CallId::from("call_default"),
         call_path: LlmCallPath::Planner,
         redaction_applied: true,
     }
@@ -37,8 +37,8 @@ fn planner_request() -> SinkPreDispatchRequest {
 #[fixture]
 fn transport_guard_check() -> TransportGuardCheck {
     TransportGuardCheck {
-        execution_id: ExecutionId::new("exec_default".to_owned()),
-        call_id: CallId::new("call_default"),
+        execution_id: ExecutionId::from("exec_default"),
+        call_id: CallId::from("call_default"),
         redaction_applied: true,
     }
 }
@@ -61,8 +61,9 @@ fn planner_request_without_redaction(world: &mut SinkEnforcementWorld) {
 #[given("a planner LLM sink call request with execution id {exec_id} and call id {call_id}")]
 fn planner_request_with_ids(world: &mut SinkEnforcementWorld, exec_id: String, call_id: String) {
     world.request = Some(SinkPreDispatchRequest {
-        execution_id: ExecutionId::new(exec_id.trim_matches('"').to_owned()),
-        call_id: CallId::new(call_id.trim_matches('"')),
+        execution_id: ExecutionId::from(exec_id.trim_matches('"')),
+        call_id: CallId::from(call_id.trim_matches('"')),
+        // This explicit value intentionally overrides planner_request()'s default `true`.
         redaction_applied: false,
         ..planner_request()
     });
@@ -75,8 +76,8 @@ fn quarantined_request_with_ids(
     call_id: String,
 ) {
     world.request = Some(SinkPreDispatchRequest {
-        execution_id: ExecutionId::new(exec_id.trim_matches('"').to_owned()),
-        call_id: CallId::new(call_id.trim_matches('"')),
+        execution_id: ExecutionId::from(exec_id.trim_matches('"')),
+        call_id: CallId::from(call_id.trim_matches('"')),
         call_path: LlmCallPath::Quarantined,
         redaction_applied: false,
     });
