@@ -66,11 +66,6 @@ enum ReviewError {
     InvalidArgument(Box<str>),
     MissingArgumentValue(Box<str>),
     MissingRevisionPair,
-    SubmodulePointerStateChanged {
-        submodule_path: Utf8PathBuf,
-        base_superproject_rev: GitRevision,
-        head_superproject_rev: GitRevision,
-    },
     Io {
         path: Utf8PathBuf,
         source: io::Error,
@@ -101,16 +96,6 @@ impl std::fmt::Display for ReviewError {
                     "either --diff-file or both --base-superproject-rev and --head-superproject-rev are required"
                 )
             }
-            Self::SubmodulePointerStateChanged {
-                submodule_path,
-                base_superproject_rev,
-                head_superproject_rev,
-            } => write!(
-                f,
-                "submodule `{submodule_path}` is not present at both revisions (`{}` and `{}`)",
-                base_superproject_rev.as_str(),
-                head_superproject_rev.as_str(),
-            ),
             Self::Io { path, source } => write!(f, "I/O error for `{path}`: {source}"),
             Self::Command { cmd, source } => {
                 write!(f, "failed to run command `{cmd}`: {source}")
@@ -237,16 +222,9 @@ fn build_patch_from_submodule_range(
     let base_pointer_option = try_resolve_submodule_pointer(base_superproject_rev, submodule_path)?;
     let head_pointer_option = try_resolve_submodule_pointer(head_superproject_rev, submodule_path)?;
 
-    let (base_pointer, head_pointer) = match (base_pointer_option, head_pointer_option) {
-        (Some(base_pointer), Some(head_pointer)) => (base_pointer, head_pointer),
-        (None, None) => return Ok(String::new()),
-        _ => {
-            return Err(ReviewError::SubmodulePointerStateChanged {
-                submodule_path: submodule_path.to_path_buf(),
-                base_superproject_rev: base_superproject_rev.clone(),
-                head_superproject_rev: head_superproject_rev.clone(),
-            });
-        }
+    let (Some(base_pointer), Some(head_pointer)) = (base_pointer_option, head_pointer_option)
+    else {
+        return Ok(String::new());
     };
 
     if base_pointer == head_pointer {
