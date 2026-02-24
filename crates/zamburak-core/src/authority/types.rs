@@ -22,30 +22,26 @@ impl TokenTimestamp {
     }
 }
 
+#[expect(
+    clippy::expl_impl_clone_on_copy,
+    reason = "newt-hype macro expansion emits explicit Clone for Copy wrappers"
+)]
+mod authority_newtypes {
+    use newt_hype::{base_newtype, newtype};
+
+    base_newtype!(AuthorityStringNewtype);
+    newtype!(AuthorityTokenId, AuthorityStringNewtype, String);
+}
+
 /// Stable identifier for an authority token.
-#[derive(Clone, Debug, Eq, Ord, PartialEq, PartialOrd, Hash)]
-pub struct AuthorityTokenId(String);
-
-impl AuthorityTokenId {
-    /// Return the identifier as a string slice.
-    #[must_use]
-    pub fn as_str(&self) -> &str {
-        &self.0
-    }
-}
-
-impl std::fmt::Display for AuthorityTokenId {
-    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        formatter.write_str(&self.0)
-    }
-}
+pub type AuthorityTokenId = authority_newtypes::AuthorityTokenId;
 
 impl TryFrom<&str> for AuthorityTokenId {
     type Error = AuthorityLifecycleError;
 
     fn try_from(value: &str) -> Result<Self, Self::Error> {
         non_empty(value, "token_id")?;
-        Ok(Self(value.to_owned()))
+        Ok(Self::new(value.to_owned()))
     }
 }
 

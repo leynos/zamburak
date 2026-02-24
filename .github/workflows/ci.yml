@@ -22,16 +22,44 @@ jobs:
         uses: leynos/shared-actions/.github/actions/setup-rust@f9f1c863c8a5bef64aa6779caa746e1a4a6c1ad4
       - name: Monty fork review policy
         if: ${{ github.event_name == 'pull_request' }}
-        run: >
-          cargo run --bin monty_fork_review --
-          --base-superproject-rev "${{ github.event.pull_request.base.sha }}"
-          --head-superproject-rev "${{ github.event.pull_request.head.sha }}"
+        run: |
+          base_rev="${{ github.event.pull_request.base.sha }}"
+          head_rev="${{ github.event.pull_request.head.sha }}"
+          submodule_path="third_party/full-monty"
+
+          if ! git rev-parse --verify "${base_rev}:${submodule_path}" >/dev/null 2>&1; then
+            echo "Skipping monty_fork_review: ${submodule_path} is not present at base revision ${base_rev}."
+            exit 0
+          fi
+
+          if ! git rev-parse --verify "${head_rev}:${submodule_path}" >/dev/null 2>&1; then
+            echo "Skipping monty_fork_review: ${submodule_path} is not present at head revision ${head_rev}."
+            exit 0
+          fi
+
+          cargo run --bin monty_fork_review -- \
+            --base-superproject-rev "${base_rev}" \
+            --head-superproject-rev "${head_rev}"
       - name: Monty fork review policy (manual trigger)
         if: ${{ github.event_name != 'pull_request' }}
-        run: >
-          cargo run --bin monty_fork_review --
-          --base-superproject-rev HEAD~1
-          --head-superproject-rev HEAD
+        run: |
+          base_rev="HEAD~1"
+          head_rev="HEAD"
+          submodule_path="third_party/full-monty"
+
+          if ! git rev-parse --verify "${base_rev}:${submodule_path}" >/dev/null 2>&1; then
+            echo "Skipping monty_fork_review: ${submodule_path} is not present at base revision ${base_rev}."
+            exit 0
+          fi
+
+          if ! git rev-parse --verify "${head_rev}:${submodule_path}" >/dev/null 2>&1; then
+            echo "Skipping monty_fork_review: ${submodule_path} is not present at head revision ${head_rev}."
+            exit 0
+          fi
+
+          cargo run --bin monty_fork_review -- \
+            --base-superproject-rev "${base_rev}" \
+            --head-superproject-rev "${head_rev}"
       - name: Setup uv
         run: |
           python3 -m pip install --user uv==0.10.2

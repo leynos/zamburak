@@ -13,6 +13,17 @@
 //! design-contract minimum: calls without redaction are denied. Full
 //! budget and context evaluation belongs to Phase 4 (Task 4.1.2).
 
+#[expect(
+    clippy::expl_impl_clone_on_copy,
+    reason = "newt-hype macro expansion emits explicit Clone for Copy wrappers"
+)]
+mod sink_identifier_newtypes {
+    use newt_hype::{base_newtype, newtype};
+
+    base_newtype!(SinkIdentifierNewtype);
+    newtype!(ExecutionId, SinkIdentifierNewtype, String);
+}
+
 /// Newtype for execution identifiers linking calls to the audit chain.
 ///
 /// Prevents accidental mix-up between execution and call identifiers
@@ -23,25 +34,10 @@
 /// ```rust
 /// use zamburak_policy::sink_enforcement::ExecutionId;
 ///
-/// let id = ExecutionId::new("exec_01");
+/// let id = ExecutionId::new("exec_01".to_owned());
 /// assert_eq!(id.as_str(), "exec_01");
 /// ```
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub struct ExecutionId(String);
-
-impl ExecutionId {
-    /// Create a new execution identifier.
-    #[must_use]
-    pub fn new(id: impl Into<String>) -> Self {
-        Self(id.into())
-    }
-
-    /// View the identifier as a string slice.
-    #[must_use]
-    pub fn as_str(&self) -> &str {
-        &self.0
-    }
-}
+pub type ExecutionId = sink_identifier_newtypes::ExecutionId;
 
 /// Newtype for per-call identifiers linking pre-dispatch to
 /// post-dispatch audit records.
@@ -110,7 +106,7 @@ pub enum LlmCallPath {
 /// };
 ///
 /// let request = SinkPreDispatchRequest {
-///     execution_id: ExecutionId::new("exec_01"),
+///     execution_id: ExecutionId::new("exec_01".to_owned()),
 ///     call_id: CallId::new("call_01"),
 ///     call_path: LlmCallPath::Planner,
 ///     redaction_applied: true,
@@ -155,7 +151,7 @@ pub enum SinkPreDispatchDecision {
 /// };
 ///
 /// let check = TransportGuardCheck {
-///     execution_id: ExecutionId::new("exec_01"),
+///     execution_id: ExecutionId::new("exec_01".to_owned()),
 ///     call_id: CallId::new("call_01"),
 ///     redaction_applied: true,
 /// };
@@ -197,13 +193,13 @@ pub enum TransportGuardOutcome {
 /// };
 ///
 /// let record = SinkAuditRecord {
-///     execution_id: ExecutionId::new("exec_7f2c"),
+///     execution_id: ExecutionId::new("exec_7f2c".to_owned()),
 ///     call_id: CallId::new("call_0192"),
 ///     decision: SinkPreDispatchDecision::Allow,
 ///     redaction_applied: true,
 ///     call_path: LlmCallPath::Planner,
 /// };
-/// assert_eq!(record.execution_id, ExecutionId::new("exec_7f2c"));
+/// assert_eq!(record.execution_id, ExecutionId::new("exec_7f2c".to_owned()));
 /// ```
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct SinkAuditRecord {
@@ -235,7 +231,7 @@ pub struct SinkAuditRecord {
 /// };
 ///
 /// let request = SinkPreDispatchRequest {
-///     execution_id: ExecutionId::new("exec_01"),
+///     execution_id: ExecutionId::new("exec_01".to_owned()),
 ///     call_id: CallId::new("call_01"),
 ///     call_path: LlmCallPath::Planner,
 ///     redaction_applied: true,
@@ -265,7 +261,7 @@ pub fn evaluate_pre_dispatch(request: &SinkPreDispatchRequest) -> SinkPreDispatc
 /// };
 ///
 /// let check = TransportGuardCheck {
-///     execution_id: ExecutionId::new("exec_01"),
+///     execution_id: ExecutionId::new("exec_01".to_owned()),
 ///     call_id: CallId::new("call_01"),
 ///     redaction_applied: true,
 /// };
@@ -298,14 +294,14 @@ pub fn evaluate_transport_guard(check: &TransportGuardCheck) -> TransportGuardOu
 /// };
 ///
 /// let request = SinkPreDispatchRequest {
-///     execution_id: ExecutionId::new("exec_01"),
+///     execution_id: ExecutionId::new("exec_01".to_owned()),
 ///     call_id: CallId::new("call_01"),
 ///     call_path: LlmCallPath::Planner,
 ///     redaction_applied: true,
 /// };
 /// let decision = evaluate_pre_dispatch(&request);
 /// let audit = emit_audit_record(&request, decision);
-/// assert_eq!(audit.execution_id, ExecutionId::new("exec_01"));
+/// assert_eq!(audit.execution_id, ExecutionId::new("exec_01".to_owned()));
 /// assert_eq!(audit.call_id, CallId::new("call_01"));
 /// assert_eq!(audit.call_path, LlmCallPath::Planner);
 /// ```

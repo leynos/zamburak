@@ -97,7 +97,7 @@ hook-substrate internals.
 - [x] (2026-02-23 19:12Z) Added `full-monty` submodule at
   `third_party/full-monty/` and created `.gitmodules`.
 - [x] (2026-02-23 19:27Z) Implemented review-policy contract module and
-  `monty_fork_review` CLI enforcement path.
+  `monty_fork_review` command-line interface (CLI) enforcement path.
 - [x] (2026-02-23 19:31Z) Added unit tests and `rstest-bdd` behavioural tests
   for happy, unhappy, and edge paths.
 - [x] (2026-02-23 19:36Z) Updated design, repository-layout, users-guide,

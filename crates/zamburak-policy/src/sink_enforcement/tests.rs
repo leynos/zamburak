@@ -13,7 +13,7 @@ use super::{
 #[fixture]
 fn planner_request() -> SinkPreDispatchRequest {
     SinkPreDispatchRequest {
-        execution_id: ExecutionId::new("exec_test"),
+        execution_id: ExecutionId::new("exec_test".to_owned()),
         call_id: CallId::new("call_test"),
         call_path: LlmCallPath::Planner,
         redaction_applied: true,
@@ -23,7 +23,7 @@ fn planner_request() -> SinkPreDispatchRequest {
 #[fixture]
 fn transport_guard_check() -> TransportGuardCheck {
     TransportGuardCheck {
-        execution_id: ExecutionId::new("exec_test"),
+        execution_id: ExecutionId::new("exec_test".to_owned()),
         call_id: CallId::new("call_test"),
         redaction_applied: true,
     }
@@ -62,7 +62,7 @@ fn transport_guard_redaction_decides(
 #[rstest]
 fn audit_record_preserves_linkage_fields() {
     let request = SinkPreDispatchRequest {
-        execution_id: ExecutionId::new("exec_7f2c"),
+        execution_id: ExecutionId::new("exec_7f2c".to_owned()),
         call_id: CallId::new("call_0192"),
         call_path: LlmCallPath::Planner,
         redaction_applied: true,
@@ -70,7 +70,7 @@ fn audit_record_preserves_linkage_fields() {
     let decision = evaluate_pre_dispatch(&request);
     let audit = emit_audit_record(&request, decision);
 
-    assert_eq!(audit.execution_id, ExecutionId::new("exec_7f2c"));
+    assert_eq!(audit.execution_id, ExecutionId::new("exec_7f2c".to_owned()));
     assert_eq!(audit.call_id, CallId::new("call_0192"));
     assert_eq!(audit.decision, SinkPreDispatchDecision::Allow);
     assert_eq!(audit.call_path, LlmCallPath::Planner);
@@ -80,7 +80,7 @@ fn audit_record_preserves_linkage_fields() {
 #[rstest]
 fn quarantined_path_discrimination() {
     let request = SinkPreDispatchRequest {
-        execution_id: ExecutionId::new("exec_q"),
+        execution_id: ExecutionId::new("exec_q".to_owned()),
         call_id: CallId::new("call_q"),
         call_path: LlmCallPath::Quarantined,
         redaction_applied: true,

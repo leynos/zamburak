@@ -15,41 +15,20 @@ mod output;
 
 const DEFAULT_SUBMODULE_PATH: &str = "third_party/full-monty";
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-struct GitRevision(String);
+#[expect(
+    clippy::expl_impl_clone_on_copy,
+    reason = "newt-hype macro expansion emits explicit Clone for Copy wrappers"
+)]
+mod review_newtypes {
+    use newt_hype::{base_newtype, newtype};
 
-impl GitRevision {
-    fn new(value: impl Into<String>) -> Self {
-        Self(value.into())
-    }
-    const fn as_str(&self) -> &str {
-        self.0.as_str()
-    }
+    base_newtype!(ReviewNewtype);
+    newtype!(GitRevision, ReviewNewtype, String);
+    newtype!(SubmodulePointer, ReviewNewtype, String);
 }
 
-impl AsRef<str> for GitRevision {
-    fn as_ref(&self) -> &str {
-        self.as_str()
-    }
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-struct SubmodulePointer(String);
-
-impl SubmodulePointer {
-    fn new(value: impl Into<String>) -> Self {
-        Self(value.into())
-    }
-    const fn as_str(&self) -> &str {
-        self.0.as_str()
-    }
-}
-
-impl AsRef<str> for SubmodulePointer {
-    fn as_ref(&self) -> &str {
-        self.as_str()
-    }
-}
+type GitRevision = review_newtypes::GitRevision;
+type SubmodulePointer = review_newtypes::SubmodulePointer;
 
 type SuperprojectRev = GitRevision;
 
