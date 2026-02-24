@@ -295,7 +295,7 @@ Run from repository root (`/home/user/project`). Use `set -o pipefail` and
     set -o pipefail
     RUSTFLAGS="-D warnings" cargo test --workspace --all-targets \
       --all-features monty_fork_policy \
-      | tee /tmp/test-monty-fork-policy.out |
+      | tee /tmp/test-monty-fork-policy.out
 
    Expected evidence includes passing unit tests and behavioural scenarios for
    happy and unhappy paths.
