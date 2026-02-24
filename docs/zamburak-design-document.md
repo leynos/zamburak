@@ -234,7 +234,7 @@ Track A governance is fail-closed and repository-local:
   rejected by automated review policy checks.
 
 The canonical process contract is defined in
-[Monty fork policy](docs/monty-fork-policy.md).
+[Monty fork policy](monty-fork-policy.md).
 
 For screen readers: The following diagram shows trusted query flow entering the
 planner, code running in Monty with IFC, and all side effects traversing policy

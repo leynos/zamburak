@@ -295,7 +295,7 @@ Run from repository root (`/home/user/project`). Use `set -o pipefail` and
     set -o pipefail
     RUSTFLAGS="-D warnings" cargo test --workspace --all-targets \
       --all-features monty_fork_policy \
-      | tee /tmp/test-monty-fork-policy.out |
+      | tee /tmp/test-monty-fork-policy.out
 
    Expected evidence includes passing unit tests and behavioural scenarios for
    happy and unhappy paths.
@@ -361,7 +361,7 @@ Quality criteria:
 - Keep rollback simple: submodule pointer, `.gitmodules`, and policy-enforcement
   files can be reverted together as one atomic set.
 
-## Artifacts and notes
+## Artefacts and notes
 
 Expected command transcript snippets at completion:
 
@@ -417,5 +417,5 @@ Dependencies:
 
 - Updated status from `DRAFT` to `COMPLETE`.
 - Recorded implemented milestones and validation evidence.
-- Added a discovery and decision about excluding `third_party/` from markdown
+- Added a discovery and decision about excluding `third_party/` from Markdown
   formatting and lint gates.

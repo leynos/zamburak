@@ -48,10 +48,9 @@ before building:
 git submodule update --init --recursive
 ```
 
-Track A changes are constrained by
-[Monty fork policy](docs/monty-fork-policy.md). Zamburak semantics are
-prohibited in fork API surface, and pull requests that violate that policy are
-rejected by automated review checks.
+Track A changes are constrained by [Monty fork policy](monty-fork-policy.md).
+Zamburak semantics are prohibited in fork API surface, and pull requests that
+violate that policy are rejected by automated review checks.
 
 ## Example: canonical policy (schema v1)
 
