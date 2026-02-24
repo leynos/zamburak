@@ -41,8 +41,8 @@ Audit outcomes include:
 This repository vendors the Track A runtime substrate as a Git submodule at
 `third_party/full-monty/`.
 
-If you consume Zamburak from source, initialize and update submodules before
-building:
+Consumers building Zamburak from source must initialize and update submodules
+before building:
 
 ```sh
 git submodule update --init --recursive

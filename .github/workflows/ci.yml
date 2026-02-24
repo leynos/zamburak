@@ -28,7 +28,10 @@ jobs:
           --head-superproject-rev "${{ github.event.pull_request.head.sha }}"
       - name: Monty fork review policy (manual trigger)
         if: ${{ github.event_name != 'pull_request' }}
-        run: cargo run --bin monty_fork_review -- --diff-file /dev/null
+        run: >
+          cargo run --bin monty_fork_review --
+          --base-superproject-rev HEAD
+          --head-superproject-rev HEAD
       - name: Setup uv
         run: |
           python3 -m pip install --user uv==0.10.2

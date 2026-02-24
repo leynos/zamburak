@@ -158,11 +158,7 @@ fn violation_for_added_line(
 
 fn is_api_surface_line(line: &str) -> bool {
     let trimmed = line.trim_start();
-    trimmed.starts_with("pub ")
-        || trimmed.starts_with("pub(")
-        || trimmed.starts_with("trait ")
-        || trimmed.starts_with("pub trait ")
-        || trimmed.starts_with("///")
+    trimmed.starts_with("pub ") || trimmed.starts_with("///")
 }
 
 #[cfg(test)]
@@ -245,6 +241,17 @@ mod tests {
             panic!("expected one violation for capability token");
         };
         assert_eq!(first_violation.matched_token, "capabilit");
+    }
+
+    #[test]
+    fn private_trait_with_forbidden_term_is_ignored() {
+        let patch = concat!(
+            "diff --git a/src/run.rs b/src/run.rs\n",
+            "+++ b/src/run.rs\n",
+            "+trait PolicyHook {}\n",
+        );
+
+        assert!(evaluate_patch_text(patch).is_empty());
     }
 
     #[test]

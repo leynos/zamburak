@@ -113,10 +113,10 @@ hook-substrate internals.
   fails and `git submodule status` returns no rows. Impact: this task needs
   first-time submodule bootstrap, not an update.
 
-- Observation: MCP project-memory tools (`qdrant-find` / `qdrant-store`) are
-  not available in this runtime session. Evidence: MCP resource listing
-  returned no servers or templates. Impact: plan drafting used repository docs
-  directly as source-of-truth.
+- Observation: Model Context Protocol (MCP) project-memory tools
+  (`qdrant-find` / `qdrant-store`) are not available in this runtime session.
+  Evidence: MCP resource listing returned no servers or templates. Impact: plan
+  drafting used repository docs directly as source-of-truth.
 
 - Observation: introducing the `full-monty` submodule caused Markdown format
   and lint sweeps to traverse vendored docs and fail repository gates.

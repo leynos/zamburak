@@ -5,9 +5,10 @@ use std::io::{self, Write};
 use std::process::{Command, ExitCode};
 
 use camino::{Utf8Path, Utf8PathBuf};
-use cap_std::{ambient_authority, fs_utf8};
 use zamburak::monty_fork_policy_contract::{MontyForkViolation, evaluate_patch_text};
 
+#[path = "monty_fork_review/io_utils.rs"]
+mod io_utils;
 #[path = "monty_fork_review/output.rs"]
 mod output;
 
@@ -57,6 +58,7 @@ struct CliArgs {
     submodule_path: Utf8PathBuf,
     base_superproject_rev: Option<SuperprojectRev>,
     head_superproject_rev: Option<SuperprojectRev>,
+    show_help: bool,
 }
 
 #[derive(Debug)]
@@ -64,6 +66,11 @@ enum ReviewError {
     InvalidArgument(Box<str>),
     MissingArgumentValue(Box<str>),
     MissingRevisionPair,
+    SubmodulePointerStateChanged {
+        submodule_path: Utf8PathBuf,
+        base_superproject_rev: GitRevision,
+        head_superproject_rev: GitRevision,
+    },
     Io {
         path: Utf8PathBuf,
         source: io::Error,
@@ -94,6 +101,16 @@ impl std::fmt::Display for ReviewError {
                     "either --diff-file or both --base-superproject-rev and --head-superproject-rev are required"
                 )
             }
+            Self::SubmodulePointerStateChanged {
+                submodule_path,
+                base_superproject_rev,
+                head_superproject_rev,
+            } => write!(
+                f,
+                "submodule `{submodule_path}` is not present at both revisions (`{}` and `{}`)",
+                base_superproject_rev.as_str(),
+                head_superproject_rev.as_str(),
+            ),
             Self::Io { path, source } => write!(f, "I/O error for `{path}`: {source}"),
             Self::Command { cmd, source } => {
                 write!(f, "failed to run command `{cmd}`: {source}")
@@ -126,6 +143,9 @@ fn main() -> ExitCode {
 
 fn run() -> Result<(), ReviewError> {
     let cli_args = parse_cli_args(env::args().skip(1).collect())?;
+    if cli_args.show_help {
+        return Ok(());
+    }
     let patch_text = resolve_patch_text(&cli_args)?;
     let violations = evaluate_patch_text(&patch_text);
 
@@ -174,10 +194,11 @@ fn parse_cli_args(raw_args: Vec<String>) -> Result<CliArgs, ReviewError> {
             "--help" | "-h" => {
                 output::print_usage();
                 return Ok(CliArgs {
-                    diff_file: Some(Utf8PathBuf::from("/dev/null")),
+                    diff_file,
                     submodule_path,
                     base_superproject_rev,
                     head_superproject_rev,
+                    show_help: true,
                 });
             }
             _ => return Err(ReviewError::InvalidArgument(flag.into_boxed_str())),
@@ -189,12 +210,13 @@ fn parse_cli_args(raw_args: Vec<String>) -> Result<CliArgs, ReviewError> {
         submodule_path,
         base_superproject_rev,
         head_superproject_rev,
+        show_help: false,
     })
 }
 
 fn resolve_patch_text(cli_args: &CliArgs) -> Result<String, ReviewError> {
     if let Some(diff_file) = &cli_args.diff_file {
-        return read_patch_from_file(diff_file);
+        return io_utils::read_patch_from_file(diff_file);
     }
 
     let Some(base_rev) = &cli_args.base_superproject_rev else {
@@ -207,44 +229,6 @@ fn resolve_patch_text(cli_args: &CliArgs) -> Result<String, ReviewError> {
     build_patch_from_submodule_range(&cli_args.submodule_path, base_rev, head_rev)
 }
 
-fn read_patch_from_file(path: &Utf8Path) -> Result<String, ReviewError> {
-    if path.is_absolute() {
-        let root_dir =
-            fs_utf8::Dir::open_ambient_dir("/", ambient_authority()).map_err(|source| {
-                ReviewError::Io {
-                    path: Utf8PathBuf::from("/"),
-                    source,
-                }
-            })?;
-        let relative_path = path.strip_prefix("/").map_err(|source| ReviewError::Io {
-            path: path.to_path_buf(),
-            source: io::Error::other(source.to_string()),
-        })?;
-
-        return root_dir
-            .read_to_string(relative_path)
-            .map_err(|source| ReviewError::Io {
-                path: path.to_path_buf(),
-                source,
-            });
-    }
-
-    let current_dir =
-        fs_utf8::Dir::open_ambient_dir(".", ambient_authority()).map_err(|source| {
-            ReviewError::Io {
-                path: Utf8PathBuf::from("."),
-                source,
-            }
-        })?;
-
-    current_dir
-        .read_to_string(path)
-        .map_err(|source| ReviewError::Io {
-            path: path.to_path_buf(),
-            source,
-        })
-}
-
 fn build_patch_from_submodule_range(
     submodule_path: &Utf8Path,
     base_superproject_rev: &GitRevision,
@@ -253,11 +237,16 @@ fn build_patch_from_submodule_range(
     let base_pointer_option = try_resolve_submodule_pointer(base_superproject_rev, submodule_path)?;
     let head_pointer_option = try_resolve_submodule_pointer(head_superproject_rev, submodule_path)?;
 
-    let Some(base_pointer) = base_pointer_option else {
-        return Ok(String::new());
-    };
-    let Some(head_pointer) = head_pointer_option else {
-        return Ok(String::new());
+    let (base_pointer, head_pointer) = match (base_pointer_option, head_pointer_option) {
+        (Some(base_pointer), Some(head_pointer)) => (base_pointer, head_pointer),
+        (None, None) => return Ok(String::new()),
+        _ => {
+            return Err(ReviewError::SubmodulePointerStateChanged {
+                submodule_path: submodule_path.to_path_buf(),
+                base_superproject_rev: base_superproject_rev.clone(),
+                head_superproject_rev: head_superproject_rev.clone(),
+            });
+        }
     };
 
     if base_pointer == head_pointer {
@@ -311,9 +300,7 @@ fn run_submodule_pointer_command(
 }
 
 fn pointer_not_present_in_revision(stderr: &str) -> bool {
-    stderr.contains("exists on disk, but not in")
-        || stderr.contains("unknown revision or path not in the working tree")
-        || stderr.contains("pathspec")
+    stderr.contains("exists on disk, but not in") || stderr.contains("does not exist in")
 }
 
 fn run_git_command_in_submodule(
