@@ -8,9 +8,48 @@ use camino::{Utf8Path, Utf8PathBuf};
 use cap_std::{ambient_authority, fs_utf8};
 use zamburak::monty_fork_policy_contract::{MontyForkViolation, evaluate_patch_text};
 
+#[path = "monty_fork_review/output.rs"]
+mod output;
+
 const DEFAULT_SUBMODULE_PATH: &str = "third_party/full-monty";
 
-type SuperprojectRev = String;
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct GitRevision(String);
+
+impl GitRevision {
+    fn new(value: impl Into<String>) -> Self {
+        Self(value.into())
+    }
+    const fn as_str(&self) -> &str {
+        self.0.as_str()
+    }
+}
+
+impl AsRef<str> for GitRevision {
+    fn as_ref(&self) -> &str {
+        self.as_str()
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct SubmodulePointer(String);
+
+impl SubmodulePointer {
+    fn new(value: impl Into<String>) -> Self {
+        Self(value.into())
+    }
+    const fn as_str(&self) -> &str {
+        self.0.as_str()
+    }
+}
+
+impl AsRef<str> for SubmodulePointer {
+    fn as_ref(&self) -> &str {
+        self.as_str()
+    }
+}
+
+type SuperprojectRev = GitRevision;
 
 #[derive(Debug)]
 struct CliArgs {
@@ -76,7 +115,7 @@ fn main() -> ExitCode {
         Ok(()) => ExitCode::SUCCESS,
         Err(error) => {
             let mut stderr = io::stderr().lock();
-            discard_write_result(writeln!(stderr, "monty-fork-review error: {error}"));
+            output::discard_write_result(writeln!(stderr, "monty-fork-review error: {error}"));
             if let ReviewError::Violations { violations } = error {
                 emit_violations(&mut stderr, &violations);
             }
@@ -92,7 +131,7 @@ fn run() -> Result<(), ReviewError> {
 
     if violations.is_empty() {
         let mut stdout = io::stdout().lock();
-        discard_write_result(writeln!(stdout, "monty-fork-review: pass (0 violation(s))"));
+        output::discard_write_result(writeln!(stdout, "monty-fork-review: pass (0 violation(s))"));
         Ok(())
     } else {
         Err(ReviewError::Violations { violations })
@@ -124,16 +163,16 @@ fn parse_cli_args(raw_args: Vec<String>) -> Result<CliArgs, ReviewError> {
                 let Some(rev) = args.next() else {
                     return Err(ReviewError::MissingArgumentValue(flag.into_boxed_str()));
                 };
-                base_superproject_rev = Some(rev);
+                base_superproject_rev = Some(GitRevision::new(rev));
             }
             "--head-superproject-rev" => {
                 let Some(rev) = args.next() else {
                     return Err(ReviewError::MissingArgumentValue(flag.into_boxed_str()));
                 };
-                head_superproject_rev = Some(rev);
+                head_superproject_rev = Some(GitRevision::new(rev));
             }
             "--help" | "-h" => {
-                print_usage();
+                output::print_usage();
                 return Ok(CliArgs {
                     diff_file: Some(Utf8PathBuf::from("/dev/null")),
                     submodule_path,
@@ -208,8 +247,8 @@ fn read_patch_from_file(path: &Utf8Path) -> Result<String, ReviewError> {
 
 fn build_patch_from_submodule_range(
     submodule_path: &Utf8Path,
-    base_superproject_rev: &str,
-    head_superproject_rev: &str,
+    base_superproject_rev: &GitRevision,
+    head_superproject_rev: &GitRevision,
 ) -> Result<String, ReviewError> {
     let base_pointer_option = try_resolve_submodule_pointer(base_superproject_rev, submodule_path)?;
     let head_pointer_option = try_resolve_submodule_pointer(head_superproject_rev, submodule_path)?;
@@ -230,15 +269,15 @@ fn build_patch_from_submodule_range(
 }
 
 fn try_resolve_submodule_pointer(
-    superproject_rev: &str,
+    superproject_rev: &GitRevision,
     submodule_path: &Utf8Path,
-) -> Result<Option<String>, ReviewError> {
+) -> Result<Option<SubmodulePointer>, ReviewError> {
     let output = run_submodule_pointer_command(superproject_rev, submodule_path)?;
 
     if output.status.success() {
-        return Ok(Some(
+        return Ok(Some(SubmodulePointer::new(
             String::from_utf8_lossy(&output.stdout).trim().to_owned(),
-        ));
+        )));
     }
 
     let stderr = String::from_utf8_lossy(&output.stderr);
@@ -248,7 +287,8 @@ fn try_resolve_submodule_pointer(
 
     Err(ReviewError::CommandFailed {
         cmd: format!(
-            "git rev-parse {superproject_rev}:{}",
+            "git rev-parse {}:{}",
+            superproject_rev.as_str(),
             submodule_path.as_str()
         )
         .into_boxed_str(),
@@ -257,10 +297,10 @@ fn try_resolve_submodule_pointer(
 }
 
 fn run_submodule_pointer_command(
-    superproject_rev: &str,
+    superproject_rev: &GitRevision,
     submodule_path: &Utf8Path,
 ) -> Result<std::process::Output, ReviewError> {
-    let object_spec = format!("{superproject_rev}:{}", submodule_path.as_str());
+    let object_spec = format!("{}:{}", superproject_rev.as_str(), submodule_path.as_str());
     Command::new("git")
         .args(["rev-parse", &object_spec])
         .output()
@@ -276,58 +316,18 @@ fn pointer_not_present_in_revision(stderr: &str) -> bool {
         || stderr.contains("pathspec")
 }
 
-fn fetch_submodule_commits(
+fn run_git_command_in_submodule(
     submodule_path: &Utf8Path,
-    base_pointer: &str,
-    head_pointer: &str,
-) -> Result<(), ReviewError> {
-    let submodule_arg = submodule_path.as_str();
-    let cmd = format!(
-        "git -C {submodule_arg} fetch --quiet --depth=1 origin {base_pointer} {head_pointer}"
-    );
-    let output = Command::new("git")
-        .args([
-            "-C",
-            submodule_arg,
-            "fetch",
-            "--quiet",
-            "--depth=1",
-            "origin",
-            base_pointer,
-            head_pointer,
-        ])
-        .output()
-        .map_err(|source| ReviewError::Command {
-            cmd: cmd.clone().into_boxed_str(),
-            source,
-        })?;
-
-    if output.status.success() {
-        return Ok(());
-    }
-
-    Err(ReviewError::CommandFailed {
-        cmd: cmd.into_boxed_str(),
-        stderr: String::from_utf8_lossy(&output.stderr).trim().into(),
-    })
-}
-
-fn diff_submodule_commits(
-    submodule_path: &Utf8Path,
-    base_pointer: &str,
-    head_pointer: &str,
+    args: &[&str],
+    capture_stdout: bool,
 ) -> Result<String, ReviewError> {
     let submodule_arg = submodule_path.as_str();
-    let cmd = format!("git -C {submodule_arg} diff --unified=0 {base_pointer} {head_pointer}");
+    let joined_args = args.join(" ");
+    let cmd = format!("git -C {submodule_arg} {joined_args}");
     let output = Command::new("git")
-        .args([
-            "-C",
-            submodule_arg,
-            "diff",
-            "--unified=0",
-            base_pointer,
-            head_pointer,
-        ])
+        .arg("-C")
+        .arg(submodule_arg)
+        .args(args)
         .output()
         .map_err(|source| ReviewError::Command {
             cmd: cmd.clone().into_boxed_str(),
@@ -341,18 +341,52 @@ fn diff_submodule_commits(
         });
     }
 
-    Ok(String::from_utf8_lossy(&output.stdout).into_owned())
+    if capture_stdout {
+        Ok(String::from_utf8_lossy(&output.stdout).into_owned())
+    } else {
+        Ok(String::new())
+    }
+}
+
+fn fetch_submodule_commits(
+    submodule_path: &Utf8Path,
+    base_pointer: &SubmodulePointer,
+    head_pointer: &SubmodulePointer,
+) -> Result<(), ReviewError> {
+    let fetch_args = [
+        "fetch",
+        "--quiet",
+        "--depth=1",
+        "origin",
+        base_pointer.as_str(),
+        head_pointer.as_str(),
+    ];
+    run_git_command_in_submodule(submodule_path, &fetch_args, false).map(|_| ())
+}
+
+fn diff_submodule_commits(
+    submodule_path: &Utf8Path,
+    base_pointer: &SubmodulePointer,
+    head_pointer: &SubmodulePointer,
+) -> Result<String, ReviewError> {
+    let diff_args = [
+        "diff",
+        "--unified=0",
+        base_pointer.as_str(),
+        head_pointer.as_str(),
+    ];
+    run_git_command_in_submodule(submodule_path, &diff_args, true)
 }
 
 fn emit_violations(stderr: &mut io::StderrLock<'_>, violations: &[MontyForkViolation]) {
-    discard_write_result(writeln!(
+    output::discard_write_result(writeln!(
         stderr,
         "monty-fork-review: fail ({})",
         violations.len()
     ));
 
     for violation in violations {
-        discard_write_result(writeln!(
+        output::discard_write_result(writeln!(
             stderr,
             "- {:?} at {}:{} matched `{}` in `{}`",
             violation.code,
@@ -362,21 +396,4 @@ fn emit_violations(stderr: &mut io::StderrLock<'_>, violations: &[MontyForkViola
             violation.line,
         ));
     }
-}
-
-fn print_usage() {
-    let mut stdout = io::stdout().lock();
-    discard_write_result(writeln!(
-        stdout,
-        concat!(
-            "Usage:\n",
-            "  monty_fork_review --diff-file <PATH>\n",
-            "  monty_fork_review --base-superproject-rev <REV> ",
-            "--head-superproject-rev <REV> [--submodule-path <PATH>]"
-        )
-    ));
-}
-
-fn discard_write_result(write_result: io::Result<()>) {
-    drop(write_result);
 }
