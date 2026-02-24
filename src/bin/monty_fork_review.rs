@@ -86,6 +86,11 @@ enum ReviewError {
     },
     #[error("command `{cmd}` failed: {stderr}")]
     CommandFailed { cmd: Box<str>, stderr: Box<str> },
+    #[error("submodule `{path}` is not present at revision `{revision}`")]
+    SubmodulePointerMissing {
+        revision: Box<str>,
+        path: Utf8PathBuf,
+    },
     #[error("found {count} fork-policy violation(s)")]
     Violations {
         count: usize,
@@ -203,13 +208,16 @@ fn build_patch_from_submodule_range(
     base_superproject_rev: &GitRevision,
     head_superproject_rev: &GitRevision,
 ) -> Result<String, ReviewError> {
-    let base_pointer_option = try_resolve_submodule_pointer(base_superproject_rev, submodule_path)?;
-    let head_pointer_option = try_resolve_submodule_pointer(head_superproject_rev, submodule_path)?;
-
-    let (Some(base_pointer), Some(head_pointer)) = (base_pointer_option, head_pointer_option)
-    else {
-        return Ok(String::new());
-    };
+    let base_pointer = try_resolve_submodule_pointer(base_superproject_rev, submodule_path)?
+        .ok_or_else(|| ReviewError::SubmodulePointerMissing {
+            revision: base_superproject_rev.as_str().into(),
+            path: submodule_path.to_path_buf(),
+        })?;
+    let head_pointer = try_resolve_submodule_pointer(head_superproject_rev, submodule_path)?
+        .ok_or_else(|| ReviewError::SubmodulePointerMissing {
+            revision: head_superproject_rev.as_str().into(),
+            path: submodule_path.to_path_buf(),
+        })?;
 
     if base_pointer == head_pointer {
         return Ok(String::new());
