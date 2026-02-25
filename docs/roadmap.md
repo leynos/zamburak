@@ -144,7 +144,7 @@ completion criteria so the work can be sequenced and assessed without ambiguity.
 
 ### Step 0.4: `full-monty` repository mechanics and guardrails
 
-- [ ] Task 0.4.1: Add `full-monty` as a Git submodule and define fork rules.
+- [x] Task 0.4.1: Add `full-monty` as a Git submodule and define fork rules.
   - Requirement signposts:
     - `docs/adr-001-monty-ifc-vm-hooks.md` sections "Decision" and
       "Process requirements to keep the fork PR-able",

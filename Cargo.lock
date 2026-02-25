@@ -1352,9 +1352,11 @@ version = "0.1.0"
 dependencies = [
  "camino",
  "cap-std",
+ "newt-hype",
  "rstest",
  "rstest-bdd",
  "rstest-bdd-macros",
+ "thiserror 2.0.18",
  "zamburak-core",
  "zamburak-policy",
 ]
@@ -1363,6 +1365,7 @@ dependencies = [
 name = "zamburak-core"
 version = "0.1.0"
 dependencies = [
+ "newt-hype",
  "rstest",
  "thiserror 2.0.18",
 ]
@@ -1371,6 +1374,7 @@ dependencies = [
 name = "zamburak-policy"
 version = "0.1.0"
 dependencies = [
+ "newt-hype",
  "rstest",
  "serde",
  "serde_json",

@@ -222,6 +222,20 @@ flow.
 No Zamburak policy semantics may be implemented in `Track A` APIs. All policy
 meaning is owned by `Track B`.
 
+### `full-monty` fork governance contract
+
+Track A governance is fail-closed and repository-local:
+
+- `third_party/full-monty/` is pinned as a Git submodule so Track A state is
+  explicit and auditable per superproject revision.
+- Allowed delta classes are limited to stable runtime IDs, generic observer
+  hooks, optional generic snapshot extension, and narrowly enabling refactors.
+- Added Track A API surface lines that include Zamburak semantic tokens are
+  rejected by automated review policy checks.
+
+The canonical process contract is defined in
+[Monty fork policy](monty-fork-policy.md).
+
 For screen readers: The following diagram shows trusted query flow entering the
 planner, code running in Monty with IFC, and all side effects traversing policy
 checks before tool execution and audit logging.

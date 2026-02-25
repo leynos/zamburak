@@ -13,6 +13,18 @@
 //! design-contract minimum: calls without redaction are denied. Full
 //! budget and context evaluation belongs to Phase 4 (Task 4.1.2).
 
+mod sink_identifier_newtypes {
+    //! Defines sink-enforcement identifier wrappers for `ExecutionId` and
+    //! `CallId` via shared `newt-hype` newtype macros.
+
+    use newt_hype::{base_newtype, newtype};
+
+    base_newtype!(ExecutionIdentifierNewtype);
+    newtype!(ExecutionId, ExecutionIdentifierNewtype, String);
+    base_newtype!(CallIdentifierNewtype);
+    newtype!(CallId, CallIdentifierNewtype, String);
+}
+
 /// Newtype for execution identifiers linking calls to the audit chain.
 ///
 /// Prevents accidental mix-up between execution and call identifiers
@@ -23,23 +35,14 @@
 /// ```rust
 /// use zamburak_policy::sink_enforcement::ExecutionId;
 ///
-/// let id = ExecutionId::new("exec_01");
+/// let id = ExecutionId::from("exec_01");
 /// assert_eq!(id.as_str(), "exec_01");
 /// ```
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub struct ExecutionId(String);
+pub type ExecutionId = sink_identifier_newtypes::ExecutionId;
 
-impl ExecutionId {
-    /// Create a new execution identifier.
-    #[must_use]
-    pub fn new(id: impl Into<String>) -> Self {
-        Self(id.into())
-    }
-
-    /// View the identifier as a string slice.
-    #[must_use]
-    pub fn as_str(&self) -> &str {
-        &self.0
+impl From<&str> for ExecutionId {
+    fn from(id: &str) -> Self {
+        Self::new(id.to_owned())
     }
 }
 
@@ -54,23 +57,14 @@ impl ExecutionId {
 /// ```rust
 /// use zamburak_policy::sink_enforcement::CallId;
 ///
-/// let id = CallId::new("call_01");
+/// let id = CallId::from("call_01");
 /// assert_eq!(id.as_str(), "call_01");
 /// ```
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub struct CallId(String);
+pub type CallId = sink_identifier_newtypes::CallId;
 
-impl CallId {
-    /// Create a new call identifier.
-    #[must_use]
-    pub fn new(id: impl Into<String>) -> Self {
-        Self(id.into())
-    }
-
-    /// View the identifier as a string slice.
-    #[must_use]
-    pub fn as_str(&self) -> &str {
-        &self.0
+impl From<&str> for CallId {
+    fn from(id: &str) -> Self {
+        Self::new(id.to_owned())
     }
 }
 
@@ -110,8 +104,8 @@ pub enum LlmCallPath {
 /// };
 ///
 /// let request = SinkPreDispatchRequest {
-///     execution_id: ExecutionId::new("exec_01"),
-///     call_id: CallId::new("call_01"),
+///     execution_id: ExecutionId::from("exec_01"),
+///     call_id: CallId::from("call_01"),
 ///     call_path: LlmCallPath::Planner,
 ///     redaction_applied: true,
 /// };
@@ -155,8 +149,8 @@ pub enum SinkPreDispatchDecision {
 /// };
 ///
 /// let check = TransportGuardCheck {
-///     execution_id: ExecutionId::new("exec_01"),
-///     call_id: CallId::new("call_01"),
+///     execution_id: ExecutionId::from("exec_01"),
+///     call_id: CallId::from("call_01"),
 ///     redaction_applied: true,
 /// };
 /// assert!(check.redaction_applied);
@@ -197,13 +191,13 @@ pub enum TransportGuardOutcome {
 /// };
 ///
 /// let record = SinkAuditRecord {
-///     execution_id: ExecutionId::new("exec_7f2c"),
-///     call_id: CallId::new("call_0192"),
+///     execution_id: ExecutionId::from("exec_7f2c"),
+///     call_id: CallId::from("call_0192"),
 ///     decision: SinkPreDispatchDecision::Allow,
 ///     redaction_applied: true,
 ///     call_path: LlmCallPath::Planner,
 /// };
-/// assert_eq!(record.execution_id, ExecutionId::new("exec_7f2c"));
+/// assert_eq!(record.execution_id, ExecutionId::from("exec_7f2c"));
 /// ```
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct SinkAuditRecord {
@@ -235,8 +229,8 @@ pub struct SinkAuditRecord {
 /// };
 ///
 /// let request = SinkPreDispatchRequest {
-///     execution_id: ExecutionId::new("exec_01"),
-///     call_id: CallId::new("call_01"),
+///     execution_id: ExecutionId::from("exec_01"),
+///     call_id: CallId::from("call_01"),
 ///     call_path: LlmCallPath::Planner,
 ///     redaction_applied: true,
 /// };
@@ -265,8 +259,8 @@ pub fn evaluate_pre_dispatch(request: &SinkPreDispatchRequest) -> SinkPreDispatc
 /// };
 ///
 /// let check = TransportGuardCheck {
-///     execution_id: ExecutionId::new("exec_01"),
-///     call_id: CallId::new("call_01"),
+///     execution_id: ExecutionId::from("exec_01"),
+///     call_id: CallId::from("call_01"),
 ///     redaction_applied: true,
 /// };
 /// assert_eq!(
@@ -298,15 +292,15 @@ pub fn evaluate_transport_guard(check: &TransportGuardCheck) -> TransportGuardOu
 /// };
 ///
 /// let request = SinkPreDispatchRequest {
-///     execution_id: ExecutionId::new("exec_01"),
-///     call_id: CallId::new("call_01"),
+///     execution_id: ExecutionId::from("exec_01"),
+///     call_id: CallId::from("call_01"),
 ///     call_path: LlmCallPath::Planner,
 ///     redaction_applied: true,
 /// };
 /// let decision = evaluate_pre_dispatch(&request);
 /// let audit = emit_audit_record(&request, decision);
-/// assert_eq!(audit.execution_id, ExecutionId::new("exec_01"));
-/// assert_eq!(audit.call_id, CallId::new("call_01"));
+/// assert_eq!(audit.execution_id, ExecutionId::from("exec_01"));
+/// assert_eq!(audit.call_id, CallId::from("call_01"));
 /// assert_eq!(audit.call_path, LlmCallPath::Planner);
 /// ```
 #[must_use]

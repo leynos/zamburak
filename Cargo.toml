@@ -7,9 +7,15 @@ edition = "2024"
 members = ["crates/zamburak-core", "crates/zamburak-policy"]
 resolver = "3"
 
+[workspace.dependencies]
+newt-hype = "0.2.0"
+thiserror = "2.0.11"
+
 [dependencies]
 camino = "1.2.2"
 cap-std = { version = "3.4.5", features = ["fs_utf8"] }
+newt-hype.workspace = true
+thiserror.workspace = true
 zamburak-core = { path = "crates/zamburak-core" }
 zamburak-policy = { path = "crates/zamburak-policy" }
 

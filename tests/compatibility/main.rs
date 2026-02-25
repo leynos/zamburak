@@ -1,6 +1,7 @@
-//! Behavioural compatibility tests for policy schema loading and localization
-//! contracts.
+//! Behavioural compatibility tests for policy schema loading, fork policy
+//! guardrails, and localization contracts.
 
 mod localization_contract;
+mod monty_fork_policy;
 mod phase_gate_bdd;
 mod policy_schema_bdd;

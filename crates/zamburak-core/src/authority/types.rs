@@ -22,122 +22,59 @@ impl TokenTimestamp {
     }
 }
 
+#[expect(
+    clippy::expl_impl_clone_on_copy,
+    reason = "newt-hype macro expansion emits explicit Clone for Copy wrappers"
+)]
+// Authority identifier newtypes generated via `base_newtype!` and `newtype!`.
+mod authority_newtypes {
+    //! Defines authority-specific identifier wrappers used across lifecycle
+    //! contracts: `AuthorityTokenId`, `AuthorityIssuer`,
+    //! `AuthoritySubject`, `AuthorityCapability`, and `ScopeResource`.
+
+    use newt_hype::{base_newtype, newtype};
+
+    base_newtype!(AuthorityTokenIdNewtype);
+    newtype!(AuthorityTokenId, AuthorityTokenIdNewtype, String);
+    base_newtype!(AuthorityIssuerNewtype);
+    newtype!(AuthorityIssuer, AuthorityIssuerNewtype, String);
+    base_newtype!(AuthoritySubjectNewtype);
+    newtype!(AuthoritySubject, AuthoritySubjectNewtype, String);
+    base_newtype!(AuthorityCapabilityNewtype);
+    newtype!(AuthorityCapability, AuthorityCapabilityNewtype, String);
+    base_newtype!(ScopeResourceNewtype);
+    newtype!(ScopeResource, ScopeResourceNewtype, String);
+}
+
 /// Stable identifier for an authority token.
-#[derive(Clone, Debug, Eq, Ord, PartialEq, PartialOrd, Hash)]
-pub struct AuthorityTokenId(String);
-
-impl AuthorityTokenId {
-    /// Return the identifier as a string slice.
-    #[must_use]
-    pub fn as_str(&self) -> &str {
-        &self.0
-    }
-}
-
-impl std::fmt::Display for AuthorityTokenId {
-    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        formatter.write_str(&self.0)
-    }
-}
-
-impl TryFrom<&str> for AuthorityTokenId {
-    type Error = AuthorityLifecycleError;
-
-    fn try_from(value: &str) -> Result<Self, Self::Error> {
-        non_empty(value, "token_id")?;
-        Ok(Self(value.to_owned()))
-    }
-}
-
+pub type AuthorityTokenId = authority_newtypes::AuthorityTokenId;
 /// Validated issuer identity for minting and delegation provenance.
-#[derive(Clone, Debug, Eq, Ord, PartialEq, PartialOrd, Hash)]
-pub struct AuthorityIssuer(String);
-
-impl AuthorityIssuer {
-    /// Return the issuer as a string slice.
-    #[must_use]
-    pub fn as_str(&self) -> &str {
-        &self.0
-    }
-}
-
-impl std::fmt::Display for AuthorityIssuer {
-    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        formatter.write_str(&self.0)
-    }
-}
-
-impl TryFrom<&str> for AuthorityIssuer {
-    type Error = AuthorityLifecycleError;
-
-    fn try_from(value: &str) -> Result<Self, Self::Error> {
-        non_empty(value, "issuer")?;
-        Ok(Self(value.to_owned()))
-    }
-}
-
+pub type AuthorityIssuer = authority_newtypes::AuthorityIssuer;
 /// Subject for whom authority is granted.
-#[derive(Clone, Debug, Eq, Ord, PartialEq, PartialOrd, Hash)]
-pub struct AuthoritySubject(String);
-
-impl AuthoritySubject {
-    /// Return the subject as a string slice.
-    #[must_use]
-    pub fn as_str(&self) -> &str {
-        &self.0
-    }
-}
-
-impl TryFrom<&str> for AuthoritySubject {
-    type Error = AuthorityLifecycleError;
-
-    fn try_from(value: &str) -> Result<Self, Self::Error> {
-        non_empty(value, "subject")?;
-        Ok(Self(value.to_owned()))
-    }
-}
-
+pub type AuthoritySubject = authority_newtypes::AuthoritySubject;
 /// Capability encoded by an authority token.
-#[derive(Clone, Debug, Eq, Ord, PartialEq, PartialOrd, Hash)]
-pub struct AuthorityCapability(String);
-
-impl AuthorityCapability {
-    /// Return the capability as a string slice.
-    #[must_use]
-    pub fn as_str(&self) -> &str {
-        &self.0
-    }
-}
-
-impl TryFrom<&str> for AuthorityCapability {
-    type Error = AuthorityLifecycleError;
-
-    fn try_from(value: &str) -> Result<Self, Self::Error> {
-        non_empty(value, "capability")?;
-        Ok(Self(value.to_owned()))
-    }
-}
-
+pub type AuthorityCapability = authority_newtypes::AuthorityCapability;
 /// Scope entry that an authority token may permit.
-#[derive(Clone, Debug, Eq, Ord, PartialEq, PartialOrd, Hash)]
-pub struct ScopeResource(String);
+pub type ScopeResource = authority_newtypes::ScopeResource;
 
-impl ScopeResource {
-    /// Return the scope resource as a string slice.
-    #[must_use]
-    pub fn as_str(&self) -> &str {
-        &self.0
-    }
+macro_rules! impl_non_empty_try_from {
+    ($target:ty, $field:literal) => {
+        impl TryFrom<&str> for $target {
+            type Error = AuthorityLifecycleError;
+
+            fn try_from(value: &str) -> Result<Self, Self::Error> {
+                non_empty(value, $field)?;
+                Ok(Self::new(value.to_owned()))
+            }
+        }
+    };
 }
 
-impl TryFrom<&str> for ScopeResource {
-    type Error = AuthorityLifecycleError;
-
-    fn try_from(value: &str) -> Result<Self, Self::Error> {
-        non_empty(value, "scope_resource")?;
-        Ok(Self(value.to_owned()))
-    }
-}
+impl_non_empty_try_from!(AuthorityTokenId, "token_id");
+impl_non_empty_try_from!(AuthorityIssuer, "issuer");
+impl_non_empty_try_from!(AuthoritySubject, "subject");
+impl_non_empty_try_from!(AuthorityCapability, "capability");
+impl_non_empty_try_from!(ScopeResource, "scope_resource");
 
 /// Set of scope resources permitted by a token.
 #[derive(Clone, Debug, Eq, PartialEq)]
