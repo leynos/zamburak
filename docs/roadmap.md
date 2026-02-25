@@ -157,7 +157,7 @@ completion criteria so the work can be sequenced and assessed without ambiguity.
   - Out of scope: implementation of hook substrate internals.
   - Completion criteria: submodule and fork-policy document exist, and review
     policy rejects non-generic fork changes.
-- [ ] Task 0.4.2: Add `make monty-sync` with fork sync and verification gates.
+- [x] Task 0.4.2: Add `make monty-sync` with fork sync and verification gates.
   - Requirement signposts:
     - `docs/adr-001-monty-ifc-vm-hooks.md` section "Implementation plan",
     - `docs/zamburak-engineering-standards.md` section

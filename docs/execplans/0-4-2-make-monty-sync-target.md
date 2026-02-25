@@ -4,7 +4,7 @@ This ExecPlan is a living document. The sections `Constraints`, `Tolerances`,
 `Risks`, `Progress`, `Surprises & Discoveries`, `Decision Log`, and
 `Outcomes & Retrospective` must be kept up to date as work proceeds.
 
-Status: DRAFT
+Status: COMPLETE
 
 `PLANS.md` is not present in this repository at draft time, so this document is
 the governing execution plan for this task.
@@ -105,9 +105,18 @@ observable via deterministic command output and green quality gates.
   mechanics (`.gitmodules` present, submodule currently uninitialized in this
   workspace, `monty_fork_review` exists).
 - [x] (2026-02-25 18:39Z) Drafted this ExecPlan.
-- [ ] Implement `make monty-sync` orchestration and safety checks.
-- [ ] Add unit and behavioural test coverage for sync behaviour.
-- [ ] Update design/user/roadmap documents and run required gates.
+- [x] (2026-02-25 19:10Z) Implemented `scripts/monty_sync.py` and `make`
+  `monty-sync` orchestration with fail-closed guardrails.
+- [x] (2026-02-25 19:27Z) Added script unit and behavioural tests for happy
+  paths, unhappy paths, and edge-case sequencing.
+- [x] (2026-02-25 19:30Z) Updated design and users-guide docs and marked
+  roadmap Task `0.4.2` done.
+- [x] (2026-02-25 19:44Z) Ran required gate suite with `tee` logs:
+  `make fmt`, `make markdownlint`, `make nixie`, `make script-baseline`,
+  `make script-test`, `make check-fmt`, `make lint`, and `make test`.
+- [x] (2026-02-25 19:45Z) Validated runtime unhappy path via
+  `uv run scripts/monty_sync.py` in a dirty worktree; command failed closed
+  with a deterministic cleanliness error.
 
 ## Surprises & Discoveries
 
@@ -122,6 +131,13 @@ observable via deterministic command output and green quality gates.
   expose `main`. Evidence: `.gitmodules` and `git ls-remote --heads` checks.
   Impact: draft sync defaults should target fork `main` and upstream `main`
   unless explicitly overridden.
+
+- Observation: initial script-test runs failed at collection because
+  `SCRIPT_UV_DEPS` did not include `cuprum`, which `monty_sync.py` imports.
+  Evidence: `ModuleNotFoundError: No module named 'cuprum'` in
+  `/tmp/test-monty-sync-zamburak-<branch>.out`. Impact: `Makefile` script test
+  dependencies needed `--with cuprum==0.1.0` to keep script tests green and
+  reproducible.
 
 ## Decision Log
 
@@ -140,11 +156,53 @@ observable via deterministic command output and green quality gates.
   Rationale: task behaviour is expected to live in repository scripts and
   Makefile orchestration. Date/Author: 2026-02-25 / Codex.
 
+- Decision: include `cuprum==0.1.0` in `SCRIPT_UV_DEPS` for script test
+  commands. Rationale: new script tests import `monty_sync.py` directly and
+  require the same runtime command dependency as production script execution.
+  Date/Author: 2026-02-25 / Codex.
+
 ## Outcomes & Retrospective
 
-Implementation has not started. This section will be completed when the task
-reaches `Status: COMPLETE`, including delivered artefacts, gate outcomes,
-remaining gaps (if any), and lessons learned.
+Task `0.4.2` implementation is complete.
+
+Delivered outcomes:
+
+- added `scripts/monty_sync.py` with fail-closed orchestration for:
+  worktree cleanliness checks, submodule initialization, upstream remote
+  management, fork-branch refresh via fast-forward merge, submodule pointer
+  staging, and post-sync verification gates,
+- added `make monty-sync` entrypoint in `Makefile`,
+- added unit test coverage in
+  `scripts/tests/test_monty_sync_workflow.py`,
+  `scripts/tests/test_monty_sync_failures.py`, and
+  `scripts/tests/test_monty_sync_cli.py`,
+- added behavioural coverage in `scripts/tests/test_monty_sync_bdd.py` with
+  feature scenarios in `scripts/tests/features/monty_sync.feature`,
+- added reusable command-runner test helpers in
+  `scripts/tests/monty_sync_test_helpers.py`,
+- updated `docs/zamburak-design-document.md` with `monty-sync` governance
+  contract behaviour,
+- updated `docs/users-guide.md` with maintainer sync workflow command,
+- marked roadmap Task `0.4.2` done in `docs/roadmap.md`.
+
+Gate outcomes:
+
+- passed: `make fmt`,
+- passed: `make markdownlint`,
+- passed: `make nixie`,
+- passed: `make script-baseline`,
+- passed: `make script-test`,
+- passed: `make check-fmt`,
+- passed: `make lint`,
+- passed: `make test`.
+
+Retrospective:
+
+- Command dependency parity between script runtime and script test harness is a
+  practical maintenance requirement; drift surfaced immediately once
+  `monty_sync.py` imported Cuprum.
+- The sync command's fail-closed cleanliness gate prevented unsafe execution in
+  a dirty repository and produced clear remediation guidance.
 
 ## Context and orientation
 
@@ -160,8 +218,8 @@ Current repository context relevant to Task `0.4.2`:
   `script-test`) and is the canonical command surface.
 - Existing script testing patterns are in `scripts/tests/`, with unit tests and
   behavioural scenarios (`pytest-bdd`) already established.
-- Task `0.4.2` remains unchecked in `docs/roadmap.md` and must be marked done
-  only after implementation and gate validation complete.
+- Task `0.4.2` is marked done in `docs/roadmap.md` after implementation and
+  gate validation completion.
 
 Planned primary touchpoints:
 
@@ -248,16 +306,20 @@ otherwise.
 
 ```sh
 set -o pipefail
-uv run --with pytest --with pytest-bdd --with pytest-mock --with cmd-mox --with astroid \
-  pytest scripts/tests/test_monty_sync_cli.py scripts/tests/test_monty_sync_bdd.py \
+uv run --with pytest --with pytest-bdd --with pytest-mock --with cmd-mox --with astroid --with cuprum==0.1.0 \
+  pytest scripts/tests/test_monty_sync*.py \
   | tee /tmp/test-monty-sync-zamburak-$(git branch --show-current).out
 ```
 
-Expected pre-implementation transcript excerpt:
+Observed transcript excerpt:
 
 ```plaintext
-E   ModuleNotFoundError: No module named 'monty_sync'
-FAILED scripts/tests/test_monty_sync_...
+collected 12 items
+scripts/tests/test_monty_sync_workflow.py ...
+scripts/tests/test_monty_sync_failures.py ..
+scripts/tests/test_monty_sync_cli.py ...
+scripts/tests/test_monty_sync_bdd.py ....
+12 passed
 ```
 
 1. Implement script and Makefile target, then run targeted script suites.
@@ -302,17 +364,13 @@ make test | tee /tmp/test-zamburak-$(git branch --show-current).out
 
 ```sh
 set -o pipefail
-make monty-sync | tee /tmp/monty-sync-zamburak-$(git branch --show-current).out
+uv run scripts/monty_sync.py | tee /tmp/monty-sync-zamburak-$(git branch --show-current).out
 ```
 
-Expected success excerpt:
+Observed dirty-worktree guardrail excerpt:
 
 ```plaintext
-monty-sync: initialized submodule third_party/full-monty
-monty-sync: fetched origin and upstream
-monty-sync: refreshed fork branch
-monty-sync: running verification gates
-monty-sync: completed successfully
+monty-sync error: superproject worktree is not clean; commit or stash changes before running monty sync
 ```
 
 ## Validation and acceptance
@@ -350,16 +408,18 @@ Acceptance is behaviour-based and must be demonstrable:
 
 ## Artifacts and notes
 
-During implementation, append concise evidence snippets here for:
+Evidence snippets captured during implementation:
 
-- successful sync log excerpt,
-- failing unhappy-path excerpt (for one representative failure),
-- gate-pass summaries,
-- final diff summary of touched files.
+- targeted new script tests:
+  `scripts/tests/test_monty_sync*.py` passed (`12 passed`),
+- full script suite passed (`40 passed`) via `make script-test`,
+- fail-closed runtime unhappy path confirmed by dirty-worktree error from
+  `uv run scripts/monty_sync.py`,
+- all required docs/script/code gates passed in one logged batch.
 
 ## Interfaces and dependencies
 
-Planned script interface (subject to Stage A confirmation):
+Implemented script interface:
 
 - `make monty-sync` as canonical entrypoint.
 - `scripts/monty_sync.py` as implementation surface.
@@ -386,3 +446,12 @@ Initial draft created for roadmap Task `0.4.2`.
   in roadmap and signpost documents.
 - Effect on remaining work: implementation can now proceed milestone-by-
   milestone after explicit user approval.
+
+Implementation completion update:
+
+- What changed: status moved to `COMPLETE`; progress, discoveries, decisions,
+  concrete evidence, and outcomes were updated with delivered code, tests, docs
+  changes, and gate results.
+- Why it changed: requested functionality was implemented and fully validated.
+- Effect on remaining work: Task `0.4.2` is complete; downstream roadmap work
+  can build on the new `make monty-sync` contract.

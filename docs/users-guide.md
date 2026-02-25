@@ -48,6 +48,12 @@ before building:
 git submodule update --init --recursive
 ```
 
+Maintainers syncing Track A fork state can use the repository-local workflow:
+
+```sh
+make monty-sync
+```
+
 Track A changes are constrained by [Monty fork policy](monty-fork-policy.md).
 Zamburak semantics are prohibited in fork API surface, and pull requests that
 violate that policy are rejected by automated review checks.

@@ -228,6 +228,9 @@ Track A governance is fail-closed and repository-local:
 
 - `third_party/full-monty/` is pinned as a Git submodule so Track A state is
   explicit and auditable per superproject revision.
+- Maintainers use `make monty-sync` to initialize the submodule, fast-forward
+  fork branch state with upstream Monty, stage the pointer update, and run
+  repository verification gates (`check-fmt`, `lint`, `test`).
 - Allowed delta classes are limited to stable runtime IDs, generic observer
   hooks, optional generic snapshot extension, and narrowly enabling refactors.
 - Added Track A API surface lines that include Zamburak semantic tokens are

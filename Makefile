@@ -1,4 +1,4 @@
-.PHONY: help all clean test build release lint typecheck fmt check-fmt markdownlint nixie phase-gate script-baseline script-test
+.PHONY: help all clean test build release lint typecheck fmt check-fmt markdownlint nixie phase-gate script-baseline script-test monty-sync
 
 
 TARGET ?= libzamburak.rlib
@@ -13,7 +13,7 @@ TEST_FLAGS ?= $(CARGO_FLAGS)
 MDLINT ?= markdownlint-cli2
 NIXIE ?= nixie
 PHASE_GATE_TARGET_FILE ?= .github/phase-gate-target.txt
-SCRIPT_UV_DEPS ?= --with pytest --with pytest-bdd --with pytest-mock --with cmd-mox --with astroid
+SCRIPT_UV_DEPS ?= --with pytest --with pytest-bdd --with pytest-mock --with cmd-mox --with astroid --with cuprum==0.1.0
 
 build: target/debug/$(TARGET) ## Build debug binary
 release: target/release/$(TARGET) ## Build release binary
@@ -57,6 +57,9 @@ script-baseline: ## Validate roadmap script baseline contracts
 
 script-test: ## Run script baseline test suite
 	uv run $(SCRIPT_UV_DEPS) pytest scripts/tests
+
+monty-sync: ## Sync full-monty fork branch with upstream and run verification gates
+	uv run scripts/monty_sync.py
 
 help: ## Show available targets
 	@grep -E '^[a-zA-Z_-]+:.*?##' $(MAKEFILE_LIST) | \
