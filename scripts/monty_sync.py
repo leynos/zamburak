@@ -72,6 +72,15 @@ class SyncConfig:
         return self.repo_root / self.submodule_path
 
 
+@dataclass(frozen=True)
+class CommandInvocation:
+    """Specification for a single command execution."""
+
+    program: str
+    args: tuple[str, ...]
+    cwd: Path
+
+
 class CommandRunner(Protocol):
     """Protocol for command execution, enabling dependency injection in tests."""
 
@@ -111,18 +120,20 @@ def _resolve_command(program: str):
 def _run_checked(
     runner: CommandRunner,
     *,
-    program: str,
-    args: tuple[str, ...],
-    cwd: Path,
+    invocation: CommandInvocation,
     failure_summary: str,
 ) -> CommandOutcome:
     """Execute one command and raise `MontySyncError` on failure."""
-    outcome = runner.run(program=program, args=args, cwd=cwd)
+    outcome = runner.run(
+        program=invocation.program,
+        args=invocation.args,
+        cwd=invocation.cwd,
+    )
     if outcome.ok:
         return outcome
 
     details = outcome.stderr.strip() or outcome.stdout.strip() or "no error detail"
-    command_text = " ".join((program, *args))
+    command_text = " ".join((invocation.program, *invocation.args))
     raise MontySyncError(
         f"{failure_summary}: `{command_text}` failed with exit code "
         f"{outcome.exit_code}: {details}"
@@ -143,9 +154,11 @@ def _ensure_clean_worktree(
     """Fail when `cwd` worktree has tracked or untracked changes."""
     outcome = _run_checked(
         runner,
-        program="git",
-        args=("status", "--porcelain"),
-        cwd=cwd,
+        invocation=CommandInvocation(
+            program="git",
+            args=("status", "--porcelain"),
+            cwd=cwd,
+        ),
         failure_summary=f"unable to inspect {scope_name} worktree status",
     )
     if outcome.stdout.strip():
@@ -163,9 +176,11 @@ def _read_head_revision(
     """Return current HEAD revision for one repository checkout."""
     outcome = _run_checked(
         runner,
-        program="git",
-        args=("rev-parse", "HEAD"),
-        cwd=cwd,
+        invocation=CommandInvocation(
+            program="git",
+            args=("rev-parse", "HEAD"),
+            cwd=cwd,
+        ),
         failure_summary="unable to read HEAD revision",
     )
     return outcome.stdout.strip()
@@ -179,9 +194,11 @@ def _ensure_remotes(
     """Validate fork remote and configure upstream remote URL."""
     remotes_outcome = _run_checked(
         runner,
-        program="git",
-        args=("remote",),
-        cwd=config.submodule_root,
+        invocation=CommandInvocation(
+            program="git",
+            args=("remote",),
+            cwd=config.submodule_root,
+        ),
         failure_summary="unable to list full-monty remotes",
     )
     remotes = {line.strip() for line in remotes_outcome.stdout.splitlines() if line.strip()}
@@ -194,18 +211,22 @@ def _ensure_remotes(
     if config.upstream_remote not in remotes:
         _run_checked(
             runner,
-            program="git",
-            args=("remote", "add", config.upstream_remote, config.upstream_url),
-            cwd=config.submodule_root,
+            invocation=CommandInvocation(
+                program="git",
+                args=("remote", "add", config.upstream_remote, config.upstream_url),
+                cwd=config.submodule_root,
+            ),
             failure_summary="unable to add upstream remote",
         )
         return
 
     _run_checked(
         runner,
-        program="git",
-        args=("remote", "set-url", config.upstream_remote, config.upstream_url),
-        cwd=config.submodule_root,
+        invocation=CommandInvocation(
+            program="git",
+            args=("remote", "set-url", config.upstream_remote, config.upstream_url),
+            cwd=config.submodule_root,
+        ),
         failure_summary="unable to update upstream remote URL",
     )
 
@@ -218,39 +239,47 @@ def _refresh_submodule_branch(
     """Refresh local fork branch by fast-forwarding with upstream branch."""
     _run_checked(
         runner,
-        program="git",
-        args=("fetch", "--prune", config.fork_remote),
-        cwd=config.submodule_root,
+        invocation=CommandInvocation(
+            program="git",
+            args=("fetch", "--prune", config.fork_remote),
+            cwd=config.submodule_root,
+        ),
         failure_summary="unable to fetch fork remote",
     )
     _run_checked(
         runner,
-        program="git",
-        args=("fetch", "--prune", config.upstream_remote),
-        cwd=config.submodule_root,
+        invocation=CommandInvocation(
+            program="git",
+            args=("fetch", "--prune", config.upstream_remote),
+            cwd=config.submodule_root,
+        ),
         failure_summary="unable to fetch upstream remote",
     )
     _run_checked(
         runner,
-        program="git",
-        args=(
-            "checkout",
-            "-B",
-            config.fork_branch,
-            f"{config.fork_remote}/{config.fork_branch}",
+        invocation=CommandInvocation(
+            program="git",
+            args=(
+                "checkout",
+                "-B",
+                config.fork_branch,
+                f"{config.fork_remote}/{config.fork_branch}",
+            ),
+            cwd=config.submodule_root,
         ),
-        cwd=config.submodule_root,
         failure_summary="unable to refresh local fork branch",
     )
     _run_checked(
         runner,
-        program="git",
-        args=(
-            "merge",
-            "--ff-only",
-            f"{config.upstream_remote}/{config.upstream_branch}",
+        invocation=CommandInvocation(
+            program="git",
+            args=(
+                "merge",
+                "--ff-only",
+                f"{config.upstream_remote}/{config.upstream_branch}",
+            ),
+            cwd=config.submodule_root,
         ),
-        cwd=config.submodule_root,
         failure_summary=(
             "unable to fast-forward fork branch with upstream; resolve divergence "
             "manually"
@@ -267,9 +296,11 @@ def _run_verification_gates(
     for target in config.verification_targets:
         _run_checked(
             runner,
-            program="make",
-            args=(target,),
-            cwd=config.repo_root,
+            invocation=CommandInvocation(
+                program="make",
+                args=(target,),
+                cwd=config.repo_root,
+            ),
             failure_summary=f"verification gate `{target}` failed",
         )
 
@@ -287,15 +318,17 @@ def run_monty_sync(
     _log(stdout, f"monty-sync: initializing {config.submodule_path.as_posix()}")
     _run_checked(
         runner,
-        program="git",
-        args=(
-            "submodule",
-            "update",
-            "--init",
-            "--recursive",
-            config.submodule_path.as_posix(),
+        invocation=CommandInvocation(
+            program="git",
+            args=(
+                "submodule",
+                "update",
+                "--init",
+                "--recursive",
+                config.submodule_path.as_posix(),
+            ),
+            cwd=config.repo_root,
         ),
-        cwd=config.repo_root,
         failure_summary="unable to initialize full-monty submodule",
     )
 
@@ -326,9 +359,11 @@ def run_monty_sync(
 
     _run_checked(
         runner,
-        program="git",
-        args=("add", config.submodule_path.as_posix()),
-        cwd=config.repo_root,
+        invocation=CommandInvocation(
+            program="git",
+            args=("add", config.submodule_path.as_posix()),
+            cwd=config.repo_root,
+        ),
         failure_summary="unable to stage submodule pointer update",
     )
     _log(stdout, "monty-sync: staged submodule pointer update")

@@ -45,6 +45,245 @@ def invocation(
     return CommandInvocation(program=program, args=args, cwd=cwd)
 
 
+def build_preflight_stubs(config: monty_sync.SyncConfig) -> tuple[CommandStub, ...]:
+    """Build stubs for preflight checks and submodule initialisation."""
+    return (
+        CommandStub(
+            invocation(config, program="git", args=("status", "--porcelain")),
+            successful_outcome(),
+        ),
+        CommandStub(
+            invocation(
+                config,
+                program="git",
+                args=(
+                    "submodule",
+                    "update",
+                    "--init",
+                    "--recursive",
+                    "third_party/full-monty",
+                ),
+            ),
+            successful_outcome(),
+        ),
+        CommandStub(
+            invocation(
+                config,
+                program="git",
+                args=("status", "--porcelain"),
+                submodule=True,
+            ),
+            successful_outcome(),
+        ),
+    )
+
+
+def build_remote_setup_stubs(
+    config: monty_sync.SyncConfig,
+    has_upstream: bool = False,
+) -> tuple[CommandStub, ...]:
+    """Build stubs for remote configuration (add or set-url upstream)."""
+    remote_list = "origin\nupstream\n" if has_upstream else "origin\n"
+    remote_cmd = "set-url" if has_upstream else "add"
+
+    return (
+        CommandStub(
+            invocation(config, program="git", args=("remote",), submodule=True),
+            successful_outcome(remote_list),
+        ),
+        CommandStub(
+            invocation(
+                config,
+                program="git",
+                args=(
+                    "remote",
+                    remote_cmd,
+                    "upstream",
+                    "https://github.com/pydantic/monty.git",
+                ),
+                submodule=True,
+            ),
+            successful_outcome(),
+        ),
+    )
+
+
+def build_sync_stubs(
+    config: monty_sync.SyncConfig,
+    old_rev: str,
+    new_rev: str,
+) -> tuple[CommandStub, ...]:
+    """Build stubs for fetch/merge sync operations."""
+    return (
+        CommandStub(
+            invocation(config, program="git", args=("rev-parse", "HEAD"), submodule=True),
+            successful_outcome(f"{old_rev}\n"),
+        ),
+        CommandStub(
+            invocation(
+                config,
+                program="git",
+                args=("fetch", "--prune", "origin"),
+                submodule=True,
+            ),
+            successful_outcome(),
+        ),
+        CommandStub(
+            invocation(
+                config,
+                program="git",
+                args=("fetch", "--prune", "upstream"),
+                submodule=True,
+            ),
+            successful_outcome(),
+        ),
+        CommandStub(
+            invocation(
+                config,
+                program="git",
+                args=("checkout", "-B", "main", "origin/main"),
+                submodule=True,
+            ),
+            successful_outcome(),
+        ),
+        CommandStub(
+            invocation(
+                config,
+                program="git",
+                args=("merge", "--ff-only", "upstream/main"),
+                submodule=True,
+            ),
+            successful_outcome(),
+        ),
+        CommandStub(
+            invocation(config, program="git", args=("rev-parse", "HEAD"), submodule=True),
+            successful_outcome(f"{new_rev}\n"),
+        ),
+        CommandStub(
+            invocation(config, program="git", args=("add", "third_party/full-monty")),
+            successful_outcome(),
+        ),
+    )
+
+
+def build_gate_stubs(config: monty_sync.SyncConfig) -> tuple[CommandStub, ...]:
+    """Build stubs for verification gate targets."""
+    return (
+        CommandStub(
+            invocation(config, program="make", args=("check-fmt",)),
+            successful_outcome(),
+        ),
+        CommandStub(
+            invocation(config, program="make", args=("lint",)),
+            successful_outcome(),
+        ),
+        CommandStub(
+            invocation(config, program="make", args=("test",)),
+            successful_outcome(),
+        ),
+    )
+
+
+def happy_path_stubs_up_to_sync(
+    config: monty_sync.SyncConfig,
+    *,
+    has_upstream: bool = True,
+    old_revision: str = "1111111111111111111111111111111111111111",
+) -> tuple[CommandStub, ...]:
+    """Build stubs from preflight checks through merge for happy-path sync."""
+    normalised_old_revision = old_revision.rstrip("\n")
+    return (
+        build_preflight_stubs(config)
+        + build_remote_setup_stubs(config, has_upstream=has_upstream)
+        + (
+            CommandStub(
+                invocation(config, program="git", args=("rev-parse", "HEAD"), submodule=True),
+                successful_outcome(f"{normalised_old_revision}\n"),
+            ),
+            CommandStub(
+                invocation(
+                    config,
+                    program="git",
+                    args=("fetch", "--prune", "origin"),
+                    submodule=True,
+                ),
+                successful_outcome(),
+            ),
+            CommandStub(
+                invocation(
+                    config,
+                    program="git",
+                    args=("fetch", "--prune", "upstream"),
+                    submodule=True,
+                ),
+                successful_outcome(),
+            ),
+            CommandStub(
+                invocation(
+                    config,
+                    program="git",
+                    args=("checkout", "-B", "main", "origin/main"),
+                    submodule=True,
+                ),
+                successful_outcome(),
+            ),
+            CommandStub(
+                invocation(
+                    config,
+                    program="git",
+                    args=("merge", "--ff-only", "upstream/main"),
+                    submodule=True,
+                ),
+                successful_outcome(),
+            ),
+        )
+    )
+
+
+def post_sync_stubs(
+    config: monty_sync.SyncConfig,
+    *,
+    new_revision: str = "1111111111111111111111111111111111111111",
+) -> tuple[CommandStub, ...]:
+    """Build stubs for post-sync revision capture and pointer staging."""
+    normalised_new_revision = new_revision.rstrip("\n")
+    return (
+        CommandStub(
+            invocation(config, program="git", args=("rev-parse", "HEAD"), submodule=True),
+            successful_outcome(f"{normalised_new_revision}\n"),
+        ),
+        CommandStub(
+            invocation(config, program="git", args=("add", "third_party/full-monty")),
+            successful_outcome(),
+        ),
+    )
+
+
+def gate_stubs(
+    config: monty_sync.SyncConfig,
+    *,
+    fail_at: str | None = None,
+) -> tuple[CommandStub, ...]:
+    """Build stubs for verification gates, optionally failing at one target."""
+    stubs: list[CommandStub] = []
+    for target in ("check-fmt", "lint", "test"):
+        if target == fail_at:
+            stubs.append(
+                CommandStub(
+                    invocation(config, program="make", args=(target,)),
+                    failure_outcome("clippy: simulated lint failure"),
+                )
+            )
+            break
+        stubs.append(
+            CommandStub(
+                invocation(config, program="make", args=(target,)),
+                successful_outcome(),
+            )
+        )
+    return tuple(stubs)
+
+
 def successful_outcome(stdout: str = "") -> monty_sync.CommandOutcome:
     """Return a successful command outcome with optional stdout."""
     return monty_sync.CommandOutcome(ok=True, stdout=stdout, stderr="", exit_code=0)

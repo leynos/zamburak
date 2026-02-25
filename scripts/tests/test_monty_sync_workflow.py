@@ -21,10 +21,29 @@ import monty_sync
 from monty_sync_test_helpers import (
     CommandStub,
     QueueRunner,
+    build_gate_stubs,
     build_config,
+    build_preflight_stubs,
+    build_remote_setup_stubs,
+    build_sync_stubs,
+    gate_stubs,
+    happy_path_stubs_up_to_sync,
     invocation,
+    post_sync_stubs,
     successful_outcome,
 )
+
+
+def build_happy_path_command_stubs(config: monty_sync.SyncConfig) -> tuple[CommandStub, ...]:
+    """Build command stub sequence for happy-path monty-sync workflow."""
+    old_rev = "1111111111111111111111111111111111111111"
+    new_rev = "2222222222222222222222222222222222222222"
+    return (
+        build_preflight_stubs(config)
+        + build_remote_setup_stubs(config, has_upstream=True)
+        + build_sync_stubs(config, old_rev, new_rev)
+        + build_gate_stubs(config)
+    )
 
 
 def test_run_monty_sync_happy_path_updates_revision_and_runs_gates(
@@ -32,115 +51,7 @@ def test_run_monty_sync_happy_path_updates_revision_and_runs_gates(
 ) -> None:
     """Verify successful sync updates revision and executes gate targets."""
     config = build_config(tmp_path)
-    runner = QueueRunner(
-        (
-            CommandStub(
-                invocation(config, program="git", args=("status", "--porcelain")),
-                successful_outcome(),
-            ),
-            CommandStub(
-                invocation(
-                    config,
-                    program="git",
-                    args=(
-                        "submodule",
-                        "update",
-                        "--init",
-                        "--recursive",
-                        "third_party/full-monty",
-                    ),
-                ),
-                successful_outcome(),
-            ),
-            CommandStub(
-                invocation(
-                    config,
-                    program="git",
-                    args=("status", "--porcelain"),
-                    submodule=True,
-                ),
-                successful_outcome(),
-            ),
-            CommandStub(
-                invocation(config, program="git", args=("remote",), submodule=True),
-                successful_outcome("origin\nupstream\n"),
-            ),
-            CommandStub(
-                invocation(
-                    config,
-                    program="git",
-                    args=(
-                        "remote",
-                        "set-url",
-                        "upstream",
-                        "https://github.com/pydantic/monty.git",
-                    ),
-                    submodule=True,
-                ),
-                successful_outcome(),
-            ),
-            CommandStub(
-                invocation(config, program="git", args=("rev-parse", "HEAD"), submodule=True),
-                successful_outcome("1111111111111111111111111111111111111111\n"),
-            ),
-            CommandStub(
-                invocation(
-                    config,
-                    program="git",
-                    args=("fetch", "--prune", "origin"),
-                    submodule=True,
-                ),
-                successful_outcome(),
-            ),
-            CommandStub(
-                invocation(
-                    config,
-                    program="git",
-                    args=("fetch", "--prune", "upstream"),
-                    submodule=True,
-                ),
-                successful_outcome(),
-            ),
-            CommandStub(
-                invocation(
-                    config,
-                    program="git",
-                    args=("checkout", "-B", "main", "origin/main"),
-                    submodule=True,
-                ),
-                successful_outcome(),
-            ),
-            CommandStub(
-                invocation(
-                    config,
-                    program="git",
-                    args=("merge", "--ff-only", "upstream/main"),
-                    submodule=True,
-                ),
-                successful_outcome(),
-            ),
-            CommandStub(
-                invocation(config, program="git", args=("rev-parse", "HEAD"), submodule=True),
-                successful_outcome("2222222222222222222222222222222222222222\n"),
-            ),
-            CommandStub(
-                invocation(config, program="git", args=("add", "third_party/full-monty")),
-                successful_outcome(),
-            ),
-            CommandStub(
-                invocation(config, program="make", args=("check-fmt",)),
-                successful_outcome(),
-            ),
-            CommandStub(
-                invocation(config, program="make", args=("lint",)),
-                successful_outcome(),
-            ),
-            CommandStub(
-                invocation(config, program="make", args=("test",)),
-                successful_outcome(),
-            ),
-        )
-    )
+    runner = QueueRunner(build_happy_path_command_stubs(config))
     stdout = StringIO()
 
     monty_sync.run_monty_sync(runner, config=config, stdout=stdout)
@@ -155,116 +66,13 @@ def test_run_monty_sync_happy_path_updates_revision_and_runs_gates(
 def test_run_monty_sync_initializes_submodule_before_submodule_operations(
     tmp_path: Path,
 ) -> None:
-    """Verify submodule initialization occurs before submodule-scoped commands."""
+    """Verify submodule initialisation occurs before submodule-scoped commands."""
     config = build_config(tmp_path)
+    rev = "1111111111111111111111111111111111111111"
     runner = QueueRunner(
-        (
-            CommandStub(
-                invocation(config, program="git", args=("status", "--porcelain")),
-                successful_outcome(),
-            ),
-            CommandStub(
-                invocation(
-                    config,
-                    program="git",
-                    args=(
-                        "submodule",
-                        "update",
-                        "--init",
-                        "--recursive",
-                        "third_party/full-monty",
-                    ),
-                ),
-                successful_outcome(),
-            ),
-            CommandStub(
-                invocation(
-                    config,
-                    program="git",
-                    args=("status", "--porcelain"),
-                    submodule=True,
-                ),
-                successful_outcome(),
-            ),
-            CommandStub(
-                invocation(config, program="git", args=("remote",), submodule=True),
-                successful_outcome("origin\n"),
-            ),
-            CommandStub(
-                invocation(
-                    config,
-                    program="git",
-                    args=(
-                        "remote",
-                        "add",
-                        "upstream",
-                        "https://github.com/pydantic/monty.git",
-                    ),
-                    submodule=True,
-                ),
-                successful_outcome(),
-            ),
-            CommandStub(
-                invocation(config, program="git", args=("rev-parse", "HEAD"), submodule=True),
-                successful_outcome("1111111111111111111111111111111111111111\n"),
-            ),
-            CommandStub(
-                invocation(
-                    config,
-                    program="git",
-                    args=("fetch", "--prune", "origin"),
-                    submodule=True,
-                ),
-                successful_outcome(),
-            ),
-            CommandStub(
-                invocation(
-                    config,
-                    program="git",
-                    args=("fetch", "--prune", "upstream"),
-                    submodule=True,
-                ),
-                successful_outcome(),
-            ),
-            CommandStub(
-                invocation(
-                    config,
-                    program="git",
-                    args=("checkout", "-B", "main", "origin/main"),
-                    submodule=True,
-                ),
-                successful_outcome(),
-            ),
-            CommandStub(
-                invocation(
-                    config,
-                    program="git",
-                    args=("merge", "--ff-only", "upstream/main"),
-                    submodule=True,
-                ),
-                successful_outcome(),
-            ),
-            CommandStub(
-                invocation(config, program="git", args=("rev-parse", "HEAD"), submodule=True),
-                successful_outcome("1111111111111111111111111111111111111111\n"),
-            ),
-            CommandStub(
-                invocation(config, program="git", args=("add", "third_party/full-monty")),
-                successful_outcome(),
-            ),
-            CommandStub(
-                invocation(config, program="make", args=("check-fmt",)),
-                successful_outcome(),
-            ),
-            CommandStub(
-                invocation(config, program="make", args=("lint",)),
-                successful_outcome(),
-            ),
-            CommandStub(
-                invocation(config, program="make", args=("test",)),
-                successful_outcome(),
-            ),
-        )
+        happy_path_stubs_up_to_sync(config, has_upstream=False, old_revision=rev)
+        + post_sync_stubs(config, new_revision=rev)
+        + gate_stubs(config)
     )
 
     monty_sync.run_monty_sync(runner, config=config, stdout=StringIO())

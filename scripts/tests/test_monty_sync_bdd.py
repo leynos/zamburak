@@ -58,51 +58,65 @@ def _invoke(
     return CommandInvocation(program=program, args=args, cwd=cwd)
 
 
-@pytest.fixture
-def scenario_state(tmp_path: Path) -> ScenarioState:
-    """Create isolated scenario state with a repository-root configuration."""
-    return ScenarioState(config=_config(tmp_path))
-
-
-@given("a monty sync happy-path command sequence")
-def given_happy_path_sequence(scenario_state: ScenarioState) -> None:
-    """Prepare successful command queue for full sync workflow."""
-    config = scenario_state.config
-    scenario_state.runner = QueueRunner(
-        (
+def _build_sync_command_sequence(
+    config: monty_sync.SyncConfig,
+    *,
+    remotes: list[str],
+    gate_to_fail: str | None,
+    old_revision: str,
+    new_revision: str,
+    superproject_dirty: bool,
+) -> tuple[CommandStub, ...]:
+    """Build command stubs for monty-sync flow with scenario-driven short-circuiting."""
+    if superproject_dirty:
+        return (
             CommandStub(
                 _invoke(config, program="git", args=("status", "--porcelain")),
-                successful_outcome(),
+                successful_outcome(" M README.md\n"),
             ),
-            CommandStub(
-                _invoke(
-                    config,
-                    program="git",
-                    args=(
-                        "submodule",
-                        "update",
-                        "--init",
-                        "--recursive",
-                        "third_party/full-monty",
-                    ),
+        )
+
+    stubs: list[CommandStub] = [
+        CommandStub(
+            _invoke(config, program="git", args=("status", "--porcelain")),
+            successful_outcome(),
+        ),
+        CommandStub(
+            _invoke(
+                config,
+                program="git",
+                args=(
+                    "submodule",
+                    "update",
+                    "--init",
+                    "--recursive",
+                    "third_party/full-monty",
                 ),
-                successful_outcome(),
             ),
-            CommandStub(
-                _invoke(config, program="git", args=("status", "--porcelain"), submodule=True),
-                successful_outcome(),
-            ),
-            CommandStub(
-                _invoke(config, program="git", args=("remote",), submodule=True),
-                successful_outcome("origin\nupstream\n"),
-            ),
+            successful_outcome(),
+        ),
+        CommandStub(
+            _invoke(config, program="git", args=("status", "--porcelain"), submodule=True),
+            successful_outcome(),
+        ),
+        CommandStub(
+            _invoke(config, program="git", args=("remote",), submodule=True),
+            successful_outcome("".join(f"{remote}\n" for remote in remotes)),
+        ),
+    ]
+    if "origin" not in remotes:
+        return tuple(stubs)
+
+    upstream_command = "set-url" if "upstream" in remotes else "add"
+    stubs.extend(
+        (
             CommandStub(
                 _invoke(
                     config,
                     program="git",
                     args=(
                         "remote",
-                        "set-url",
+                        upstream_command,
                         "upstream",
                         "https://github.com/pydantic/monty.git",
                     ),
@@ -112,10 +126,15 @@ def given_happy_path_sequence(scenario_state: ScenarioState) -> None:
             ),
             CommandStub(
                 _invoke(config, program="git", args=("rev-parse", "HEAD"), submodule=True),
-                successful_outcome("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n"),
+                successful_outcome(old_revision),
             ),
             CommandStub(
-                _invoke(config, program="git", args=("fetch", "--prune", "origin"), submodule=True),
+                _invoke(
+                    config,
+                    program="git",
+                    args=("fetch", "--prune", "origin"),
+                    submodule=True,
+                ),
                 successful_outcome(),
             ),
             CommandStub(
@@ -147,26 +166,55 @@ def given_happy_path_sequence(scenario_state: ScenarioState) -> None:
             ),
             CommandStub(
                 _invoke(config, program="git", args=("rev-parse", "HEAD"), submodule=True),
-                successful_outcome("bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\n"),
+                successful_outcome(new_revision),
             ),
             CommandStub(
                 _invoke(config, program="git", args=("add", "third_party/full-monty")),
                 successful_outcome(),
             ),
-            CommandStub(
-                _invoke(config, program="make", args=("check-fmt",)),
-                successful_outcome(),
-            ),
-            CommandStub(
-                _invoke(config, program="make", args=("lint",)),
-                successful_outcome(),
-            ),
-            CommandStub(
-                _invoke(config, program="make", args=("test",)),
-                successful_outcome(),
-            ),
         )
     )
+    for target in ("check-fmt", "lint", "test"):
+        if gate_to_fail == target:
+            stubs.append(
+                CommandStub(
+                    _invoke(config, program="make", args=(target,)),
+                    failure_outcome("simulated lint gate failure"),
+                )
+            )
+            return tuple(stubs)
+        stubs.append(
+            CommandStub(
+                _invoke(config, program="make", args=(target,)),
+                successful_outcome(),
+            )
+        )
+    return tuple(stubs)
+
+
+@pytest.fixture
+def scenario_state(tmp_path: Path) -> ScenarioState:
+    """Create isolated scenario state with a repository-root configuration."""
+    return ScenarioState(config=_config(tmp_path))
+
+
+def build_bdd_happy_path_stubs(config: monty_sync.SyncConfig) -> tuple[CommandStub, ...]:
+    """Build command stub sequence for BDD happy-path sync workflow."""
+    return _build_sync_command_sequence(
+        config,
+        remotes=["origin", "upstream"],
+        gate_to_fail=None,
+        old_revision="aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n",
+        new_revision="bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\n",
+        superproject_dirty=False,
+    )
+
+
+@given("a monty sync happy-path command sequence")
+def given_happy_path_sequence(scenario_state: ScenarioState) -> None:
+    """Prepare successful command queue for full sync workflow."""
+    config = scenario_state.config
+    scenario_state.runner = QueueRunner(build_bdd_happy_path_stubs(config))
 
 
 @given("a dirty superproject command sequence")
@@ -174,11 +222,13 @@ def given_dirty_superproject_sequence(scenario_state: ScenarioState) -> None:
     """Prepare command queue that fails at superproject cleanliness check."""
     config = scenario_state.config
     scenario_state.runner = QueueRunner(
-        (
-            CommandStub(
-                _invoke(config, program="git", args=("status", "--porcelain")),
-                successful_outcome(" M README.md\n"),
-            ),
+        _build_sync_command_sequence(
+            config,
+            remotes=[],
+            gate_to_fail=None,
+            old_revision="aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n",
+            new_revision="aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n",
+            superproject_dirty=True,
         )
     )
 
@@ -188,33 +238,13 @@ def given_missing_remote_sequence(scenario_state: ScenarioState) -> None:
     """Prepare queue where fork remote is missing in submodule checkout."""
     config = scenario_state.config
     scenario_state.runner = QueueRunner(
-        (
-            CommandStub(
-                _invoke(config, program="git", args=("status", "--porcelain")),
-                successful_outcome(),
-            ),
-            CommandStub(
-                _invoke(
-                    config,
-                    program="git",
-                    args=(
-                        "submodule",
-                        "update",
-                        "--init",
-                        "--recursive",
-                        "third_party/full-monty",
-                    ),
-                ),
-                successful_outcome(),
-            ),
-            CommandStub(
-                _invoke(config, program="git", args=("status", "--porcelain"), submodule=True),
-                successful_outcome(),
-            ),
-            CommandStub(
-                _invoke(config, program="git", args=("remote",), submodule=True),
-                successful_outcome("upstream\n"),
-            ),
+        _build_sync_command_sequence(
+            config,
+            remotes=["upstream"],
+            gate_to_fail=None,
+            old_revision="aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n",
+            new_revision="aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n",
+            superproject_dirty=False,
         )
     )
 
@@ -224,98 +254,13 @@ def given_gate_failure_sequence(scenario_state: ScenarioState) -> None:
     """Prepare queue where lint gate fails after sync operations."""
     config = scenario_state.config
     scenario_state.runner = QueueRunner(
-        (
-            CommandStub(
-                _invoke(config, program="git", args=("status", "--porcelain")),
-                successful_outcome(),
-            ),
-            CommandStub(
-                _invoke(
-                    config,
-                    program="git",
-                    args=(
-                        "submodule",
-                        "update",
-                        "--init",
-                        "--recursive",
-                        "third_party/full-monty",
-                    ),
-                ),
-                successful_outcome(),
-            ),
-            CommandStub(
-                _invoke(config, program="git", args=("status", "--porcelain"), submodule=True),
-                successful_outcome(),
-            ),
-            CommandStub(
-                _invoke(config, program="git", args=("remote",), submodule=True),
-                successful_outcome("origin\nupstream\n"),
-            ),
-            CommandStub(
-                _invoke(
-                    config,
-                    program="git",
-                    args=(
-                        "remote",
-                        "set-url",
-                        "upstream",
-                        "https://github.com/pydantic/monty.git",
-                    ),
-                    submodule=True,
-                ),
-                successful_outcome(),
-            ),
-            CommandStub(
-                _invoke(config, program="git", args=("rev-parse", "HEAD"), submodule=True),
-                successful_outcome("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n"),
-            ),
-            CommandStub(
-                _invoke(config, program="git", args=("fetch", "--prune", "origin"), submodule=True),
-                successful_outcome(),
-            ),
-            CommandStub(
-                _invoke(
-                    config,
-                    program="git",
-                    args=("fetch", "--prune", "upstream"),
-                    submodule=True,
-                ),
-                successful_outcome(),
-            ),
-            CommandStub(
-                _invoke(
-                    config,
-                    program="git",
-                    args=("checkout", "-B", "main", "origin/main"),
-                    submodule=True,
-                ),
-                successful_outcome(),
-            ),
-            CommandStub(
-                _invoke(
-                    config,
-                    program="git",
-                    args=("merge", "--ff-only", "upstream/main"),
-                    submodule=True,
-                ),
-                successful_outcome(),
-            ),
-            CommandStub(
-                _invoke(config, program="git", args=("rev-parse", "HEAD"), submodule=True),
-                successful_outcome("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n"),
-            ),
-            CommandStub(
-                _invoke(config, program="git", args=("add", "third_party/full-monty")),
-                successful_outcome(),
-            ),
-            CommandStub(
-                _invoke(config, program="make", args=("check-fmt",)),
-                successful_outcome(),
-            ),
-            CommandStub(
-                _invoke(config, program="make", args=("lint",)),
-                failure_outcome("simulated lint gate failure"),
-            ),
+        _build_sync_command_sequence(
+            config,
+            remotes=["origin", "upstream"],
+            gate_to_fail="lint",
+            old_revision="aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n",
+            new_revision="aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n",
+            superproject_dirty=False,
         )
     )
 
