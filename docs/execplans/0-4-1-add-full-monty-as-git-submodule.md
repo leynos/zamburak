@@ -179,7 +179,7 @@ Retrospective:
 
 Current repository state relevant to this task:
 
-- `third_party/full-monty/` is now present as a pinned Git submodule and
+- `third_party/full-monty/` is now present as a pinned Git submodule, and
   `.gitmodules` is tracked in the repository root.
 - Roadmap Task 0.4.1 is now marked done in `docs/roadmap.md` under
   "Step 0.4: `full-monty` repository mechanics and guardrails".
@@ -295,7 +295,7 @@ Run from repository root (`/home/user/project`). Use `set -o pipefail` and
     set -o pipefail
     RUSTFLAGS="-D warnings" cargo test --workspace --all-targets \
       --all-features monty_fork_policy \
-      | tee /tmp/test-monty-fork-policy.out
+      | tee /tmp/test-monty-fork-policy.out |
 
    Expected evidence includes passing unit tests and behavioural scenarios for
    happy and unhappy paths.

@@ -269,24 +269,37 @@ fn pointer_not_present_in_revision(stderr: &str) -> bool {
     stderr.contains("exists on disk, but not in") || stderr.contains("does not exist in")
 }
 
-fn run_git_command_in_submodule_for_side_effects(
-    submodule_path: &Utf8Path,
-    args: &[&str],
-) -> Result<(), ReviewError> {
+fn format_git_submodule_command(submodule_path: &Utf8Path, args: &[&str]) -> String {
     let submodule_arg = submodule_path.as_str();
     let joined_args = args.join(" ");
-    let cmd = format!("git -C {submodule_arg} {joined_args}");
-    let output = Command::new("git")
+    format!("git -C {submodule_arg} {joined_args}")
+}
+
+fn run_git_submodule_command(
+    submodule_path: &Utf8Path,
+    args: &[&str],
+) -> Result<std::process::Output, ReviewError> {
+    let submodule_arg = submodule_path.as_str();
+    let cmd = format_git_submodule_command(submodule_path, args);
+    Command::new("git")
         .arg("-C")
         .arg(submodule_arg)
         .args(args)
         .output()
-        .map_err(|source| ReviewError::Command {
-            cmd: cmd.clone().into_boxed_str(),
+        .map_err(move |source| ReviewError::Command {
+            cmd: cmd.into_boxed_str(),
             source,
-        })?;
+        })
+}
+
+fn run_git_command_in_submodule_for_side_effects(
+    submodule_path: &Utf8Path,
+    args: &[&str],
+) -> Result<(), ReviewError> {
+    let output = run_git_submodule_command(submodule_path, args)?;
 
     if !output.status.success() {
+        let cmd = format_git_submodule_command(submodule_path, args);
         return Err(ReviewError::CommandFailed {
             cmd: cmd.into_boxed_str(),
             stderr: String::from_utf8_lossy(&output.stderr).trim().into(),
@@ -300,20 +313,10 @@ fn run_git_command_in_submodule_capture_stdout(
     submodule_path: &Utf8Path,
     args: &[&str],
 ) -> Result<String, ReviewError> {
-    let submodule_arg = submodule_path.as_str();
-    let joined_args = args.join(" ");
-    let cmd = format!("git -C {submodule_arg} {joined_args}");
-    let output = Command::new("git")
-        .arg("-C")
-        .arg(submodule_arg)
-        .args(args)
-        .output()
-        .map_err(|source| ReviewError::Command {
-            cmd: cmd.clone().into_boxed_str(),
-            source,
-        })?;
+    let output = run_git_submodule_command(submodule_path, args)?;
 
     if !output.status.success() {
+        let cmd = format_git_submodule_command(submodule_path, args);
         return Err(ReviewError::CommandFailed {
             cmd: cmd.into_boxed_str(),
             stderr: String::from_utf8_lossy(&output.stderr).trim().into(),

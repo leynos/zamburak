@@ -26,7 +26,12 @@ impl TokenTimestamp {
     clippy::expl_impl_clone_on_copy,
     reason = "newt-hype macro expansion emits explicit Clone for Copy wrappers"
 )]
+// Authority identifier newtypes generated via `base_newtype!` and `newtype!`.
 mod authority_newtypes {
+    //! Defines authority-specific identifier wrappers used across lifecycle
+    //! contracts: `AuthorityTokenId`, `AuthorityIssuer`,
+    //! `AuthoritySubject`, `AuthorityCapability`, and `ScopeResource`.
+
     use newt_hype::{base_newtype, newtype};
 
     base_newtype!(AuthorityTokenIdNewtype);
@@ -52,50 +57,24 @@ pub type AuthorityCapability = authority_newtypes::AuthorityCapability;
 /// Scope entry that an authority token may permit.
 pub type ScopeResource = authority_newtypes::ScopeResource;
 
-impl TryFrom<&str> for AuthorityTokenId {
-    type Error = AuthorityLifecycleError;
+macro_rules! impl_non_empty_try_from {
+    ($target:ty, $field:literal) => {
+        impl TryFrom<&str> for $target {
+            type Error = AuthorityLifecycleError;
 
-    fn try_from(value: &str) -> Result<Self, Self::Error> {
-        non_empty(value, "token_id")?;
-        Ok(Self::new(value.to_owned()))
-    }
+            fn try_from(value: &str) -> Result<Self, Self::Error> {
+                non_empty(value, $field)?;
+                Ok(Self::new(value.to_owned()))
+            }
+        }
+    };
 }
 
-impl TryFrom<&str> for AuthorityIssuer {
-    type Error = AuthorityLifecycleError;
-
-    fn try_from(value: &str) -> Result<Self, Self::Error> {
-        non_empty(value, "issuer")?;
-        Ok(Self::new(value.to_owned()))
-    }
-}
-
-impl TryFrom<&str> for AuthoritySubject {
-    type Error = AuthorityLifecycleError;
-
-    fn try_from(value: &str) -> Result<Self, Self::Error> {
-        non_empty(value, "subject")?;
-        Ok(Self::new(value.to_owned()))
-    }
-}
-
-impl TryFrom<&str> for AuthorityCapability {
-    type Error = AuthorityLifecycleError;
-
-    fn try_from(value: &str) -> Result<Self, Self::Error> {
-        non_empty(value, "capability")?;
-        Ok(Self::new(value.to_owned()))
-    }
-}
-
-impl TryFrom<&str> for ScopeResource {
-    type Error = AuthorityLifecycleError;
-
-    fn try_from(value: &str) -> Result<Self, Self::Error> {
-        non_empty(value, "scope_resource")?;
-        Ok(Self::new(value.to_owned()))
-    }
-}
+impl_non_empty_try_from!(AuthorityTokenId, "token_id");
+impl_non_empty_try_from!(AuthorityIssuer, "issuer");
+impl_non_empty_try_from!(AuthoritySubject, "subject");
+impl_non_empty_try_from!(AuthorityCapability, "capability");
+impl_non_empty_try_from!(ScopeResource, "scope_resource");
 
 /// Set of scope resources permitted by a token.
 #[derive(Clone, Debug, Eq, PartialEq)]

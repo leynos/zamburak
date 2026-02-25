@@ -13,11 +13,10 @@
 //! design-contract minimum: calls without redaction are denied. Full
 //! budget and context evaluation belongs to Phase 4 (Task 4.1.2).
 
-#[expect(
-    clippy::expl_impl_clone_on_copy,
-    reason = "newt-hype macro expansion emits explicit Clone for Copy wrappers"
-)]
 mod sink_identifier_newtypes {
+    //! Defines sink-enforcement identifier wrappers for `ExecutionId` and
+    //! `CallId` via shared `newt-hype` newtype macros.
+
     use newt_hype::{base_newtype, newtype};
 
     base_newtype!(ExecutionIdentifierNewtype);
