@@ -19,8 +19,8 @@ pass before Phase 1 build work starts. Two of the four suites already exist and
 pass: policy-schema-contract (test filter `policy_schema_bdd::`) and
 authority-lifecycle (test filter `authority_lifecycle_bdd::`). Two are missing:
 large language model (LLM) sink enforcement (test filter
-`llm_sink_enforcement::`) and localization
-contract (test filter `localization_contract::`). The phase-gate target in
+`llm_sink_enforcement::`) and localization contract (test filter
+`localization_contract::`). The phase-gate target in
 `.github/phase-gate-target.txt` currently reads `phase0`.
 
 After this change a user can observe success by running `make phase-gate` and
@@ -28,12 +28,11 @@ seeing all four Phase 1 suites listed, executed, and passing. Running
 `make test` confirms the new BDD suites exercise both the LLM sink enforcement
 and localization contract types.
 
-This task introduces the *design-contract types* (traits, structs,
-enums, and contract functions) that express the design-document API
-shapes and writes behaviour-driven development (BDD) tests proving
-those shapes exist and behave correctly. Actual runtime logic (policy
-evaluation, Fluent loading, real LLM adapter dispatch) comes later in
-Phase 1, Phase 4, and Phase 6.
+This task introduces the *design-contract types* (traits, structs, enums, and
+contract functions) that express the design-document API shapes and writes
+behaviour-driven development (BDD) tests proving those shapes exist and behave
+correctly. Actual runtime logic (policy evaluation, Fluent loading, real LLM
+adapter dispatch) comes later in Phase 1, Phase 4, and Phase 6.
 
 ## Constraints
 
