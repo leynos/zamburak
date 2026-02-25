@@ -19,7 +19,7 @@ jobs:
           fetch-depth: 0
           submodules: recursive
       - name: Setup Rust
-        uses: leynos/shared-actions/.github/actions/setup-rust@f9f1c863c8a5bef64aa6779caa746e1a4a6c1ad4
+        uses: leynos/shared-actions/.github/actions/setup-rust@bf0f7fd98756a3643e9a3af70d0df7b7cf6d1fe7
       - name: Monty fork review policy
         if: ${{ github.event_name == 'pull_request' }}
         run: |
@@ -80,7 +80,7 @@ jobs:
       - name: Lint
         run: make lint
       - name: Test and Measure Coverage
-        uses: leynos/shared-actions/.github/actions/generate-coverage@f9f1c863c8a5bef64aa6779caa746e1a4a6c1ad4
+        uses: leynos/shared-actions/.github/actions/generate-coverage@bf0f7fd98756a3643e9a3af70d0df7b7cf6d1fe7
         with:
           output-path: lcov.info
           format: lcov
@@ -88,7 +88,7 @@ jobs:
         env:
           CS_ACCESS_TOKEN: ${{ secrets.CS_ACCESS_TOKEN }}
         if: ${{ env.CS_ACCESS_TOKEN }}
-        uses: leynos/shared-actions/.github/actions/upload-codescene-coverage@f9f1c863c8a5bef64aa6779caa746e1a4a6c1ad4
+        uses: leynos/shared-actions/.github/actions/upload-codescene-coverage@bf0f7fd98756a3643e9a3af70d0df7b7cf6d1fe7
         with:
           format: lcov
           access-token: ${{ env.CS_ACCESS_TOKEN }}
@@ -107,6 +107,6 @@ jobs:
           fetch-depth: 0
           submodules: recursive
       - name: Setup Rust
-        uses: leynos/shared-actions/.github/actions/setup-rust@f9f1c863c8a5bef64aa6779caa746e1a4a6c1ad4
+        uses: leynos/shared-actions/.github/actions/setup-rust@bf0f7fd98756a3643e9a3af70d0df7b7cf6d1fe7
       - name: Evaluate phase-gate suites
         run: make phase-gate
