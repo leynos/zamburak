@@ -13,7 +13,7 @@ TEST_FLAGS ?= $(CARGO_FLAGS)
 MDLINT ?= markdownlint-cli2
 NIXIE ?= nixie
 PHASE_GATE_TARGET_FILE ?= .github/phase-gate-target.txt
-SCRIPT_UV_DEPS ?= --with pytest --with pytest-bdd --with pytest-mock --with cmd-mox --with astroid --with cuprum
+SCRIPT_UV_DEPS ?= --with pytest --with pytest-bdd --with pytest-mock --with cmd-mox --with astroid --with cuprum==0.1.0
 SCRIPT_TYPECHECK_FLAGS ?= --ignore unresolved-import
 
 build: target/debug/$(TARGET) ## Build debug binary

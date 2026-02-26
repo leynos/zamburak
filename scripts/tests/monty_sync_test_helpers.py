@@ -126,7 +126,10 @@ def build_remote_setup_stubs(
     has_upstream: bool = False,
 ) -> tuple[CommandStub, ...]:
     """Build stubs for remote configuration (add or set-url upstream)."""
-    remotes = ("origin", "upstream") if has_upstream else ("origin",)
+    remotes = (
+        config.fork_remote,
+        config.upstream_remote,
+    ) if has_upstream else (config.fork_remote,)
     remote_cmd = "set-url" if has_upstream else "add"
     return (
         build_remote_listing_stub(config, remotes=remotes),
@@ -137,8 +140,8 @@ def build_remote_setup_stubs(
                 args=(
                     "remote",
                     remote_cmd,
-                    "upstream",
-                    "https://github.com/pydantic/monty.git",
+                    config.upstream_remote,
+                    config.upstream_url,
                 ),
                 submodule=True,
             ),
@@ -154,7 +157,7 @@ def _build_fetch_stubs_helper(config: monty_sync.SyncConfig) -> tuple[CommandStu
             invocation(
                 config,
                 program="git",
-                args=("fetch", "--prune", "origin"),
+                args=("fetch", "--prune", config.fork_remote),
                 submodule=True,
             ),
             successful_outcome(),
@@ -163,7 +166,7 @@ def _build_fetch_stubs_helper(config: monty_sync.SyncConfig) -> tuple[CommandStu
             invocation(
                 config,
                 program="git",
-                args=("fetch", "--prune", "upstream"),
+                args=("fetch", "--prune", config.upstream_remote),
                 submodule=True,
             ),
             successful_outcome(),
@@ -180,7 +183,12 @@ def _build_checkout_merge_stubs_helper(
             invocation(
                 config,
                 program="git",
-                args=("checkout", "-B", "main", "origin/main"),
+                args=(
+                    "checkout",
+                    "-B",
+                    config.fork_branch,
+                    f"{config.fork_remote}/{config.fork_branch}",
+                ),
                 submodule=True,
             ),
             successful_outcome(),
@@ -189,7 +197,11 @@ def _build_checkout_merge_stubs_helper(
             invocation(
                 config,
                 program="git",
-                args=("merge", "--ff-only", "upstream/main"),
+                args=(
+                    "merge",
+                    "--ff-only",
+                    f"{config.upstream_remote}/{config.upstream_branch}",
+                ),
                 submodule=True,
             ),
             successful_outcome(),
@@ -220,7 +232,7 @@ def build_sync_operation_stubs(
     new_revision: str,
 ) -> tuple[CommandStub, ...]:
     """Build stubs for remote setup, sync operations, and pointer staging."""
-    upstream_command = "set-url" if "upstream" in remotes else "add"
+    upstream_command = "set-url" if config.upstream_remote in remotes else "add"
     before_revision = old_revision.rstrip("\n")
     remote_setup_stub = (
         CommandStub(
@@ -230,8 +242,8 @@ def build_sync_operation_stubs(
                 args=(
                     "remote",
                     upstream_command,
-                    "upstream",
-                    "https://github.com/pydantic/monty.git",
+                    config.upstream_remote,
+                    config.upstream_url,
                 ),
                 submodule=True,
             ),
@@ -261,7 +273,7 @@ def build_sync_stubs(
     """Build stubs for fetch/merge sync operations."""
     return build_sync_operation_stubs(
         config,
-        remotes=("origin", "upstream"),
+        remotes=(config.fork_remote, config.upstream_remote),
         old_revision=old_rev,
         new_revision=new_rev,
     )[1:]
@@ -269,19 +281,12 @@ def build_sync_stubs(
 
 def build_gate_stubs(config: monty_sync.SyncConfig) -> tuple[CommandStub, ...]:
     """Build stubs for verification gate targets."""
-    return (
+    return tuple(
         CommandStub(
-            invocation(config, program="make", args=("check-fmt",)),
+            invocation(config, program="make", args=(target,)),
             successful_outcome(),
-        ),
-        CommandStub(
-            invocation(config, program="make", args=("lint",)),
-            successful_outcome(),
-        ),
-        CommandStub(
-            invocation(config, program="make", args=("test",)),
-            successful_outcome(),
-        ),
+        )
+        for target in config.verification_targets
     )
 
 
@@ -292,7 +297,10 @@ def happy_path_stubs_up_to_sync(
     old_revision: str = "1111111111111111111111111111111111111111",
 ) -> tuple[CommandStub, ...]:
     """Build stubs from preflight checks through merge for happy-path sync."""
-    remotes = ("origin", "upstream") if has_upstream else ("origin",)
+    remotes = (
+        config.fork_remote,
+        config.upstream_remote,
+    ) if has_upstream else (config.fork_remote,)
     return (
         build_preflight_stubs(config)
         + (build_remote_listing_stub(config, remotes=remotes),)
@@ -331,7 +339,7 @@ def gate_stubs(
 ) -> tuple[CommandStub, ...]:
     """Build stubs for verification gates, optionally failing at one target."""
     stubs: list[CommandStub] = []
-    for target in ("check-fmt", "lint", "test"):
+    for target in config.verification_targets:
         if target == fail_at:
             stubs.append(
                 CommandStub(
