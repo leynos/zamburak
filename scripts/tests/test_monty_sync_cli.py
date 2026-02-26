@@ -38,6 +38,29 @@ def test_main_reports_error_when_run_monty_sync_raises(
     assert "monty-sync error: simulated failure" in captured.err
 
 
+def test_main_success_runs_monty_sync(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Verify CLI success path wiring and exit code when sync succeeds."""
+    recorded: dict[str, object] = {}
+
+    def _fake_sync(
+        runner: monty_sync.CommandRunner,
+        *,
+        config: monty_sync.SyncConfig,
+        stdout,
+    ) -> None:
+        recorded["runner"] = runner
+        recorded["config"] = config
+        recorded["stdout"] = stdout
+
+    monkeypatch.setattr(monty_sync, "run_monty_sync", _fake_sync)
+    exit_code = monty_sync.main([])
+
+    assert exit_code == 0
+    assert isinstance(recorded.get("config"), monty_sync.SyncConfig)
+
+
 def test_main_accepts_help() -> None:
     """Verify help flag returns zero without running sync."""
     assert monty_sync.main(["--help"]) == 0

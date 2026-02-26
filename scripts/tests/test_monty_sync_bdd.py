@@ -21,12 +21,14 @@ from pytest_bdd import given, scenarios, then, when
 import monty_sync
 
 from monty_sync_test_helpers import (
-    CommandInvocation,
     CommandStub,
     QueueRunner,
+    build_config,
+    build_preflight_stubs,
     build_remote_listing_stub,
     build_sync_operation_stubs,
-    failure_outcome,
+    gate_stubs,
+    invocation,
     successful_outcome,
 )
 
@@ -38,7 +40,7 @@ scenarios("features/monty_sync.feature")
 class SyncScenarioParams:
     """Parameters defining a specific monty-sync test scenario."""
 
-    remotes: list[str]
+    remotes: tuple[str, ...]
     gate_to_fail: str | None
     old_revision: str
     new_revision: str
@@ -47,7 +49,7 @@ class SyncScenarioParams:
 
 # Scenario parameter presets for BDD test cases.
 HAPPY_PATH_SCENARIO = SyncScenarioParams(
-    remotes=["origin", "upstream"],
+    remotes=("origin", "upstream"),
     gate_to_fail=None,
     old_revision="aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n",
     new_revision="bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\n",
@@ -55,7 +57,7 @@ HAPPY_PATH_SCENARIO = SyncScenarioParams(
 )
 
 DIRTY_SUPERPROJECT_SCENARIO = SyncScenarioParams(
-    remotes=[],
+    remotes=(),
     gate_to_fail=None,
     old_revision="aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n",
     new_revision="aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n",
@@ -63,7 +65,7 @@ DIRTY_SUPERPROJECT_SCENARIO = SyncScenarioParams(
 )
 
 MISSING_REMOTE_SCENARIO = SyncScenarioParams(
-    remotes=["upstream"],
+    remotes=("upstream",),
     gate_to_fail=None,
     old_revision="aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n",
     new_revision="aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n",
@@ -71,7 +73,7 @@ MISSING_REMOTE_SCENARIO = SyncScenarioParams(
 )
 
 GATE_FAILURE_SCENARIO = SyncScenarioParams(
-    remotes=["origin", "upstream"],
+    remotes=("origin", "upstream"),
     gate_to_fail="lint",
     old_revision="aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n",
     new_revision="aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n",
@@ -89,66 +91,26 @@ class ScenarioState:
     error: monty_sync.MontySyncError | None = None
 
 
-def _config(tmp_path: Path) -> monty_sync.SyncConfig:
-    repo_root = tmp_path / "repo"
-    return monty_sync.SyncConfig(repo_root=repo_root)
-
-
-def _invoke(
-    config: monty_sync.SyncConfig,
-    *,
-    program: str,
-    args: tuple[str, ...],
-    submodule: bool = False,
-) -> CommandInvocation:
-    cwd = config.submodule_root if submodule else config.repo_root
-    return CommandInvocation(program=program, args=args, cwd=cwd)
-
-
 def _build_preflight_stubs(
     config: monty_sync.SyncConfig,
     *,
     superproject_dirty: bool,
 ) -> tuple[CommandStub, ...]:
-    """Build stubs for preflight checks and submodule initialisation."""
+    """Build stubs for preflight checks and submodule initialization."""
     if superproject_dirty:
         return (
             CommandStub(
-                _invoke(config, program="git", args=("status", "--porcelain")),
+                invocation(config, program="git", args=("status", "--porcelain")),
                 successful_outcome(" M README.md\n"),
             ),
         )
-
-    return (
-        CommandStub(
-            _invoke(config, program="git", args=("status", "--porcelain")),
-            successful_outcome(),
-        ),
-        CommandStub(
-            _invoke(
-                config,
-                program="git",
-                args=(
-                    "submodule",
-                    "update",
-                    "--init",
-                    "--recursive",
-                    "third_party/full-monty",
-                ),
-            ),
-            successful_outcome(),
-        ),
-        CommandStub(
-            _invoke(config, program="git", args=("status", "--porcelain"), submodule=True),
-            successful_outcome(),
-        ),
-    )
+    return build_preflight_stubs(config)
 
 
 def _build_remote_check_stub(
     config: monty_sync.SyncConfig,
     *,
-    remotes: list[str],
+    remotes: tuple[str, ...],
 ) -> CommandStub:
     """Build stub for remote listing in the submodule checkout."""
     return build_remote_listing_stub(config, remotes=remotes)
@@ -157,7 +119,7 @@ def _build_remote_check_stub(
 def _build_sync_operation_stubs(
     config: monty_sync.SyncConfig,
     *,
-    remotes: list[str],
+    remotes: tuple[str, ...],
     old_revision: str,
     new_revision: str,
 ) -> tuple[CommandStub, ...]:
@@ -176,23 +138,7 @@ def _build_gate_stubs(
     gate_to_fail: str | None,
 ) -> tuple[CommandStub, ...]:
     """Build stubs for verification gates with optional failure injection."""
-    stubs: list[CommandStub] = []
-    for target in ("check-fmt", "lint", "test"):
-        if gate_to_fail == target:
-            stubs.append(
-                CommandStub(
-                    _invoke(config, program="make", args=(target,)),
-                    failure_outcome("simulated lint gate failure"),
-                )
-            )
-            return tuple(stubs)
-        stubs.append(
-            CommandStub(
-                _invoke(config, program="make", args=(target,)),
-                successful_outcome(),
-            )
-        )
-    return tuple(stubs)
+    return gate_stubs(config, fail_at=gate_to_fail)
 
 
 def _build_sync_command_sequence(
@@ -218,14 +164,14 @@ def _build_sync_command_sequence(
         new_revision=scenario.new_revision,
     )
 
-    gate_stubs = _build_gate_stubs(config, gate_to_fail=scenario.gate_to_fail)
-    return (*preflight_stubs, remote_check_stub, *sync_stubs, *gate_stubs)
+    verification_stubs = _build_gate_stubs(config, gate_to_fail=scenario.gate_to_fail)
+    return (*preflight_stubs, remote_check_stub, *sync_stubs, *verification_stubs)
 
 
 @pytest.fixture
 def scenario_state(tmp_path: Path) -> ScenarioState:
     """Create isolated scenario state with a repository-root configuration."""
-    return ScenarioState(config=_config(tmp_path))
+    return ScenarioState(config=build_config(tmp_path))
 
 
 def build_bdd_happy_path_stubs(config: monty_sync.SyncConfig) -> tuple[CommandStub, ...]:

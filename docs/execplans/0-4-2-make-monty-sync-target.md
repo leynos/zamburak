@@ -16,7 +16,7 @@ command, `make monty-sync`, that synchronizes the `full-monty` fork with
 upstream Monty and then runs repository verification gates.
 
 After this change, maintainers can run a single target to perform the routine
-sync workflow: initialise the submodule if needed, fetch upstream and fork
+sync workflow: initialize the submodule if needed, fetch upstream and fork
 state, refresh the fork branch in the local submodule checkout, update the
 superproject pointer, and execute defined verification suites. Success is
 observable via deterministic command output and green quality gates.
@@ -74,10 +74,10 @@ observable via deterministic command output and green quality gates.
 
 ## Risks
 
-- Risk: `third_party/full-monty/` may be uninitialised in local clones.
+- Risk: `third_party/full-monty/` may be uninitialized in local clones.
   Severity: high. Likelihood: high. Mitigation: make sync command perform
   `git submodule update --init` before any submodule git operations and include
-  tests for uninitialised state.
+  tests for uninitialized state.
 
 - Risk: local dirty state in superproject or submodule can cause partial sync
   side effects. Severity: high. Likelihood: medium. Mitigation: preflight
@@ -99,10 +99,11 @@ observable via deterministic command output and green quality gates.
 
 ## Progress
 
-- [x] (2026-02-25 18:39Z) Reviewed roadmap Task `0.4.2`, ADR signposts,
-  command/gateway baseline docs, and prior Task `0.4.1` artefacts.
+- [x] (2026-02-25 18:39Z) Reviewed roadmap Task `0.4.2`, Architecture Decision
+  Record (ADR) signposts, command/gateway baseline docs, and prior Task `0.4.1`
+  artefacts.
 - [x] (2026-02-25 18:39Z) Confirmed repository state and current `full-monty`
-  mechanics (`.gitmodules` present, submodule currently uninitialised in this
+  mechanics (`.gitmodules` present, submodule currently uninitialized in this
   workspace, `monty_fork_review` exists).
 - [x] (2026-02-25 18:39Z) Drafted this ExecPlan.
 - [x] (2026-02-25 19:10Z) Implemented `scripts/monty_sync.py` and `make`
@@ -120,7 +121,7 @@ observable via deterministic command output and green quality gates.
 
 ## Surprises & Discoveries
 
-- Observation: `third_party/full-monty/` is currently present but uninitialised
+- Observation: `third_party/full-monty/` is currently present but uninitialized
   in this workspace (`git submodule status` line starts with `-`). Evidence:
   `git submodule status --recursive` returned
   `-b316ce4a... third_party/full-monty`. Impact: sync implementation must
@@ -212,8 +213,8 @@ Current repository context relevant to Task `0.4.2`:
   `third_party/full-monty` at `https://github.com/leynos/full-monty.git`.
 - `src/bin/monty_fork_review.rs` already enforces fork semantic policy checks
   over submodule deltas.
-- CI currently runs `monty_fork_review` and baseline quality gates, but there is
-  no developer-facing `make monty-sync` target yet.
+- continuous integration (CI) currently runs `monty_fork_review` and baseline
+  quality gates, but there is no developer-facing `make monty-sync` target yet.
 - `Makefile` contains standard gates plus script gates (`script-baseline` and
   `script-test`) and is the canonical command surface.
 - Existing script testing patterns are in `scripts/tests/`, with unit tests and
@@ -255,7 +256,7 @@ Stage B: scaffold tests first (red), then implement script and Make target
   `scripts/tests/test_monty_sync_*.py`.
 - Add behavioural tests in `scripts/tests/test_monty_sync_bdd.py` with feature
   scenarios under `scripts/tests/features/monty_sync.feature` for: happy path
-  sync, uninitialised submodule bootstrap, dirty-state failure, fetch failure,
+  sync, uninitialized submodule bootstrap, dirty-state failure, fetch failure,
   and verification gate failure.
 - Implement `scripts/monty_sync.py` with:
   - `uv` metadata block and Python baseline compliance,
@@ -383,7 +384,7 @@ Acceptance is behaviour-based and must be demonstrable:
 - Unhappy path: command exits non-zero with clear diagnostics when:
   working tree is dirty, remotes cannot be fetched, branch refresh fails, or a
   verification suite fails.
-- Edge path: if the submodule is uninitialised, the command initialises it and
+- Edge path: if the submodule is uninitialized, the command initializes it and
   continues without manual bootstrap.
 - Tests:
   - unit tests validate sync command planning, preflight logic, and gate list,

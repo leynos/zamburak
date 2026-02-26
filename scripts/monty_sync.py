@@ -5,7 +5,7 @@
 # ///
 """Synchronise `full-monty` and run repository verification gates.
 
-The script initialises and refreshes `third_party/full-monty`, fast-forwards
+The script initializes and refreshes `third_party/full-monty`, fast-forwards
 the fork branch against upstream, stages the submodule pointer update, and runs
 post-sync verification gates. Run from repository root with `make monty-sync`.
 """
@@ -35,7 +35,15 @@ make = COMMANDS[MAKE]
 
 @dataclass(frozen=True)
 class CommandOutcome:
-    """Structured command result used by sync orchestration."""
+    """Represent one command result consumed by sync orchestration.
+
+    Parameters
+    ----------
+    ok : bool
+    stdout : str
+    stderr : str
+    exit_code : int
+    """
 
     ok: bool
     stdout: str
@@ -45,7 +53,19 @@ class CommandOutcome:
 
 @dataclass(frozen=True)
 class SyncConfig:
-    """Configuration for `full-monty` synchronization."""
+    """Define repository and remote settings for monty-sync.
+
+    Parameters
+    ----------
+    repo_root : Path
+    submodule_path : Path
+    fork_remote : str
+    fork_branch : str
+    upstream_remote : str
+    upstream_url : str
+    upstream_branch : str
+    verification_targets : tuple[str, ...]
+    """
 
     repo_root: Path
     submodule_path: Path = Path("third_party/full-monty")
@@ -63,7 +83,14 @@ class SyncConfig:
 
 @dataclass(frozen=True)
 class CommandInvocation:
-    """Specification for a single command execution."""
+    """Describe one command invocation expected by a command runner.
+
+    Parameters
+    ----------
+    program : str
+    args : tuple[str, ...]
+    cwd : Path
+    """
 
     program: str
     args: tuple[str, ...]
@@ -71,18 +98,29 @@ class CommandInvocation:
 
 
 class CommandRunner(Protocol):
-    """Protocol for command execution, enabling dependency injection in tests."""
+    """Define the command runner contract used by monty-sync orchestration."""
 
     def run(self, *, program: str, args: tuple[str, ...], cwd: Path) -> CommandOutcome:
-        """Execute one command and return command outcome."""
+        """Execute one command invocation.
+
+        Parameters
+        ----------
+        program : str
+        args : tuple[str, ...]
+        cwd : Path
+
+        Returns
+        -------
+        CommandOutcome
+        """
 
 
 class MontySyncError(RuntimeError):
-    """Raised when monty sync orchestration encounters a fail-closed condition."""
+    """Signal a fail-closed monty-sync orchestration error."""
 
 
 class CuprumRunner:
-    """Command runner backed by Cuprum safe commands."""
+    """Execute command invocations via Cuprum safe command wrappers."""
 
     def run(self, *, program: str, args: tuple[str, ...], cwd: Path) -> CommandOutcome:
         command = _resolve_command(program)
@@ -113,11 +151,7 @@ def _run_checked(
     failure_summary: str,
 ) -> CommandOutcome:
     """Execute one command and raise `MontySyncError` on failure."""
-    outcome = runner.run(
-        program=invocation.program,
-        args=invocation.args,
-        cwd=invocation.cwd,
-    )
+    outcome = runner.run(program=invocation.program, args=invocation.args, cwd=invocation.cwd)
     if outcome.ok:
         return outcome
 
@@ -134,60 +168,34 @@ def _log(stdout: TextIO, message: str) -> None:
     stdout.write(f"{message}\n")
 
 
-def _ensure_clean_worktree(
-    runner: CommandRunner,
-    *,
-    cwd: Path,
-    scope_name: str,
-) -> None:
+def _ensure_clean_worktree(runner: CommandRunner, *, cwd: Path, scope_name: str) -> None:
     """Fail when `cwd` worktree has tracked or untracked changes."""
     outcome = _run_checked(
         runner,
-        invocation=CommandInvocation(
-            program="git",
-            args=("status", "--porcelain"),
-            cwd=cwd,
-        ),
+        invocation=CommandInvocation(program="git", args=("status", "--porcelain"), cwd=cwd),
         failure_summary=f"unable to inspect {scope_name} worktree status",
     )
     if outcome.stdout.strip():
         raise MontySyncError(
-            f"{scope_name} worktree is not clean; commit or stash changes before "
-            "running monty sync"
+            f"{scope_name} worktree is not clean; commit or stash changes before running monty sync"
         )
 
 
-def _read_head_revision(
-    runner: CommandRunner,
-    *,
-    cwd: Path,
-) -> str:
+def _read_head_revision(runner: CommandRunner, *, cwd: Path) -> str:
     """Return current HEAD revision for one repository checkout."""
     outcome = _run_checked(
         runner,
-        invocation=CommandInvocation(
-            program="git",
-            args=("rev-parse", "HEAD"),
-            cwd=cwd,
-        ),
+        invocation=CommandInvocation(program="git", args=("rev-parse", "HEAD"), cwd=cwd),
         failure_summary="unable to read HEAD revision",
     )
     return outcome.stdout.strip()
 
 
-def _ensure_remotes(
-    runner: CommandRunner,
-    *,
-    config: SyncConfig,
-) -> None:
+def _ensure_remotes(runner: CommandRunner, *, config: SyncConfig) -> None:
     """Validate fork remote and configure upstream remote URL."""
     remotes_outcome = _run_checked(
         runner,
-        invocation=CommandInvocation(
-            program="git",
-            args=("remote",),
-            cwd=config.submodule_root,
-        ),
+        invocation=CommandInvocation(program="git", args=("remote",), cwd=config.submodule_root),
         failure_summary="unable to list full-monty remotes",
     )
     remotes = {line.strip() for line in remotes_outcome.stdout.splitlines() if line.strip()}
@@ -220,11 +228,7 @@ def _ensure_remotes(
     )
 
 
-def _refresh_submodule_branch(
-    runner: CommandRunner,
-    *,
-    config: SyncConfig,
-) -> None:
+def _refresh_submodule_branch(runner: CommandRunner, *, config: SyncConfig) -> None:
     """Refresh local fork branch by fast-forwarding with upstream branch."""
     _run_checked(
         runner,
@@ -238,9 +242,7 @@ def _refresh_submodule_branch(
     _run_checked(
         runner,
         invocation=CommandInvocation(
-            program="git",
-            args=("fetch", "--prune", config.upstream_remote),
-            cwd=config.submodule_root,
+            program="git", args=("fetch", "--prune", config.upstream_remote), cwd=config.submodule_root
         ),
         failure_summary="unable to fetch upstream remote",
     )
@@ -262,34 +264,19 @@ def _refresh_submodule_branch(
         runner,
         invocation=CommandInvocation(
             program="git",
-            args=(
-                "merge",
-                "--ff-only",
-                f"{config.upstream_remote}/{config.upstream_branch}",
-            ),
+            args=("merge", "--ff-only", f"{config.upstream_remote}/{config.upstream_branch}"),
             cwd=config.submodule_root,
         ),
-        failure_summary=(
-            "unable to fast-forward fork branch with upstream; resolve divergence "
-            "manually"
-        ),
+        failure_summary="unable to fast-forward fork branch with upstream; resolve divergence manually",
     )
 
 
-def _run_verification_gates(
-    runner: CommandRunner,
-    *,
-    config: SyncConfig,
-) -> None:
+def _run_verification_gates(runner: CommandRunner, *, config: SyncConfig) -> None:
     """Run required repository verification gates after sync."""
     for target in config.verification_targets:
         _run_checked(
             runner,
-            invocation=CommandInvocation(
-                program="make",
-                args=(target,),
-                cwd=config.repo_root,
-            ),
+            invocation=CommandInvocation(program="make", args=(target,), cwd=config.repo_root),
             failure_summary=f"verification gate `{target}` failed",
         )
 
@@ -300,33 +287,39 @@ def run_monty_sync(
     config: SyncConfig,
     stdout: TextIO,
 ) -> None:
-    """Execute repository-local full-monty sync and verification workflow."""
+    """Synchronize the `full-monty` submodule and run verification gates.
+
+    Parameters
+    ----------
+    runner : CommandRunner
+    config : SyncConfig
+    stdout : TextIO
+        Stream receiving progress output.
+
+    Returns
+    -------
+    None
+
+    Raises
+    ------
+    MontySyncError
+    """
     _log(stdout, "monty-sync: checking superproject worktree cleanliness")
     _ensure_clean_worktree(runner, cwd=config.repo_root, scope_name="superproject")
 
-    _log(stdout, f"monty-sync: initialising {config.submodule_path.as_posix()}")
+    _log(stdout, f"monty-sync: initializing {config.submodule_path.as_posix()}")
     _run_checked(
         runner,
         invocation=CommandInvocation(
             program="git",
-            args=(
-                "submodule",
-                "update",
-                "--init",
-                "--recursive",
-                config.submodule_path.as_posix(),
-            ),
+            args=("submodule", "update", "--init", "--recursive", config.submodule_path.as_posix()),
             cwd=config.repo_root,
         ),
-        failure_summary="unable to initialise full-monty submodule",
+        failure_summary="unable to initialize full-monty submodule",
     )
 
     _log(stdout, "monty-sync: checking full-monty worktree cleanliness")
-    _ensure_clean_worktree(
-        runner,
-        cwd=config.submodule_root,
-        scope_name="full-monty submodule",
-    )
+    _ensure_clean_worktree(runner, cwd=config.submodule_root, scope_name="full-monty submodule")
 
     _log(stdout, "monty-sync: ensuring remote configuration")
     _ensure_remotes(runner, config=config)
@@ -341,10 +334,7 @@ def run_monty_sync(
     if before_revision == after_revision:
         _log(stdout, "monty-sync: submodule revision already current")
     else:
-        _log(
-            stdout,
-            f"monty-sync: submodule revision updated {before_revision} -> {after_revision}",
-        )
+        _log(stdout, f"monty-sync: submodule revision updated {before_revision} -> {after_revision}")
 
     _run_checked(
         runner,
@@ -373,7 +363,16 @@ def _parse_args(argv: list[str]) -> None:
 
 
 def main(argv: list[str] | None = None) -> int:
-    """Run monty sync command and return process exit code."""
+    """Run the monty-sync CLI entrypoint.
+
+    Parameters
+    ----------
+    argv : list[str] | None
+
+    Returns
+    -------
+    int
+    """
     cli_args = [] if argv is None else argv
     try:
         _parse_args(cli_args)

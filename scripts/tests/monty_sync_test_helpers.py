@@ -104,7 +104,7 @@ def build_preflight_stubs(config: monty_sync.SyncConfig) -> tuple[CommandStub, .
                     "update",
                     "--init",
                     "--recursive",
-                    "third_party/full-monty",
+                    config.submodule_path.as_posix(),
                 ),
             ),
             successful_outcome(),
@@ -147,36 +147,9 @@ def build_remote_setup_stubs(
     )
 
 
-def build_sync_operation_stubs(
-    config: monty_sync.SyncConfig,
-    *,
-    remotes: Sequence[str],
-    old_revision: str,
-    new_revision: str,
-) -> tuple[CommandStub, ...]:
-    """Build stubs for remote setup, sync operations, and pointer staging."""
-    upstream_command = "set-url" if "upstream" in remotes else "add"
-    before_revision = old_revision.rstrip("\n")
-    after_revision = new_revision.rstrip("\n")
+def _build_fetch_stubs_helper(config: monty_sync.SyncConfig) -> tuple[CommandStub, ...]:
+    """Build stubs for fetch operations from fork and upstream remotes."""
     return (
-        CommandStub(
-            invocation(
-                config,
-                program="git",
-                args=(
-                    "remote",
-                    upstream_command,
-                    "upstream",
-                    "https://github.com/pydantic/monty.git",
-                ),
-                submodule=True,
-            ),
-            successful_outcome(),
-        ),
-        CommandStub(
-            invocation(config, program="git", args=("rev-parse", "HEAD"), submodule=True),
-            successful_outcome(f"{before_revision}\n"),
-        ),
         CommandStub(
             invocation(
                 config,
@@ -195,6 +168,14 @@ def build_sync_operation_stubs(
             ),
             successful_outcome(),
         ),
+    )
+
+
+def _build_checkout_merge_stubs_helper(
+    config: monty_sync.SyncConfig,
+) -> tuple[CommandStub, ...]:
+    """Build stubs for branch checkout and fast-forward merge operations."""
+    return (
         CommandStub(
             invocation(
                 config,
@@ -213,14 +194,62 @@ def build_sync_operation_stubs(
             ),
             successful_outcome(),
         ),
+    )
+
+
+def _build_post_sync_stubs_helper(config: monty_sync.SyncConfig, *, new_revision: str) -> tuple[CommandStub, ...]:
+    """Build stubs for post-sync revision capture and pointer staging."""
+    after_revision = new_revision.rstrip("\n")
+    return (
         CommandStub(
             invocation(config, program="git", args=("rev-parse", "HEAD"), submodule=True),
             successful_outcome(f"{after_revision}\n"),
         ),
         CommandStub(
-            invocation(config, program="git", args=("add", "third_party/full-monty")),
+            invocation(config, program="git", args=("add", config.submodule_path.as_posix())),
             successful_outcome(),
         ),
+    )
+
+
+def build_sync_operation_stubs(
+    config: monty_sync.SyncConfig,
+    *,
+    remotes: Sequence[str],
+    old_revision: str,
+    new_revision: str,
+) -> tuple[CommandStub, ...]:
+    """Build stubs for remote setup, sync operations, and pointer staging."""
+    upstream_command = "set-url" if "upstream" in remotes else "add"
+    before_revision = old_revision.rstrip("\n")
+    remote_setup_stub = (
+        CommandStub(
+            invocation(
+                config,
+                program="git",
+                args=(
+                    "remote",
+                    upstream_command,
+                    "upstream",
+                    "https://github.com/pydantic/monty.git",
+                ),
+                submodule=True,
+            ),
+            successful_outcome(),
+        ),
+    )
+    pre_sync_revision_stub = (
+        CommandStub(
+            invocation(config, program="git", args=("rev-parse", "HEAD"), submodule=True),
+            successful_outcome(f"{before_revision}\n"),
+        ),
+    )
+    return (
+        remote_setup_stub
+        + pre_sync_revision_stub
+        + _build_fetch_stubs_helper(config)
+        + _build_checkout_merge_stubs_helper(config)
+        + _build_post_sync_stubs_helper(config, new_revision=new_revision)
     )
 
 
@@ -289,7 +318,7 @@ def post_sync_stubs(
             successful_outcome(f"{normalised_new_revision}\n"),
         ),
         CommandStub(
-            invocation(config, program="git", args=("add", "third_party/full-monty")),
+            invocation(config, program="git", args=("add", config.submodule_path.as_posix())),
             successful_outcome(),
         ),
     )
