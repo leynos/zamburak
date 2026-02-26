@@ -56,17 +56,18 @@ _Table 1a: Clippy threshold configuration (`clippy.toml`)._
 
 ## Required engineering tools and rationale
 
-| Tool or target         | Why it is required                                                      |
-| ---------------------- | ----------------------------------------------------------------------- |
-| `make check-fmt`       | Verifies deterministic source formatting and prevents style drift.      |
-| `make lint`            | Enforces strict Rust linting and warnings-as-errors quality discipline. |
-| `make test`            | Validates behavioural and regression correctness across the workspace.  |
-| `make markdownlint`    | Enforces documentation consistency and readability constraints.         |
-| `make fmt`             | Normalizes Rust and Markdown formatting before review.                  |
-| `make nixie`           | Validates Mermaid diagrams to prevent broken architecture renderings.   |
-| `make phase-gate`      | Enforces phase-advancement verification suites in CI fail-closed mode.  |
-| `make script-baseline` | Validates script runtime metadata and command invocation contracts.     |
-| `make script-test`     | Runs the script baseline test suite.                                    |
+| Tool or target          | Why it is required                                                      |
+| ----------------------- | ----------------------------------------------------------------------- |
+| `make check-fmt`        | Verifies deterministic source formatting and prevents style drift.      |
+| `make lint`             | Enforces strict Rust linting and warnings-as-errors quality discipline. |
+| `make test`             | Validates behavioural and regression correctness across the workspace.  |
+| `make markdownlint`     | Enforces documentation consistency and readability constraints.         |
+| `make fmt`              | Normalizes Rust and Markdown formatting before review.                  |
+| `make nixie`            | Validates Mermaid diagrams to prevent broken architecture renderings.   |
+| `make phase-gate`       | Enforces phase-advancement verification suites in CI fail-closed mode.  |
+| `make script-baseline`  | Validates script runtime metadata and command invocation contracts.     |
+| `make script-typecheck` | Runs Python script type checks with `ty`.                               |
+| `make script-test`      | Runs the script baseline test suite.                                    |
 
 _Table 2: Required engineering tools and quality-gate rationale._
 
@@ -79,7 +80,7 @@ All repository changes must run the quality gates that match scope:
 - code-affecting changes:
   `make check-fmt`, `make lint`, and `make test`.
 - script-affecting changes:
-  `make script-baseline` and `make script-test`.
+  `make script-baseline`, `make script-typecheck`, and `make script-test`.
 - phase-advancement changes:
   `make phase-gate` in CI must pass for the configured
   `.github/phase-gate-target.txt` target.

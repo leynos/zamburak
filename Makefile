@@ -1,4 +1,4 @@
-.PHONY: help all clean test build release lint typecheck fmt check-fmt markdownlint nixie phase-gate script-baseline script-test
+.PHONY: help all clean test build release lint typecheck fmt check-fmt markdownlint nixie phase-gate script-baseline script-typecheck script-test monty-sync
 
 
 TARGET ?= libzamburak.rlib
@@ -13,7 +13,8 @@ TEST_FLAGS ?= $(CARGO_FLAGS)
 MDLINT ?= markdownlint-cli2
 NIXIE ?= nixie
 PHASE_GATE_TARGET_FILE ?= .github/phase-gate-target.txt
-SCRIPT_UV_DEPS ?= --with pytest --with pytest-bdd --with pytest-mock --with cmd-mox --with astroid
+SCRIPT_UV_DEPS ?= --with pytest --with pytest-bdd --with pytest-mock --with cmd-mox --with astroid --with cuprum==0.1.0
+SCRIPT_TYPECHECK_FLAGS ?= --ignore unresolved-import
 
 build: target/debug/$(TARGET) ## Build debug binary
 release: target/release/$(TARGET) ## Build release binary
@@ -36,7 +37,7 @@ lint: ## Run Clippy with warnings denied
 	RUSTDOCFLAGS="$(RUSTDOC_FLAGS)" $(CARGO) doc --workspace --no-deps
 	$(CARGO) clippy --workspace $(CLIPPY_FLAGS)
 
-typecheck: ## Run compile-time type checks
+typecheck: script-typecheck ## Run compile-time type checks
 	$(CARGO) check --workspace $(CARGO_FLAGS) $(BUILD_JOBS)
 
 fmt: ## Format Rust and Markdown sources
@@ -55,8 +56,14 @@ nixie: ## Validate Mermaid diagrams
 script-baseline: ## Validate roadmap script baseline contracts
 	uv run $(SCRIPT_UV_DEPS) scripts/verify_script_baseline.py
 
+script-typecheck: ## Run script type checks with ty
+	uv run --with ty ty check $(SCRIPT_TYPECHECK_FLAGS) scripts
+
 script-test: ## Run script baseline test suite
 	uv run $(SCRIPT_UV_DEPS) pytest scripts/tests
+
+monty-sync: ## Sync full-monty fork branch with upstream and run verification gates
+	uv run scripts/monty_sync.py
 
 help: ## Show available targets
 	@grep -E '^[a-zA-Z_-]+:.*?##' $(MAKEFILE_LIST) | \
