@@ -4,7 +4,7 @@ This ExecPlan is a living document. The sections `Constraints`, `Tolerances`,
 `Risks`, `Progress`, `Surprises & discoveries`, `Decision log`, and
 `Outcomes & retrospective` must be kept up to date as work proceeds.
 
-Status: DRAFT
+Status: COMPLETE
 
 ## Purpose / big picture
 
@@ -38,8 +38,8 @@ unit-level and behavioural tests proving:
 - Runtime IDs must be additive and generic. Existing execution semantics must
   remain unchanged when host code ignores runtime IDs.
 - Add tests covering happy, unhappy, and edge paths.
-- Add behavioural tests using `rstest-bdd` v0.5.0 where applicable in this
-  repository's compatibility suite.
+- Add behavioural tests using `rstest-bdd` v0.5.0 in `full-monty` tests where
+  applicable.
 - Record any design decisions in `docs/zamburak-design-document.md`.
 - Update `docs/users-guide.md` for consumer-visible API or behaviour changes.
 - Mark roadmap Task 0.5.1 as done in `docs/roadmap.md` only after all gates
@@ -66,10 +66,6 @@ unit-level and behavioural tests proving:
 
 ## Risks
 
-- Risk: Task 0.4.2 is currently unchecked in `docs/roadmap.md`.
-  Severity: high Likelihood: medium Mitigation: add a preflight go/no-go gate;
-  do not start 0.5.1 code changes until 0.4.2 is complete and verified.
-
 - Risk: current Monty internal value identity (`Value::id()`) may not satisfy
   strict uniqueness expectations for all value kinds. Severity: high
   Likelihood: medium Mitigation: run a focused design checkpoint and document
@@ -91,13 +87,13 @@ unit-level and behavioural tests proving:
   this ExecPlan.
 - [x] (2026-02-26 17:22Z) Initialized `third_party/full-monty/` submodule and
   confirmed current code locations relevant to runtime execution snapshots.
-- [ ] Finalize runtime-ID substrate design and API shape.
-- [ ] Implement runtime-ID state plumbing in `full-monty` runtime and snapshot
-  structures.
-- [ ] Add unit and behavioural tests (including `rstest-bdd` coverage where
+- [x] Finalized runtime-ID substrate design and API shape.
+- [x] Implemented runtime-ID state plumbing in `full-monty` runtime and
+  snapshot-facing structures.
+- [x] Added unit and behavioural tests (including `rstest-bdd` coverage where
   applicable) for uniqueness and continuity.
-- [ ] Update `docs/zamburak-design-document.md` and `docs/users-guide.md`.
-- [ ] Run required gates and mark Task 0.5.1 done in `docs/roadmap.md`.
+- [x] Updated `docs/zamburak-design-document.md` and `docs/users-guide.md`.
+- [x] Ran required gates and marked Task 0.5.1 done in `docs/roadmap.md`.
 
 ## Surprises & discoveries
 
@@ -107,9 +103,13 @@ unit-level and behavioural tests proving:
   `git submodule update --init --recursive`. Impact: implementation
   instructions must include an explicit submodule initialization step.
 
-- Observation: Task 0.4.2 remains unchecked in `docs/roadmap.md`, despite 0.5.1
-  depending on it. Evidence: roadmap entry still shows `[ ] Task 0.4.2`.
-  Impact: this plan treats 0.4.2 as a strict preflight gate.
+- Observation: superproject compatibility tests cannot directly depend on
+  `third_party/full-monty/crates/monty` because nested workspace manifests with
+  `workspace = true` package and dependency keys cannot be resolved from the
+  parent workspace. Evidence: `cargo test --test compatibility runtime_ids`
+  failed with workspace-root inheritance and nested-workspace errors. Impact:
+  behavioural runtime-ID coverage moved into `full-monty` tests using
+  `rstest-bdd` v0.5.0.
 
 ## Decision log
 
@@ -122,16 +122,31 @@ unit-level and behavioural tests proving:
   semantics in Track A naming or payload design. Rationale: required by ADR-001
   Track A constraints and fork policy. Date/Author: 2026-02-26 / Codex
 
-- Decision: validate behaviour at two levels:
-  `full-monty` runtime tests plus superproject compatibility BDD tests.
-  Rationale: unit tests prove runtime invariants in the fork, while BDD tests
-  in this repository provide roadmap-level evidence in `tests/compatibility/`.
-  Date/Author: 2026-02-26 / Codex
+- Decision: validate behaviour in `full-monty` test binaries only
+  (`runtime_ids.rs` and `runtime_ids_bdd.rs`) due nested workspace limitations
+  for direct superproject compatibility wiring. Rationale: preserves required
+  unit and behavioural coverage while keeping the superproject workspace
+  manifest stable. Date/Author: 2026-02-26 / Codex
 
 ## Outcomes & retrospective
 
-Not complete yet. Populate this section when implementation and verification
-are finished.
+Completed.
+
+- Runtime-ID substrate delivered as additive `full-monty` API:
+  `RuntimeValueId`, `RunProgress` and `ReplProgress` runtime-ID fields, and
+  `runtime_ids()` accessors.
+- Runtime IDs now round-trip through `RunProgress::dump()` and
+  `RunProgress::load()` with continuity across `resume()`.
+- Validation evidence:
+  - `cargo test --manifest-path third_party/full-monty/Cargo.toml -p monty`
+    `--test runtime_ids --test runtime_ids_bdd`
+  - `make check-fmt`
+  - `make lint`
+  - `make test`
+- Documentation and roadmap synchronized:
+  - snapshot semantics design decision recorded,
+  - user-facing behaviour documented,
+  - roadmap task 0.5.1 marked done.
 
 ## Context and orientation
 
@@ -149,8 +164,8 @@ Current repository state relevant to Task 0.5.1:
 - Current value identity helper logic is in
   `third_party/full-monty/crates/monty/src/value.rs` (`Value::id()`), but this
   is not yet a documented 0.5.1 host-runtime-ID contract.
-- Existing superproject compatibility BDD patterns are under
-  `tests/compatibility/` using `rstest-bdd` v0.5.0.
+- Behavioural coverage for this task now lives directly in
+  `third_party/full-monty/crates/monty/tests/runtime_ids_bdd.rs`.
 
 Files expected to change:
 
@@ -163,11 +178,10 @@ Files expected to change:
 - `third_party/full-monty/crates/monty/src/lib.rs` (exports if needed)
 - `third_party/full-monty/crates/monty/tests/` (new runtime-ID unit/integration
   tests)
-- `Cargo.toml` (superproject dev-dependency wiring if compatibility tests
-  directly call `monty`)
-- `tests/compatibility/main.rs`
-- `tests/compatibility/features/runtime_ids.feature` (new)
-- `tests/compatibility/runtime_ids/mod.rs` (new step definitions)
+- `third_party/full-monty/crates/monty/Cargo.toml` (test-only
+  `rstest-bdd` dependencies)
+- `third_party/full-monty/crates/monty/tests/features/runtime_ids.feature`
+- `third_party/full-monty/crates/monty/tests/runtime_ids_bdd.rs`
 - `docs/zamburak-design-document.md`
 - `docs/users-guide.md`
 - `docs/roadmap.md`
@@ -217,12 +231,12 @@ Stage D: verification suites (unit + behavioural).
   - continuity across `start()` to `resume()`,
   - continuity across `dump()` to `load()` for both runner and progress state,
   - unhappy path handling for invalid resume inputs without silent ID reuse.
-- Add superproject compatibility behavioural tests using `rstest-bdd` v0.5.0 in
-  `tests/compatibility/runtime_ids/` with `.feature` scenarios for happy and
-  unhappy paths tied to roadmap language.
+- Add `full-monty` behavioural tests using `rstest-bdd` v0.5.0 in
+  `crates/monty/tests/runtime_ids_bdd.rs` and
+  `crates/monty/tests/features/runtime_ids.feature` for happy and unhappy paths.
 
-Go/no-go for Stage D: both runtime tests and compatibility BDD tests pass and
-prove the task completion criteria.
+Go/no-go for Stage D: runtime unit and behavioural BDD tests pass and prove the
+task completion criteria.
 
 Stage E: documentation sync, roadmap closure, and quality gates.
 
@@ -265,14 +279,6 @@ make -C third_party/full-monty test \
   | tee /tmp/full-monty-test-runtime-ids.out
 ```
 
-1. Run superproject compatibility tests, including runtime-ID BDD coverage.
-
-```sh
-set -o pipefail
-RUSTFLAGS="-D warnings" cargo test --workspace --all-targets --all-features runtime_ids \
-  | tee /tmp/zamburak-runtime-ids-focused-tests.out
-```
-
 1. Run required superproject gates.
 
 ```sh
@@ -311,8 +317,8 @@ Acceptance behaviours:
 - IDs remain stable after dumping and loading runner or progress snapshots.
 - Invalid resume paths fail closed and do not silently corrupt runtime-ID
   continuity.
-- Compatibility behavioural tests in `tests/compatibility/` cover happy and
-  unhappy scenarios using `rstest-bdd` v0.5.0 where applicable.
+- Behavioural tests in `crates/monty/tests/runtime_ids_bdd.rs` cover happy and
+  unhappy scenarios using `rstest-bdd` v0.5.0.
 - `make check-fmt`, `make lint`, and `make test` pass in the superproject.
 - Roadmap Task 0.5.1 is marked done only after all evidence is green.
 

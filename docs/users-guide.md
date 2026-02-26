@@ -58,6 +58,22 @@ Track A changes are constrained by [Monty fork policy](monty-fork-policy.md).
 Zamburak semantics are prohibited in fork API surface, and pull requests that
 violate that policy are rejected by automated review checks.
 
+## Track A runtime IDs
+
+`full-monty` exposes stable, host-only runtime IDs for suspendable execution
+payloads.
+
+- `RunProgress::FunctionCall` and `RunProgress::OsCall` include
+  `arg_runtime_ids` and `kwarg_runtime_ids`.
+- `ReplProgress::FunctionCall` and `ReplProgress::OsCall` include the same
+  runtime-ID fields.
+- Both progress enums expose `runtime_ids()` for read-only access to the ID
+  slices without destructuring the enum payload.
+
+Runtime IDs are opaque host metadata and carry no policy meaning. They remain
+stable across `start()` or `resume()` boundaries and survive `dump()` or
+`load()` round trips for run-progress payloads.
+
 ## Example: canonical policy (schema v1)
 
 ```yaml

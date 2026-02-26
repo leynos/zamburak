@@ -345,9 +345,20 @@ Snapshots preserve:
 - IFC state continuity across `start()` or `resume()` and `dump()` or `load()`
   boundaries, either through runtime-native persistence or versioned
   embedder-owned snapshot extension state.
+- host-only runtime IDs for values crossing suspendable host boundaries.
+  Runtime IDs are intentionally opaque and do not encode policy meaning.
+- runtime ID continuity for both positional and keyword argument payloads
+  emitted via Track A pause events (`FunctionCall` and `OsCall`) in `run` and
+  `repl` flows.
 
 Restored execution must be semantically equivalent to uninterrupted execution
 for policy evaluation outcomes.
+
+Implementation decision (2026-02-26): Task 0.5.1 uses `Value::id()` as the
+runtime-ID substrate in `full-monty` and exposes it through additive,
+host-facing payload fields. This keeps Track A generic and upstream-friendly
+while providing continuity evidence across `start()` or `resume()` and `dump()`
+or `load()`.
 
 ## Information flow model
 
