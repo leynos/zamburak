@@ -3,25 +3,11 @@
 # requires-python = ">=3.13"
 # dependencies = ["cuprum==0.1.0"]
 # ///
-"""Synchronize `full-monty` and run repository verification gates.
+"""Synchronise `full-monty` and run repository verification gates.
 
-This script automates roadmap Task `0.4.2` repository-local mechanics:
-
-- initialize and refresh the `third_party/full-monty` submodule checkout,
-- sync local fork branch state with upstream Monty via fast-forward merge,
-- stage the submodule pointer update in the superproject, and
-- run post-sync verification gates.
-
-The command fails closed on dirty worktrees, missing remotes, fetch failures,
-merge conflicts, and verification gate failures.
-
-Usage
------
-Run from the repository root:
-
-```
-make monty-sync
-```
+The script initialises and refreshes `third_party/full-monty`, fast-forwards
+the fork branch against upstream, stages the submodule pointer update, and runs
+post-sync verification gates. Run from repository root with `make monty-sync`.
 """
 
 from __future__ import annotations
@@ -29,11 +15,14 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 import sys
-from typing import Protocol, TextIO
+from typing import TYPE_CHECKING, Protocol, TextIO
 
 from cuprum import ExecutionContext, Program, scoped
 
 from _cuprum_helpers import build_catalogue, build_commands
+
+if TYPE_CHECKING:
+    from cuprum import SafeCmd
 
 
 GIT = Program("git")
@@ -108,7 +97,7 @@ class CuprumRunner:
         )
 
 
-def _resolve_command(program: str):
+def _resolve_command(program: str) -> "SafeCmd":
     """Resolve supported command name to Cuprum command handle."""
     if program == "git":
         return git
@@ -315,7 +304,7 @@ def run_monty_sync(
     _log(stdout, "monty-sync: checking superproject worktree cleanliness")
     _ensure_clean_worktree(runner, cwd=config.repo_root, scope_name="superproject")
 
-    _log(stdout, f"monty-sync: initializing {config.submodule_path.as_posix()}")
+    _log(stdout, f"monty-sync: initialising {config.submodule_path.as_posix()}")
     _run_checked(
         runner,
         invocation=CommandInvocation(
@@ -329,7 +318,7 @@ def run_monty_sync(
             ),
             cwd=config.repo_root,
         ),
-        failure_summary="unable to initialize full-monty submodule",
+        failure_summary="unable to initialise full-monty submodule",
     )
 
     _log(stdout, "monty-sync: checking full-monty worktree cleanliness")

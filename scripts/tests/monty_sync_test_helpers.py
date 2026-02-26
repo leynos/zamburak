@@ -1,9 +1,40 @@
-"""Test helpers for `scripts/monty_sync.py` suites."""
+"""Shared helpers for `scripts/monty_sync.py` test suites.
+
+Purpose
+-------
+Provide reusable `CommandStub` builders and a deterministic `QueueRunner` for
+unit and behavioural tests that exercise monty-sync orchestration without
+running real git or make commands.
+
+Utility
+-------
+Test modules use these helpers to keep command ordering fixtures concise and
+consistent across workflow, failure, CLI, and BDD coverage.
+
+Usage
+-----
+Compose scenario stubs and execute them through `QueueRunner`:
+
+```python
+config = build_config(tmp_path)
+runner = QueueRunner(
+    build_preflight_stubs(config)
+    + (build_remote_listing_stub(config, remotes=("origin", "upstream")),)
+    + build_sync_operation_stubs(
+        config,
+        remotes=("origin", "upstream"),
+        old_revision="a" * 40,
+        new_revision="b" * 40,
+    )
+    + gate_stubs(config)
+)
+```
+"""
 
 from __future__ import annotations
 
 from collections import deque
-from collections.abc import Iterable
+from collections.abc import Iterable, Sequence
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -45,6 +76,18 @@ def invocation(
     return CommandInvocation(program=program, args=args, cwd=cwd)
 
 
+def build_remote_listing_stub(
+    config: monty_sync.SyncConfig,
+    *,
+    remotes: Sequence[str],
+) -> CommandStub:
+    """Build stub for `git remote` output scoped to the submodule checkout."""
+    return CommandStub(
+        invocation(config, program="git", args=("remote",), submodule=True),
+        successful_outcome("".join(f"{remote}\n" for remote in remotes)),
+    )
+
+
 def build_preflight_stubs(config: monty_sync.SyncConfig) -> tuple[CommandStub, ...]:
     """Build stubs for preflight checks and submodule initialisation."""
     return (
@@ -83,14 +126,10 @@ def build_remote_setup_stubs(
     has_upstream: bool = False,
 ) -> tuple[CommandStub, ...]:
     """Build stubs for remote configuration (add or set-url upstream)."""
-    remote_list = "origin\nupstream\n" if has_upstream else "origin\n"
+    remotes = ("origin", "upstream") if has_upstream else ("origin",)
     remote_cmd = "set-url" if has_upstream else "add"
-
     return (
-        CommandStub(
-            invocation(config, program="git", args=("remote",), submodule=True),
-            successful_outcome(remote_list),
-        ),
+        build_remote_listing_stub(config, remotes=remotes),
         CommandStub(
             invocation(
                 config,
@@ -108,16 +147,35 @@ def build_remote_setup_stubs(
     )
 
 
-def build_sync_stubs(
+def build_sync_operation_stubs(
     config: monty_sync.SyncConfig,
-    old_rev: str,
-    new_rev: str,
+    *,
+    remotes: Sequence[str],
+    old_revision: str,
+    new_revision: str,
 ) -> tuple[CommandStub, ...]:
-    """Build stubs for fetch/merge sync operations."""
+    """Build stubs for remote setup, sync operations, and pointer staging."""
+    upstream_command = "set-url" if "upstream" in remotes else "add"
+    before_revision = old_revision.rstrip("\n")
+    after_revision = new_revision.rstrip("\n")
     return (
         CommandStub(
+            invocation(
+                config,
+                program="git",
+                args=(
+                    "remote",
+                    upstream_command,
+                    "upstream",
+                    "https://github.com/pydantic/monty.git",
+                ),
+                submodule=True,
+            ),
+            successful_outcome(),
+        ),
+        CommandStub(
             invocation(config, program="git", args=("rev-parse", "HEAD"), submodule=True),
-            successful_outcome(f"{old_rev}\n"),
+            successful_outcome(f"{before_revision}\n"),
         ),
         CommandStub(
             invocation(
@@ -157,13 +215,27 @@ def build_sync_stubs(
         ),
         CommandStub(
             invocation(config, program="git", args=("rev-parse", "HEAD"), submodule=True),
-            successful_outcome(f"{new_rev}\n"),
+            successful_outcome(f"{after_revision}\n"),
         ),
         CommandStub(
             invocation(config, program="git", args=("add", "third_party/full-monty")),
             successful_outcome(),
         ),
     )
+
+
+def build_sync_stubs(
+    config: monty_sync.SyncConfig,
+    old_rev: str,
+    new_rev: str,
+) -> tuple[CommandStub, ...]:
+    """Build stubs for fetch/merge sync operations."""
+    return build_sync_operation_stubs(
+        config,
+        remotes=("origin", "upstream"),
+        old_revision=old_rev,
+        new_revision=new_rev,
+    )[1:]
 
 
 def build_gate_stubs(config: monty_sync.SyncConfig) -> tuple[CommandStub, ...]:
@@ -191,52 +263,16 @@ def happy_path_stubs_up_to_sync(
     old_revision: str = "1111111111111111111111111111111111111111",
 ) -> tuple[CommandStub, ...]:
     """Build stubs from preflight checks through merge for happy-path sync."""
-    normalised_old_revision = old_revision.rstrip("\n")
+    remotes = ("origin", "upstream") if has_upstream else ("origin",)
     return (
         build_preflight_stubs(config)
-        + build_remote_setup_stubs(config, has_upstream=has_upstream)
-        + (
-            CommandStub(
-                invocation(config, program="git", args=("rev-parse", "HEAD"), submodule=True),
-                successful_outcome(f"{normalised_old_revision}\n"),
-            ),
-            CommandStub(
-                invocation(
-                    config,
-                    program="git",
-                    args=("fetch", "--prune", "origin"),
-                    submodule=True,
-                ),
-                successful_outcome(),
-            ),
-            CommandStub(
-                invocation(
-                    config,
-                    program="git",
-                    args=("fetch", "--prune", "upstream"),
-                    submodule=True,
-                ),
-                successful_outcome(),
-            ),
-            CommandStub(
-                invocation(
-                    config,
-                    program="git",
-                    args=("checkout", "-B", "main", "origin/main"),
-                    submodule=True,
-                ),
-                successful_outcome(),
-            ),
-            CommandStub(
-                invocation(
-                    config,
-                    program="git",
-                    args=("merge", "--ff-only", "upstream/main"),
-                    submodule=True,
-                ),
-                successful_outcome(),
-            ),
-        )
+        + (build_remote_listing_stub(config, remotes=remotes),)
+        + build_sync_operation_stubs(
+            config,
+            remotes=remotes,
+            old_revision=old_revision,
+            new_revision=old_revision,
+        )[:6]
     )
 
 

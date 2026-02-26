@@ -4,7 +4,7 @@ Usage
 -----
 Run with:
 
-```
+```sh
 make script-test
 ```
 """

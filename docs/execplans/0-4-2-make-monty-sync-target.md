@@ -16,7 +16,7 @@ command, `make monty-sync`, that synchronizes the `full-monty` fork with
 upstream Monty and then runs repository verification gates.
 
 After this change, maintainers can run a single target to perform the routine
-sync workflow: initialize the submodule if needed, fetch upstream and fork
+sync workflow: initialise the submodule if needed, fetch upstream and fork
 state, refresh the fork branch in the local submodule checkout, update the
 superproject pointer, and execute defined verification suites. Success is
 observable via deterministic command output and green quality gates.
@@ -74,10 +74,10 @@ observable via deterministic command output and green quality gates.
 
 ## Risks
 
-- Risk: `third_party/full-monty/` may be uninitialized in local clones.
+- Risk: `third_party/full-monty/` may be uninitialised in local clones.
   Severity: high. Likelihood: high. Mitigation: make sync command perform
   `git submodule update --init` before any submodule git operations and include
-  tests for uninitialized state.
+  tests for uninitialised state.
 
 - Risk: local dirty state in superproject or submodule can cause partial sync
   side effects. Severity: high. Likelihood: medium. Mitigation: preflight
@@ -102,7 +102,7 @@ observable via deterministic command output and green quality gates.
 - [x] (2026-02-25 18:39Z) Reviewed roadmap Task `0.4.2`, ADR signposts,
   command/gateway baseline docs, and prior Task `0.4.1` artefacts.
 - [x] (2026-02-25 18:39Z) Confirmed repository state and current `full-monty`
-  mechanics (`.gitmodules` present, submodule currently uninitialized in this
+  mechanics (`.gitmodules` present, submodule currently uninitialised in this
   workspace, `monty_fork_review` exists).
 - [x] (2026-02-25 18:39Z) Drafted this ExecPlan.
 - [x] (2026-02-25 19:10Z) Implemented `scripts/monty_sync.py` and `make`
@@ -120,7 +120,7 @@ observable via deterministic command output and green quality gates.
 
 ## Surprises & Discoveries
 
-- Observation: `third_party/full-monty/` is currently present but uninitialized
+- Observation: `third_party/full-monty/` is currently present but uninitialised
   in this workspace (`git submodule status` line starts with `-`). Evidence:
   `git submodule status --recursive` returned
   `-b316ce4a... third_party/full-monty`. Impact: sync implementation must
@@ -255,12 +255,12 @@ Stage B: scaffold tests first (red), then implement script and Make target
   `scripts/tests/test_monty_sync_*.py`.
 - Add behavioural tests in `scripts/tests/test_monty_sync_bdd.py` with feature
   scenarios under `scripts/tests/features/monty_sync.feature` for: happy path
-  sync, uninitialized submodule bootstrap, dirty-state failure, fetch failure,
+  sync, uninitialised submodule bootstrap, dirty-state failure, fetch failure,
   and verification gate failure.
 - Implement `scripts/monty_sync.py` with:
   - `uv` metadata block and Python baseline compliance,
   - explicit command execution through Cuprum helpers,
-  - dependency-injected command runner seams so tests do not mutate real git
+  - dependency-injected command runner seams, so tests do not mutate real git
     state,
   - deterministic logging and non-zero exits for all failure modes.
 - Add `monty-sync` target to `Makefile` that executes the script.
@@ -383,7 +383,7 @@ Acceptance is behaviour-based and must be demonstrable:
 - Unhappy path: command exits non-zero with clear diagnostics when:
   working tree is dirty, remotes cannot be fetched, branch refresh fails, or a
   verification suite fails.
-- Edge path: if submodule is uninitialized, the command initializes it and
+- Edge path: if the submodule is uninitialised, the command initialises it and
   continues without manual bootstrap.
 - Tests:
   - unit tests validate sync command planning, preflight logic, and gate list,
@@ -402,7 +402,7 @@ Acceptance is behaviour-based and must be demonstrable:
 - If sync fails before submodule pointer update, rerun is safe after correcting
   the underlying issue (network, branch state, or remotes).
 - If sync fails during verification after pointer update, fix failing gates and
-  rerun `make monty-sync`; command should detect current state and proceed
+  rerun `make monty-sync`; the command should detect current state and proceed
   safely.
 - Script must not issue destructive git commands against user changes.
 

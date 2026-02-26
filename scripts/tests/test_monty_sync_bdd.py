@@ -4,7 +4,7 @@ Usage
 -----
 Run with:
 
-```
+```sh
 make script-test
 ```
 """
@@ -24,6 +24,8 @@ from monty_sync_test_helpers import (
     CommandInvocation,
     CommandStub,
     QueueRunner,
+    build_remote_listing_stub,
+    build_sync_operation_stubs,
     failure_outcome,
     successful_outcome,
 )
@@ -149,76 +151,7 @@ def _build_remote_check_stub(
     remotes: list[str],
 ) -> CommandStub:
     """Build stub for remote listing in the submodule checkout."""
-    return CommandStub(
-        _invoke(config, program="git", args=("remote",), submodule=True),
-        successful_outcome("".join(f"{remote}\n" for remote in remotes)),
-    )
-
-
-def _build_fetch_stubs(config: monty_sync.SyncConfig) -> tuple[CommandStub, ...]:
-    """Build stubs for fetch operations against fork and upstream remotes."""
-    return (
-        CommandStub(
-            _invoke(
-                config,
-                program="git",
-                args=("fetch", "--prune", "origin"),
-                submodule=True,
-            ),
-            successful_outcome(),
-        ),
-        CommandStub(
-            _invoke(
-                config,
-                program="git",
-                args=("fetch", "--prune", "upstream"),
-                submodule=True,
-            ),
-            successful_outcome(),
-        ),
-    )
-
-
-def _build_checkout_merge_stubs(config: monty_sync.SyncConfig) -> tuple[CommandStub, ...]:
-    """Build stubs for branch checkout and fast-forward merge operations."""
-    return (
-        CommandStub(
-            _invoke(
-                config,
-                program="git",
-                args=("checkout", "-B", "main", "origin/main"),
-                submodule=True,
-            ),
-            successful_outcome(),
-        ),
-        CommandStub(
-            _invoke(
-                config,
-                program="git",
-                args=("merge", "--ff-only", "upstream/main"),
-                submodule=True,
-            ),
-            successful_outcome(),
-        ),
-    )
-
-
-def _build_post_sync_stubs(
-    config: monty_sync.SyncConfig,
-    *,
-    new_revision: str,
-) -> tuple[CommandStub, ...]:
-    """Build stubs for post-sync revision capture and superproject staging."""
-    return (
-        CommandStub(
-            _invoke(config, program="git", args=("rev-parse", "HEAD"), submodule=True),
-            successful_outcome(new_revision),
-        ),
-        CommandStub(
-            _invoke(config, program="git", args=("add", "third_party/full-monty")),
-            successful_outcome(),
-        ),
-    )
+    return build_remote_listing_stub(config, remotes=remotes)
 
 
 def _build_sync_operation_stubs(
@@ -229,37 +162,11 @@ def _build_sync_operation_stubs(
     new_revision: str,
 ) -> tuple[CommandStub, ...]:
     """Build stubs for remote setup and sync operations."""
-    upstream_command = "set-url" if "upstream" in remotes else "add"
-    remote_setup_stub = (
-        CommandStub(
-            _invoke(
-                config,
-                program="git",
-                args=(
-                    "remote",
-                    upstream_command,
-                    "upstream",
-                    "https://github.com/pydantic/monty.git",
-                ),
-                submodule=True,
-            ),
-            successful_outcome(),
-        ),
-    )
-
-    pre_sync_revision_stub = (
-        CommandStub(
-            _invoke(config, program="git", args=("rev-parse", "HEAD"), submodule=True),
-            successful_outcome(old_revision),
-        ),
-    )
-
-    return (
-        remote_setup_stub
-        + pre_sync_revision_stub
-        + _build_fetch_stubs(config)
-        + _build_checkout_merge_stubs(config)
-        + _build_post_sync_stubs(config, new_revision=new_revision)
+    return build_sync_operation_stubs(
+        config,
+        remotes=remotes,
+        old_revision=old_revision,
+        new_revision=new_revision,
     )
 
 
@@ -302,7 +209,7 @@ def _build_sync_command_sequence(
 
     remote_check_stub = _build_remote_check_stub(config, remotes=scenario.remotes)
     if "origin" not in scenario.remotes:
-        return preflight_stubs + (remote_check_stub,)
+        return (*preflight_stubs, remote_check_stub)
 
     sync_stubs = _build_sync_operation_stubs(
         config,
@@ -312,8 +219,7 @@ def _build_sync_command_sequence(
     )
 
     gate_stubs = _build_gate_stubs(config, gate_to_fail=scenario.gate_to_fail)
-
-    return preflight_stubs + (remote_check_stub,) + sync_stubs + gate_stubs
+    return (*preflight_stubs, remote_check_stub, *sync_stubs, *gate_stubs)
 
 
 @pytest.fixture
