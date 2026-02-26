@@ -43,6 +43,40 @@ class SyncScenarioParams:
     superproject_dirty: bool
 
 
+# Scenario parameter presets for BDD test cases.
+HAPPY_PATH_SCENARIO = SyncScenarioParams(
+    remotes=["origin", "upstream"],
+    gate_to_fail=None,
+    old_revision="aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n",
+    new_revision="bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\n",
+    superproject_dirty=False,
+)
+
+DIRTY_SUPERPROJECT_SCENARIO = SyncScenarioParams(
+    remotes=[],
+    gate_to_fail=None,
+    old_revision="aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n",
+    new_revision="aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n",
+    superproject_dirty=True,
+)
+
+MISSING_REMOTE_SCENARIO = SyncScenarioParams(
+    remotes=["upstream"],
+    gate_to_fail=None,
+    old_revision="aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n",
+    new_revision="aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n",
+    superproject_dirty=False,
+)
+
+GATE_FAILURE_SCENARIO = SyncScenarioParams(
+    remotes=["origin", "upstream"],
+    gate_to_fail="lint",
+    old_revision="aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n",
+    new_revision="aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n",
+    superproject_dirty=False,
+)
+
+
 @dataclass
 class ScenarioState:
     """Mutable state shared across scenario steps."""
@@ -121,34 +155,9 @@ def _build_remote_check_stub(
     )
 
 
-def _build_sync_operation_stubs(
-    config: monty_sync.SyncConfig,
-    *,
-    remotes: list[str],
-    old_revision: str,
-    new_revision: str,
-) -> tuple[CommandStub, ...]:
-    """Build stubs for remote setup and sync operations."""
-    upstream_command = "set-url" if "upstream" in remotes else "add"
+def _build_fetch_stubs(config: monty_sync.SyncConfig) -> tuple[CommandStub, ...]:
+    """Build stubs for fetch operations against fork and upstream remotes."""
     return (
-        CommandStub(
-            _invoke(
-                config,
-                program="git",
-                args=(
-                    "remote",
-                    upstream_command,
-                    "upstream",
-                    "https://github.com/pydantic/monty.git",
-                ),
-                submodule=True,
-            ),
-            successful_outcome(),
-        ),
-        CommandStub(
-            _invoke(config, program="git", args=("rev-parse", "HEAD"), submodule=True),
-            successful_outcome(old_revision),
-        ),
         CommandStub(
             _invoke(
                 config,
@@ -167,6 +176,12 @@ def _build_sync_operation_stubs(
             ),
             successful_outcome(),
         ),
+    )
+
+
+def _build_checkout_merge_stubs(config: monty_sync.SyncConfig) -> tuple[CommandStub, ...]:
+    """Build stubs for branch checkout and fast-forward merge operations."""
+    return (
         CommandStub(
             _invoke(
                 config,
@@ -185,6 +200,16 @@ def _build_sync_operation_stubs(
             ),
             successful_outcome(),
         ),
+    )
+
+
+def _build_post_sync_stubs(
+    config: monty_sync.SyncConfig,
+    *,
+    new_revision: str,
+) -> tuple[CommandStub, ...]:
+    """Build stubs for post-sync revision capture and superproject staging."""
+    return (
         CommandStub(
             _invoke(config, program="git", args=("rev-parse", "HEAD"), submodule=True),
             successful_outcome(new_revision),
@@ -193,6 +218,48 @@ def _build_sync_operation_stubs(
             _invoke(config, program="git", args=("add", "third_party/full-monty")),
             successful_outcome(),
         ),
+    )
+
+
+def _build_sync_operation_stubs(
+    config: monty_sync.SyncConfig,
+    *,
+    remotes: list[str],
+    old_revision: str,
+    new_revision: str,
+) -> tuple[CommandStub, ...]:
+    """Build stubs for remote setup and sync operations."""
+    upstream_command = "set-url" if "upstream" in remotes else "add"
+    remote_setup_stub = (
+        CommandStub(
+            _invoke(
+                config,
+                program="git",
+                args=(
+                    "remote",
+                    upstream_command,
+                    "upstream",
+                    "https://github.com/pydantic/monty.git",
+                ),
+                submodule=True,
+            ),
+            successful_outcome(),
+        ),
+    )
+
+    pre_sync_revision_stub = (
+        CommandStub(
+            _invoke(config, program="git", args=("rev-parse", "HEAD"), submodule=True),
+            successful_outcome(old_revision),
+        ),
+    )
+
+    return (
+        remote_setup_stub
+        + pre_sync_revision_stub
+        + _build_fetch_stubs(config)
+        + _build_checkout_merge_stubs(config)
+        + _build_post_sync_stubs(config, new_revision=new_revision)
     )
 
 
@@ -257,58 +324,22 @@ def scenario_state(tmp_path: Path) -> ScenarioState:
 
 def build_bdd_happy_path_stubs(config: monty_sync.SyncConfig) -> tuple[CommandStub, ...]:
     """Build command stub sequence for BDD happy-path sync workflow."""
-    return _build_sync_command_sequence(
-        config,
-        SyncScenarioParams(
-            remotes=["origin", "upstream"],
-            gate_to_fail=None,
-            old_revision="aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n",
-            new_revision="bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\n",
-            superproject_dirty=False,
-        ),
-    )
+    return _build_sync_command_sequence(config, HAPPY_PATH_SCENARIO)
 
 
 def build_bdd_dirty_superproject_stubs(config: monty_sync.SyncConfig) -> tuple[CommandStub, ...]:
     """Build command stub sequence for dirty superproject scenario."""
-    return _build_sync_command_sequence(
-        config,
-        SyncScenarioParams(
-            remotes=[],
-            gate_to_fail=None,
-            old_revision="aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n",
-            new_revision="aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n",
-            superproject_dirty=True,
-        ),
-    )
+    return _build_sync_command_sequence(config, DIRTY_SUPERPROJECT_SCENARIO)
 
 
 def build_bdd_missing_remote_stubs(config: monty_sync.SyncConfig) -> tuple[CommandStub, ...]:
     """Build command stub sequence for missing fork remote scenario."""
-    return _build_sync_command_sequence(
-        config,
-        SyncScenarioParams(
-            remotes=["upstream"],
-            gate_to_fail=None,
-            old_revision="aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n",
-            new_revision="aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n",
-            superproject_dirty=False,
-        ),
-    )
+    return _build_sync_command_sequence(config, MISSING_REMOTE_SCENARIO)
 
 
 def build_bdd_gate_failure_stubs(config: monty_sync.SyncConfig) -> tuple[CommandStub, ...]:
     """Build command stub sequence for verification gate failure scenario."""
-    return _build_sync_command_sequence(
-        config,
-        SyncScenarioParams(
-            remotes=["origin", "upstream"],
-            gate_to_fail="lint",
-            old_revision="aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n",
-            new_revision="aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n",
-            superproject_dirty=False,
-        ),
-    )
+    return _build_sync_command_sequence(config, GATE_FAILURE_SCENARIO)
 
 
 @given("a monty sync happy-path command sequence")
