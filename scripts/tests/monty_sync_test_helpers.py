@@ -43,7 +43,17 @@ import monty_sync
 
 @dataclass(frozen=True)
 class CommandInvocation:
-    """One command invocation key for fake command runner stubs."""
+    """Represent one command invocation for queued test stubs.
+
+    Parameters
+    ----------
+    program : str
+        Executable name, for example ``git`` or ``make``.
+    args : tuple[str, ...]
+        Positional arguments passed to ``program``.
+    cwd : Path
+        Working directory used to execute the command.
+    """
 
     program: str
     args: tuple[str, ...]
@@ -52,14 +62,33 @@ class CommandInvocation:
 
 @dataclass(frozen=True)
 class CommandStub:
-    """Stubbed command outcome for a specific invocation key."""
+    """Bind an expected invocation to its deterministic outcome.
+
+    Parameters
+    ----------
+    invocation : CommandInvocation
+        Invocation key matched by :class:`QueueRunner`.
+    outcome : monty_sync.CommandOutcome
+        Outcome returned when ``invocation`` is consumed.
+    """
 
     invocation: CommandInvocation
     outcome: monty_sync.CommandOutcome
 
 
 def build_config(tmp_path: Path) -> monty_sync.SyncConfig:
-    """Create a `SyncConfig` rooted at a temporary repository path."""
+    """Create a sync configuration rooted in a temporary repository.
+
+    Parameters
+    ----------
+    tmp_path : Path
+        Temporary directory fixture provided by pytest.
+
+    Returns
+    -------
+    monty_sync.SyncConfig
+        Configuration whose ``repo_root`` points at ``tmp_path / "repo"``.
+    """
     repo_root = tmp_path / "repo"
     return monty_sync.SyncConfig(repo_root=repo_root)
 
@@ -71,7 +100,24 @@ def invocation(
     args: tuple[str, ...],
     submodule: bool = False,
 ) -> CommandInvocation:
-    """Create a `CommandInvocation` for repository or submodule scope."""
+    """Create a command invocation in repository or submodule scope.
+
+    Parameters
+    ----------
+    config : monty_sync.SyncConfig
+        Sync configuration that defines repository paths.
+    program : str
+        Executable name to invoke.
+    args : tuple[str, ...]
+        Positional arguments passed to the executable.
+    submodule : bool, default=False
+        Whether to target ``config.submodule_root`` instead of ``repo_root``.
+
+    Returns
+    -------
+    CommandInvocation
+        Normalised invocation object for use in command stubs.
+    """
     cwd = config.submodule_root if submodule else config.repo_root
     return CommandInvocation(program=program, args=args, cwd=cwd)
 
@@ -81,7 +127,20 @@ def build_remote_listing_stub(
     *,
     remotes: Sequence[str],
 ) -> CommandStub:
-    """Build stub for `git remote` output scoped to the submodule checkout."""
+    """Build a submodule-scoped ``git remote`` listing stub.
+
+    Parameters
+    ----------
+    config : monty_sync.SyncConfig
+        Sync configuration that defines command working directories.
+    remotes : Sequence[str]
+        Remote names returned by ``git remote`` in stdout order.
+
+    Returns
+    -------
+    CommandStub
+        Stub producing one newline-terminated remote per entry.
+    """
     return CommandStub(
         invocation(config, program="git", args=("remote",), submodule=True),
         successful_outcome("".join(f"{remote}\n" for remote in remotes)),
@@ -89,7 +148,19 @@ def build_remote_listing_stub(
 
 
 def build_preflight_stubs(config: monty_sync.SyncConfig) -> tuple[CommandStub, ...]:
-    """Build stubs for preflight checks and submodule initialisation."""
+    """Build stubs for preflight checks and submodule initialization.
+
+    Parameters
+    ----------
+    config : monty_sync.SyncConfig
+        Sync configuration that defines repository and submodule paths.
+
+    Returns
+    -------
+    tuple[CommandStub, ...]
+        Stubs for superproject cleanliness, submodule update, and submodule
+        cleanliness checks.
+    """
     return (
         CommandStub(
             invocation(config, program="git", args=("status", "--porcelain")),
@@ -123,9 +194,24 @@ def build_preflight_stubs(config: monty_sync.SyncConfig) -> tuple[CommandStub, .
 
 def build_remote_setup_stubs(
     config: monty_sync.SyncConfig,
+    *,
     has_upstream: bool = False,
 ) -> tuple[CommandStub, ...]:
-    """Build stubs for remote configuration (add or set-url upstream)."""
+    """Build stubs for remote inspection and upstream configuration.
+
+    Parameters
+    ----------
+    config : monty_sync.SyncConfig
+        Sync configuration that defines remote names and URLs.
+    has_upstream : bool, default=False
+        Whether the initial remote listing already includes upstream.
+
+    Returns
+    -------
+    tuple[CommandStub, ...]
+        Stub sequence for ``git remote`` and the matching
+        ``git remote add|set-url`` command.
+    """
     remotes = (
         config.fork_remote,
         config.upstream_remote,
@@ -231,7 +317,25 @@ def build_sync_operation_stubs(
     old_revision: str,
     new_revision: str,
 ) -> tuple[CommandStub, ...]:
-    """Build stubs for remote setup, sync operations, and pointer staging."""
+    """Build stubs for remote setup, sync operations, and pointer staging.
+
+    Parameters
+    ----------
+    config : monty_sync.SyncConfig
+        Sync configuration that defines remotes, branches, and paths.
+    remotes : Sequence[str]
+        Remote names available before upstream reconciliation.
+    old_revision : str
+        Revision reported before sync; trailing newline is tolerated.
+    new_revision : str
+        Revision reported after sync; trailing newline is tolerated.
+
+    Returns
+    -------
+    tuple[CommandStub, ...]
+        Ordered stubs covering remote setup, revision capture, fetch, checkout,
+        merge, post-sync revision capture, and pointer staging.
+    """
     upstream_command = "set-url" if config.upstream_remote in remotes else "add"
     before_revision = old_revision.rstrip("\n")
     remote_setup_stub = (
@@ -270,7 +374,22 @@ def build_sync_stubs(
     old_rev: str,
     new_rev: str,
 ) -> tuple[CommandStub, ...]:
-    """Build stubs for fetch/merge sync operations."""
+    """Build stubs for sync operations after remotes are already listed.
+
+    Parameters
+    ----------
+    config : monty_sync.SyncConfig
+        Sync configuration that defines remotes, branches, and paths.
+    old_rev : str
+        Revision reported before fetch and merge.
+    new_rev : str
+        Revision reported after fetch and merge.
+
+    Returns
+    -------
+    tuple[CommandStub, ...]
+        Sync-operation subset that excludes the initial remote listing stub.
+    """
     return build_sync_operation_stubs(
         config,
         remotes=(config.fork_remote, config.upstream_remote),
@@ -280,7 +399,18 @@ def build_sync_stubs(
 
 
 def build_gate_stubs(config: monty_sync.SyncConfig) -> tuple[CommandStub, ...]:
-    """Build stubs for verification gate targets."""
+    """Build successful stubs for configured verification gates.
+
+    Parameters
+    ----------
+    config : monty_sync.SyncConfig
+        Sync configuration containing ``verification_targets``.
+
+    Returns
+    -------
+    tuple[CommandStub, ...]
+        One successful ``make <target>`` stub for each verification target.
+    """
     return tuple(
         CommandStub(
             invocation(config, program="make", args=(target,)),
@@ -296,7 +426,22 @@ def happy_path_stubs_up_to_sync(
     has_upstream: bool = True,
     old_revision: str = "1111111111111111111111111111111111111111",
 ) -> tuple[CommandStub, ...]:
-    """Build stubs from preflight checks through merge for happy-path sync."""
+    """Build happy-path stubs from preflight checks through merge.
+
+    Parameters
+    ----------
+    config : monty_sync.SyncConfig
+        Sync configuration that defines remotes, branches, and paths.
+    has_upstream : bool, default=True
+        Whether the initial remote listing includes upstream.
+    old_revision : str, default="1111111111111111111111111111111111111111"
+        Revision value to return for pre-sync and post-sync HEAD checks.
+
+    Returns
+    -------
+    tuple[CommandStub, ...]
+        Stub sequence that stops after the merge operation.
+    """
     remotes = (
         config.fork_remote,
         config.upstream_remote,
@@ -318,7 +463,20 @@ def post_sync_stubs(
     *,
     new_revision: str = "1111111111111111111111111111111111111111",
 ) -> tuple[CommandStub, ...]:
-    """Build stubs for post-sync revision capture and pointer staging."""
+    """Build stubs for post-sync revision capture and pointer staging.
+
+    Parameters
+    ----------
+    config : monty_sync.SyncConfig
+        Sync configuration that defines repository and submodule paths.
+    new_revision : str, default="1111111111111111111111111111111111111111"
+        Revision value returned by the post-sync ``rev-parse`` command.
+
+    Returns
+    -------
+    tuple[CommandStub, ...]
+        Stubs for post-sync revision capture and ``git add`` pointer staging.
+    """
     normalised_new_revision = new_revision.rstrip("\n")
     return (
         CommandStub(
@@ -337,7 +495,20 @@ def gate_stubs(
     *,
     fail_at: str | None = None,
 ) -> tuple[CommandStub, ...]:
-    """Build stubs for verification gates, optionally failing at one target."""
+    """Build gate stubs, optionally failing at a specific verification target.
+
+    Parameters
+    ----------
+    config : monty_sync.SyncConfig
+        Sync configuration containing verification targets.
+    fail_at : str | None, default=None
+        Target name that should fail; later targets are omitted.
+
+    Returns
+    -------
+    tuple[CommandStub, ...]
+        Gate stubs up to and including ``fail_at`` when provided.
+    """
     stubs: list[CommandStub] = []
     for target in config.verification_targets:
         if target == fail_at:
@@ -358,12 +529,36 @@ def gate_stubs(
 
 
 def successful_outcome(stdout: str = "") -> monty_sync.CommandOutcome:
-    """Return a successful command outcome with optional stdout."""
+    """Create a successful command outcome for command stubs.
+
+    Parameters
+    ----------
+    stdout : str, default=""
+        Standard-output payload returned by the stubbed command.
+
+    Returns
+    -------
+    monty_sync.CommandOutcome
+        Successful outcome with exit code ``0``.
+    """
     return monty_sync.CommandOutcome(ok=True, stdout=stdout, stderr="", exit_code=0)
 
 
 def failure_outcome(stderr: str, *, exit_code: int = 1) -> monty_sync.CommandOutcome:
-    """Return a failing command outcome with deterministic stderr."""
+    """Create a failing command outcome for command stubs.
+
+    Parameters
+    ----------
+    stderr : str
+        Standard-error payload returned by the stubbed command.
+    exit_code : int, default=1
+        Exit code reported by the failing command.
+
+    Returns
+    -------
+    monty_sync.CommandOutcome
+        Failed outcome with empty stdout.
+    """
     return monty_sync.CommandOutcome(
         ok=False,
         stdout="",
@@ -373,9 +568,22 @@ def failure_outcome(stderr: str, *, exit_code: int = 1) -> monty_sync.CommandOut
 
 
 class QueueRunner:
-    """Fake `CommandRunner` that validates invocation order against a queue."""
+    """Run queued command stubs while validating strict invocation ordering.
+
+    Notes
+    -----
+    Each call to :meth:`run` consumes one stub. A mismatch raises
+    :class:`AssertionError` to fail tests immediately.
+    """
 
     def __init__(self, stubs: Iterable[CommandStub]) -> None:
+        """Initialize the queue-backed runner.
+
+        Parameters
+        ----------
+        stubs : Iterable[CommandStub]
+            Ordered command stubs expected during the test.
+        """
         self._stubs = deque(stubs)
         self.calls: list[CommandInvocation] = []
 
@@ -386,6 +594,27 @@ class QueueRunner:
         args: tuple[str, ...],
         cwd: Path,
     ) -> monty_sync.CommandOutcome:
+        """Execute one queued stub and validate invocation identity.
+
+        Parameters
+        ----------
+        program : str
+            Executable name expected by the next stub.
+        args : tuple[str, ...]
+            Argument tuple expected by the next stub.
+        cwd : Path
+            Working directory expected by the next stub.
+
+        Returns
+        -------
+        monty_sync.CommandOutcome
+            Outcome associated with the consumed stub.
+
+        Raises
+        ------
+        AssertionError
+            Raised when no stubs remain or the invocation does not match.
+        """
         if not self._stubs:
             raise AssertionError(
                 f"unexpected command invocation `{program} {' '.join(args)}` in `{cwd}`"
@@ -402,7 +631,17 @@ class QueueRunner:
         return next_stub.outcome
 
     def assert_exhausted(self) -> None:
-        """Assert that all expected command stubs were consumed."""
+        """Assert that all queued stubs were consumed.
+
+        Returns
+        -------
+        None
+
+        Raises
+        ------
+        AssertionError
+            Raised when queued stubs remain after the test run.
+        """
         assert not self._stubs, (
             f"expected {len(self._stubs)} additional command invocation(s)"
         )
