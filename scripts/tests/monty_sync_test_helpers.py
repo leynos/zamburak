@@ -295,21 +295,6 @@ def _build_checkout_merge_stubs_helper(
     )
 
 
-def _build_post_sync_stubs_helper(config: monty_sync.SyncConfig, *, new_revision: str) -> tuple[CommandStub, ...]:
-    """Build stubs for post-sync revision capture and pointer staging."""
-    after_revision = new_revision.rstrip("\n")
-    return (
-        CommandStub(
-            invocation(config, program="git", args=("rev-parse", "HEAD"), submodule=True),
-            successful_outcome(f"{after_revision}\n"),
-        ),
-        CommandStub(
-            invocation(config, program="git", args=("add", config.submodule_path.as_posix())),
-            successful_outcome(),
-        ),
-    )
-
-
 def build_sync_operation_stubs(
     config: monty_sync.SyncConfig,
     *,
@@ -365,7 +350,7 @@ def build_sync_operation_stubs(
         + pre_sync_revision_stub
         + _build_fetch_stubs_helper(config)
         + _build_checkout_merge_stubs_helper(config)
-        + _build_post_sync_stubs_helper(config, new_revision=new_revision)
+        + post_sync_stubs(config, new_revision=new_revision)
     )
 
 
