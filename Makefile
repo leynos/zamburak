@@ -1,4 +1,4 @@
-.PHONY: help all clean test build release lint typecheck fmt check-fmt markdownlint nixie phase-gate script-baseline script-typecheck script-test monty-sync
+.PHONY: help all clean test build release lint typecheck fmt check-fmt markdownlint nixie phase-gate script-baseline script-typecheck script-test monty-sync lint-full-monty-local
 
 
 TARGET ?= libzamburak.rlib
@@ -64,6 +64,9 @@ script-test: ## Run script baseline test suite
 
 monty-sync: ## Sync full-monty fork branch with upstream and run verification gates
 	uv run scripts/monty_sync.py
+
+lint-full-monty-local: ## Run full-monty Rust lint with nested-checkout safe defaults
+	$(MAKE) -C third_party/full-monty lint-rs-local
 
 help: ## Show available targets
 	@grep -E '^[a-zA-Z_-]+:.*?##' $(MAKEFILE_LIST) | \
