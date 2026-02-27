@@ -360,6 +360,37 @@ host-facing payload fields. This keeps Track A generic and upstream-friendly
 while providing continuity evidence across `start()` or `resume()` and `dump()`
 or `load()`.
 
+_Runtime-ID flow across start, function-call yield, host inspection, and
+resume._
+
+```mermaid
+sequenceDiagram
+    actor Host
+    participant MontyRun
+    participant VM
+    participant ArgValues
+    participant RunProgress
+
+    Host->>MontyRun: start()
+    MontyRun->>VM: execute()
+    VM-->>MontyRun: ExternalResultFunctionCallPending(args ArgValues, call_id)
+
+    MontyRun->>ArgValues: into_py_objects_with_runtime_ids(heap, interns)
+    ArgValues-->>MontyRun: args_py, kwargs_py, arg_runtime_ids, kwarg_runtime_ids
+
+    MontyRun->>RunProgress: create FunctionCall
+    RunProgress-->>Host: yield RunProgressFunctionCall
+
+    Host->>RunProgress: runtime_ids()
+    RunProgress-->>Host: (&arg_runtime_ids, &kwarg_runtime_ids)
+
+    Host->>RunProgress: resume_with_result()
+    RunProgress->>MontyRun: snapshot state
+    MontyRun->>VM: resume(call_id, result)
+    VM-->>MontyRun: execution result
+    MontyRun-->>Host: final outcome
+```
+
 ## Information flow model
 
 ### Three-axis label and authority model
