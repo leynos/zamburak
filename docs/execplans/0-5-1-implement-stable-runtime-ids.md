@@ -60,10 +60,10 @@ unit-level and behavioural tests proving:
   value-type rewrites that exceed this task's scope, stop and escalate with a
   two-step substrate plan.
 - Iteration tolerance: if required gates fail after three focused fix loops,
-  stop and report failures and root-cause hypotheses.
+  stop, and report failures and root-cause hypotheses.
 - Ambiguity tolerance: if "unique per execution" cannot be implemented without
   clarifying whether identity is per value instance or per object identity,
-  stop and request a decision with trade-offs.
+  stop, and request a decision with trade-offs.
 
 ## Risks
 
@@ -117,17 +117,17 @@ unit-level and behavioural tests proving:
 - Decision: enforce a hard go/no-go dependency gate on Task 0.4.2 before
   implementing 0.5.1 changes. Rationale: roadmap dependency order is normative
   and avoids overlapping unresolved repository-mechanics work with Track A
-  substrate work. Date/Author: 2026-02-26 / Codex
+  substrate work. Date/Author: 2026-02-26 / Codex.
 
 - Decision: keep runtime IDs strictly generic and host-facing, with no policy
   semantics in Track A naming or payload design. Rationale: required by ADR-001
-  Track A constraints and fork policy. Date/Author: 2026-02-26 / Codex
+  Track A constraints and fork policy. Date/Author: 2026-02-26 / Codex.
 
 - Decision: validate behaviour in `full-monty` test binaries only
   (`runtime_ids.rs` and `runtime_ids_bdd.rs`) due to nested workspace
   limitations for direct superproject compatibility wiring. Rationale:
   preserves required unit and behavioural coverage while keeping the
-  superproject workspace manifest stable. Date/Author: 2026-02-26 / Codex
+  superproject workspace manifest stable. Date/Author: 2026-02-26 / Codex.
 
 ## Outcomes & retrospective
 

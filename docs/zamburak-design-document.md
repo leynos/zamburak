@@ -357,14 +357,11 @@ Snapshots preserve:
 Restored execution must be semantically equivalent to uninterrupted execution
 for policy evaluation outcomes.
 
-Implementation decision (2026-02-26): Task 0.5.1 uses `Value::id()` as the
-runtime-ID substrate in `full-monty` and exposes it through additive,
-host-facing payload fields. This keeps Track A generic and upstream-friendly
-while providing continuity evidence across `start()` or `resume()` and `dump()`
-or `load()`.
-
 _Runtime-ID flow across start, function-call yield, host inspection, and
 resume._
+
+For screen readers: The following diagram shows the runtime-ID flow across
+start, function-call yield, host inspection, and resume.
 
 ```mermaid
 sequenceDiagram
@@ -391,6 +388,12 @@ sequenceDiagram
     VM-->>MontyRun: execution result
     MontyRun-->>Host: final outcome
 ```
+
+Implementation decision (2026-02-26): Task 0.5.1 uses `Value::id()` as the
+runtime-ID substrate in `full-monty` and exposes it through additive,
+host-facing payload fields. This keeps Track A generic and upstream-friendly
+while providing continuity evidence across `start()` or `resume()` and `dump()`
+or `load()`.
 
 `ReplProgress::{FunctionCall, OsCall}` expose the same runtime-ID field shapes
 and `runtime_ids()` accessor contract as `RunProgress`.
