@@ -76,6 +76,33 @@ Runtime IDs are opaque host metadata and carry no policy meaning. They remain
 stable across `start()` or `resume()` boundaries and survive `dump()` or
 `load()` round trips for run-progress payloads.
 
+## Track A runtime observer events
+
+`full-monty` exposes a generic runtime observer surface for host-side
+instrumentation.
+
+- install an observer with `RuntimeObserverHandle::new(...)`,
+- start run execution with `MontyRun::start_with_observer(...)`,
+- start REPL snippet execution with `MontyRepl::start_with_observer(...)` or
+  `MontyRepl::start_no_print_with_observer(...)`,
+- inspect canonical event classes:
+  - `ValueCreated`,
+  - `OpResult`,
+  - `ExternalCallRequested`,
+  - `ExternalCallReturned`,
+  - `ControlCondition`.
+
+Observer payloads are runtime-generic and ID-centric. They intentionally do not
+carry Zamburak policy decisions or governance semantics.
+
+Baseline semantics are preserved in both of these modes:
+
+- no observer installed (`start(...)` and existing entrypoints),
+- explicit no-op observer (`RuntimeObserverHandle::new(NoopRuntimeObserver)`).
+
+This allows hosts to adopt instrumentation incrementally without changing
+execution outcomes.
+
 ## Example: canonical policy (schema v1)
 
 ```yaml

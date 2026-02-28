@@ -4,7 +4,7 @@ This ExecPlan is a living document. The sections `Constraints`, `Tolerances`,
 `Risks`, `Progress`, `Surprises & discoveries`, `Decision log`, and
 `Outcomes & retrospective` must be kept up to date as work proceeds.
 
-Status: DRAFT
+Status: COMPLETE
 
 ## Purpose / big picture
 
@@ -110,13 +110,17 @@ under `tests/compatibility/` and `tests/security/`.
   test sequencing, and quality gates.
 - [x] (2026-02-28 02:42Z) Revised plan to include Zamburak-repository BDD
   suites that exercise `full-monty` observer behaviour.
-- [ ] Validate dependency and baseline state, including 0.5.1 completion.
-- [ ] Add failing tests that describe required observer events and no-op parity.
-- [ ] Implement observer substrate and event emission hooks in `full-monty`.
-- [ ] Add behavioural BDD coverage and edge-case unhappy-path coverage in both
-  `full-monty` and Zamburak compatibility/security suites.
-- [ ] Update design and user documentation and mark roadmap Task 0.5.2 done.
-- [ ] Run all required gates and capture evidence.
+- [x] (2026-02-28 15:07Z) Confirmed dependency status: roadmap Task 0.5.1 was
+  already marked done before implementation edits.
+- [x] (2026-02-28 15:41Z) Added observer unit and BDD suites in
+  `third_party/full-monty/crates/monty/tests/`.
+- [x] (2026-02-28 15:41Z) Implemented observer substrate wiring across VM,
+  run/resume, and repl/resume paths with no-op defaults.
+- [x] (2026-02-28 15:47Z) Added Zamburak compatibility/security BDD probes for
+  observer behaviour exposed by the submodule.
+- [x] (2026-02-28 15:54Z) Updated design and user documentation, and marked
+  roadmap Task 0.5.2 done.
+- [x] (2026-02-28 16:22Z) Ran required quality gates and supporting checks.
 
 ## Surprises & discoveries
 
@@ -131,6 +135,11 @@ under `tests/compatibility/` and `tests/security/`.
   docs. Evidence: repository search returned no observer/event API definitions
   in `full-monty` runtime modules. Impact: this task must introduce both API
   surface and wiring points.
+- Observation: strict nested `full-monty` Clippy gates flagged additional
+  style constraints (`if_not_else`, redundant clone, assigning-clones, and
+  helper argument count) during implementation. Impact: converted one helper to
+  a struct-input pattern and tightened event-test code to satisfy existing
+  policy without lint suppressions.
 
 ## Decision log
 
@@ -151,9 +160,36 @@ under `tests/compatibility/` and `tests/security/`.
   expectations for `tests/compatibility/` and `tests/security/` while
   respecting nested workspace constraints. Date/Author: 2026-02-28 / Codex.
 
+- Decision: emit `OpResult` from VM-owned value creation points (core
+  unary/binary/compare operations and resume/future resolution conversion) and
+  keep `ExternalCallReturned` emission at run/repl boundary wiring. Rationale:
+  keeps output IDs true runtime-value IDs and avoids synthetic call-ID payloads
+  while preserving generic Track A semantics. Date/Author: 2026-02-28 / Codex.
+
 ## Outcomes & retrospective
 
-Not started yet. This section will be updated as milestones complete.
+Task 0.5.2 completed with all requested artefacts and gates.
+
+- Delivered:
+  - new observer API substrate in `third_party/full-monty/crates/monty/src/`,
+  - run and repl observer-aware entrypoints and snapshot propagation,
+  - canonical event emission across value creation, operation results, external
+    call request/return, and control conditions,
+  - full-monty unit + BDD observer suites,
+  - Zamburak compatibility + security BDD probe suites,
+  - roadmap/docs updates for consumer and architecture traceability.
+- Validation evidence:
+  - `make -C third_party/full-monty format-rs`,
+  - `make -C third_party/full-monty lint-rs-local`,
+  - `cargo test --manifest-path third_party/full-monty/Cargo.toml -p monty`
+    `--test runtime_observer_events --test runtime_observer_events_bdd`,
+  - `cargo test --test compatibility full_monty_observer`,
+  - `cargo test --test security full_monty_observer_error_probe`,
+  - `make check-fmt`,
+  - `make lint`,
+  - `make test`,
+  - `make markdownlint`,
+  - `make nixie`.
 
 ## Context and orientation
 
