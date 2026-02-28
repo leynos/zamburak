@@ -22,7 +22,9 @@ After this change, host integrations can attach an observer to Monty execution
 and receive canonical runtime events without changing interpreter semantics.
 Success is observable through unit and behavioural tests proving that events
 are emitted in expected scenarios, while hook-disabled and no-op-observer modes
-preserve baseline behaviour.
+preserve baseline behaviour. As part of this task, behavioural coverage is
+required both in `third_party/full-monty/` and in Zamburak repository BDD tests
+under `tests/compatibility/` and `tests/security/`.
 
 ## Constraints
 
@@ -43,6 +45,8 @@ preserve baseline behaviour.
   heap allocation in hot paths).
 - Add tests covering happy paths, unhappy paths, and edge cases.
 - Add behavioural tests using `rstest-bdd` v0.5.0 where applicable.
+- Add Zamburak-repository BDD tests that exercise the new observer behaviour
+  exposed by the pinned `full-monty` submodule.
 - Record design decisions in `docs/zamburak-design-document.md`.
 - Update `docs/users-guide.md` for consumer-visible API or behaviour changes.
 - Mark roadmap Task 0.5.2 done in `docs/roadmap.md` only after all gates are
@@ -66,6 +70,9 @@ preserve baseline behaviour.
 - Ambiguity tolerance: if event semantics are unclear for a specific opcode or
   control-flow form and materially affect IFC correctness, stop, and request a
   decision with concrete examples.
+- Cross-workspace tolerance: if Zamburak BDD coverage cannot exercise
+  `full-monty` observer behaviour without unsupported nested-workspace linking,
+  stop and escalate with command-driven and contract-driven alternatives.
 
 ## Risks
 
@@ -89,16 +96,25 @@ preserve baseline behaviour.
   `make -C third_party/full-monty lint-rs-local` for submodule lint evidence
   and keep required superproject gates authoritative.
 
+- Risk: Zamburak tests cannot directly path-depend on
+  `third_party/full-monty/crates/monty` because of nested workspace
+  inheritance. Severity: high Likelihood: medium Mitigation: design Zamburak
+  BDD tests around a repository-local probe path (command-driven targeted suite
+  execution and contract assertions) rather than direct crate linking.
+
 ## Progress
 
 - [x] (2026-02-28 02:25Z) Gathered signpost documents, Task 0.5.1 context, and
   current `full-monty` runtime-ID surfaces.
 - [x] (2026-02-28 02:25Z) Drafted this ExecPlan with staged delivery, red-green
   test sequencing, and quality gates.
+- [x] (2026-02-28 02:42Z) Revised plan to include Zamburak-repository BDD
+  suites that exercise `full-monty` observer behaviour.
 - [ ] Validate dependency and baseline state, including 0.5.1 completion.
 - [ ] Add failing tests that describe required observer events and no-op parity.
 - [ ] Implement observer substrate and event emission hooks in `full-monty`.
-- [ ] Add behavioural BDD coverage and edge-case unhappy-path coverage.
+- [ ] Add behavioural BDD coverage and edge-case unhappy-path coverage in both
+  `full-monty` and Zamburak compatibility/security suites.
 - [ ] Update design and user documentation and mark roadmap Task 0.5.2 done.
 - [ ] Run all required gates and capture evidence.
 
@@ -128,11 +144,12 @@ preserve baseline behaviour.
   adding Track A-specific policy labels. Rationale: keeps event taxonomy
   generic and aligned with ADR minimum set. Date/Author: 2026-02-28 / Codex.
 
-- Decision: keep behavioural observer coverage inside
-  `third_party/full-monty/crates/monty/tests/` using `rstest-bdd` rather than
-  adding superproject compatibility-path dependencies on submodule crates.
-  Rationale: avoids nested workspace dependency issues already observed in this
-  repository. Date/Author: 2026-02-28 / Codex.
+- Decision: deliver dual-layer behavioural coverage: primary observer event
+  semantics in `third_party/full-monty/crates/monty/tests/`, plus
+  Zamburak-repository BDD suites that exercise the exposed behaviour through a
+  repository-local probe path. Rationale: satisfies roadmap artefact
+  expectations for `tests/compatibility/` and `tests/security/` while
+  respecting nested workspace constraints. Date/Author: 2026-02-28 / Codex.
 
 ## Outcomes & retrospective
 
@@ -155,6 +172,13 @@ Current repository state relevant to Task 0.5.2:
 - Existing behavioural test scaffolding with `rstest-bdd` v0.5.0 is present in
   `third_party/full-monty/crates/monty/tests/runtime_ids_bdd.rs` and
   `third_party/full-monty/crates/monty/tests/features/runtime_ids.feature`.
+- Existing Zamburak BDD scaffolding is present in:
+  - `tests/compatibility/` with feature files under
+    `tests/compatibility/features/`,
+  - `tests/security/` with feature files under `tests/security/features/`.
+- Known constraint: superproject tests cannot directly path-depend on
+  `third_party/full-monty/crates/monty`; compatibility BDD must use a
+  repository-local probe strategy instead of direct crate linking.
 
 Files expected to change:
 
@@ -170,6 +194,12 @@ Files expected to change:
   (new)
 - `third_party/full-monty/crates/monty/tests/features/runtime_observer_events.feature`
   (new)
+- `tests/compatibility/main.rs`
+- `tests/compatibility/features/full_monty_observer.feature` (new)
+- `tests/compatibility/full_monty_observer_bdd.rs` (new)
+- `tests/security/main.rs`
+- `tests/security/features/full_monty_observer_security.feature` (new)
+- `tests/security/full_monty_observer_security_bdd.rs` (new)
 - `docs/zamburak-design-document.md`
 - `docs/users-guide.md`
 - `docs/roadmap.md`
@@ -196,7 +226,9 @@ Stage B: scaffolding and red tests first.
   - no-op parity tests that compare outputs and suspension behaviour with and
     without a no-op observer,
   - BDD scenarios in `runtime_observer_events.feature` for happy and unhappy
-    behavioural cases.
+    behavioural cases in `full-monty`,
+  - BDD scenarios in Zamburak compatibility/security suites that exercise the
+    same exposed behaviour through repository-level probes.
 - Run targeted tests and confirm they fail for missing observer support.
 
 Go or no-go for Stage B: failing tests clearly encode required behaviour and
@@ -229,6 +261,12 @@ Stage D: hardening and behavioural coverage.
   - no-op observer parity,
   - unhappy scenario where execution raises and observer receives only
     pre-failure events.
+- Add Zamburak BDD scenarios in `tests/compatibility/` and `tests/security/`
+  that confirm:
+  - canonical observer events are exposed by the pinned `full-monty` revision,
+  - no-op observer parity checks are exercised via repository-level probes,
+  - fail-closed paths (for example invalid resume/call_id handling) remain
+    regression-covered from the superproject perspective.
 - Ensure tests stay deterministic and avoid global mutable state.
 
 Go or no-go for Stage D: unit + behavioural suites pass with stable assertions.
@@ -267,14 +305,21 @@ Expected evidence:
 <sha> third_party/full-monty (...)
 ```
 
-1. Add observer-event test files first (unit + BDD), then run focused tests to
-   confirm red state.
+1. Add observer-event test files first (unit + BDD in `full-monty` and
+   Zamburak compatibility/security suites), then run focused tests to confirm
+   red state.
 
 ```sh
 set -o pipefail
 cargo test --manifest-path third_party/full-monty/Cargo.toml -p monty \
   --test runtime_observer_events --test runtime_observer_events_bdd \
   | tee /tmp/full-monty-runtime-observer-red.out
+set -o pipefail
+cargo test --test compatibility full_monty_observer \
+  | tee /tmp/zamburak-compat-observer-red.out
+set -o pipefail
+cargo test --test security full_monty_observer_security \
+  | tee /tmp/zamburak-security-observer-red.out
 ```
 
 Expected evidence before implementation:
@@ -292,6 +337,12 @@ cargo test --manifest-path third_party/full-monty/Cargo.toml -p monty \
   --test runtime_observer_events --test runtime_observer_events_bdd \
   --test runtime_ids --test runtime_ids_bdd --test repl \
   | tee /tmp/full-monty-runtime-observer-green.out
+set -o pipefail
+cargo test --test compatibility full_monty_observer \
+  | tee /tmp/zamburak-compat-observer-green.out
+set -o pipefail
+cargo test --test security full_monty_observer_security \
+  | tee /tmp/zamburak-security-observer-green.out
 ```
 
 1. Run submodule Rust lint in nested-checkout-safe mode.
@@ -344,7 +395,8 @@ Acceptance behaviours:
 - Unhappy paths remain fail-closed (for example invalid `call_id` resume still
   errors) and do not silently alter event invariants.
 - Behavioural tests using `rstest-bdd` v0.5.0 cover happy, unhappy, and edge
-  scenarios.
+  scenarios in both `third_party/full-monty/` and Zamburak compatibility or
+  security suites.
 - Required gates pass:
   - `make check-fmt`,
   - `make lint`,
@@ -355,7 +407,8 @@ Acceptance behaviours:
 Quality criteria:
 
 - Tests: new unit + behavioural observer coverage plus runtime-ID regression
-  coverage.
+  coverage, including BDD checks in `tests/compatibility/` and
+  `tests/security/`.
 - Lint and type safety: no warnings in required gates.
 - Formatting: formatter checks and markdown validators pass for changed docs.
 - Governance: `full-monty` delta remains Track A generic and passes
@@ -377,6 +430,14 @@ Expected evidence snippets at completion:
 ```plaintext
 $ cargo test --manifest-path third_party/full-monty/Cargo.toml -p monty \
     --test runtime_observer_events --test runtime_observer_events_bdd
+...
+test result: ok.
+
+$ cargo test --test compatibility full_monty_observer
+...
+test result: ok.
+
+$ cargo test --test security full_monty_observer_security
 ...
 test result: ok.
 
@@ -431,3 +492,6 @@ Implementation shape constraints:
 
 - Initial draft created for roadmap Task 0.5.2 with dependency gate,
   additive API strategy, red-green test sequencing, and completion gates.
+- Revised to include explicit BDD coverage in Zamburak
+  `tests/compatibility/` and `tests/security/` for behaviour exposed by
+  `full-monty`, including concrete test file targets and commands.
