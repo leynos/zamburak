@@ -64,11 +64,13 @@ violate that policy are rejected by automated review checks.
 payloads.
 
 - `RunProgress::FunctionCall` and `RunProgress::OsCall` include
-  `arg_runtime_ids` and `kwarg_runtime_ids`.
+  `arg_runtime_ids: Vec<RuntimeValueId>` and
+  `kwarg_runtime_ids: Vec<(RuntimeValueId, RuntimeValueId)>`.
 - `ReplProgress::FunctionCall` and `ReplProgress::OsCall` include the same
-  runtime-ID fields.
+  runtime-ID field types.
 - Both progress enums expose `runtime_ids()` for read-only access to the ID
-  slices without destructuring the enum payload.
+  slices without destructuring the enum payload, returning
+  `(&[RuntimeValueId], &[(RuntimeValueId, RuntimeValueId)])`.
 
 Runtime IDs are opaque host metadata and carry no policy meaning. They remain
 stable across `start()` or `resume()` boundaries and survive `dump()` or

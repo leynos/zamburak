@@ -348,8 +348,11 @@ Snapshots preserve:
 - host-only runtime IDs for values crossing suspendable host boundaries.
   Runtime IDs are intentionally opaque and do not encode policy meaning.
 - runtime ID continuity for both positional and keyword argument payloads
-  emitted via Track A pause events (`FunctionCall` and `OsCall`) in `run` and
-  `repl` flows.
+  emitted via Track A pause events in `run` and `repl` flows:
+  `RunProgress::{FunctionCall, OsCall}` and
+  `ReplProgress::{FunctionCall, OsCall}` with
+  `arg_runtime_ids: Vec<RuntimeValueId>` and
+  `kwarg_runtime_ids: Vec<(RuntimeValueId, RuntimeValueId)>`.
 
 Restored execution must be semantically equivalent to uninterrupted execution
 for policy evaluation outcomes.
@@ -368,28 +371,29 @@ sequenceDiagram
     actor Host
     participant MontyRun
     participant VM
-    participant ArgValues
     participant RunProgress
 
     Host->>MontyRun: start()
     MontyRun->>VM: execute()
-    VM-->>MontyRun: ExternalResultFunctionCallPending(args ArgValues, call_id)
+    VM-->>MontyRun: ExternalResult::FunctionCallPending(..., call_id)
 
-    MontyRun->>ArgValues: into_py_objects_with_runtime_ids(heap, interns)
-    ArgValues-->>MontyRun: args_py, kwargs_py, arg_runtime_ids, kwarg_runtime_ids
+    MontyRun->>MontyRun: convert payload and attach RuntimeValueId metadata
 
-    MontyRun->>RunProgress: create FunctionCall
-    RunProgress-->>Host: yield RunProgressFunctionCall
+    MontyRun->>RunProgress: build RunProgress::FunctionCall { arg_runtime_ids, kwarg_runtime_ids, ... }
+    RunProgress-->>Host: yield RunProgress::FunctionCall
 
     Host->>RunProgress: runtime_ids()
-    RunProgress-->>Host: (&arg_runtime_ids, &kwarg_runtime_ids)
+    RunProgress-->>Host: (&[RuntimeValueId], &[(RuntimeValueId, RuntimeValueId)])
 
-    Host->>RunProgress: resume_with_result()
+    Host->>RunProgress: resume_with_result(...)
     RunProgress->>MontyRun: snapshot state
     MontyRun->>VM: resume(call_id, result)
     VM-->>MontyRun: execution result
     MontyRun-->>Host: final outcome
 ```
+
+`ReplProgress::{FunctionCall, OsCall}` expose the same runtime-ID field shapes
+and `runtime_ids()` accessor contract as `RunProgress`.
 
 ## Information flow model
 

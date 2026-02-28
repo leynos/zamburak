@@ -27,7 +27,8 @@ unit-level and behavioural tests proving:
 - Implement to requirement signposts:
   `docs/adr-001-monty-ifc-vm-hooks.md` section "A1. Stable, host-only runtime
   IDs", `docs/zamburak-design-document.md` section "Snapshot and resume
-  semantics", and `docs/verification-targets.md` row "IFC propagation".
+  semantics", and `docs/verification-targets.md` row "IFC (information-flow
+  control) propagation".
 - Dependency constraint: Task 0.4.2 is a hard precondition for 0.5.1.
   If it is not complete, stop and complete 0.4.2 first.
 - In scope: unique host-facing IDs with continuity across `start()` or
@@ -123,10 +124,10 @@ unit-level and behavioural tests proving:
   Track A constraints and fork policy. Date/Author: 2026-02-26 / Codex
 
 - Decision: validate behaviour in `full-monty` test binaries only
-  (`runtime_ids.rs` and `runtime_ids_bdd.rs`) due nested workspace limitations
-  for direct superproject compatibility wiring. Rationale: preserves required
-  unit and behavioural coverage while keeping the superproject workspace
-  manifest stable. Date/Author: 2026-02-26 / Codex
+  (`runtime_ids.rs` and `runtime_ids_bdd.rs`) due to nested workspace
+  limitations for direct superproject compatibility wiring. Rationale:
+  preserves required unit and behavioural coverage while keeping the
+  superproject workspace manifest stable. Date/Author: 2026-02-26 / Codex
 
 ## Outcomes & retrospective
 
@@ -152,15 +153,16 @@ Completed.
 
 Current repository state relevant to Task 0.5.1:
 
-- `third_party/full-monty/` is present as a git submodule at commit
-  `b316ce4a714744e1c78ce9f95d2785e820394510`.
+- `third_party/full-monty/` is present as a git submodule at the repository's
+  currently pinned revision.
 - Runtime pause/resume orchestration is in
   `third_party/full-monty/crates/monty/src/run.rs` and
   `third_party/full-monty/crates/monty/src/repl.rs`.
 - VM snapshot state is defined in
   `third_party/full-monty/crates/monty/src/bytecode/vm/mod.rs` (`VMSnapshot`).
 - Host argument marshalling for external and OS calls is in
-  `third_party/full-monty/crates/monty/src/args.rs` (`into_py_objects`).
+  `third_party/full-monty/crates/monty/src/args.rs` (argument-to-host payload
+  conversion paths).
 - Current value identity helper logic is in
   `third_party/full-monty/crates/monty/src/value.rs` (`Value::id()`), but this
   is not yet a documented 0.5.1 host-runtime-ID contract.
@@ -254,7 +256,7 @@ Go/no-go for Stage E: all gates are green and docs plus roadmap are aligned.
 Run from repository root (`/home/user/project`). Use `set -o pipefail` and
 `tee` for gate outputs.
 
-1. Preflight dependency and submodule readiness.
+- Step 1: Preflight dependency and submodule readiness.
 
 ```sh
 git submodule update --init --recursive
@@ -268,10 +270,10 @@ Expected evidence:
 <sha> third_party/full-monty (...)
 ```
 
-1. Implement runtime-ID substrate in `third_party/full-monty/` files listed in
-   this plan.
+- Step 2: Implement runtime-ID substrate in `third_party/full-monty/` files
+  listed in this plan.
 
-2. Run focused `full-monty` runtime-ID tests first.
+- Step 3: Run focused `full-monty` runtime-ID tests first.
 
 ```sh
 set -o pipefail
@@ -279,7 +281,7 @@ make -C third_party/full-monty test \
   | tee /tmp/full-monty-test-runtime-ids.out
 ```
 
-1. Run required superproject gates.
+- Step 4: Run required superproject gates.
 
 ```sh
 set -o pipefail
@@ -290,7 +292,7 @@ set -o pipefail
 make test | tee /tmp/test-zamburak-runtime-ids.out
 ```
 
-1. Run documentation gates when docs are changed.
+- Step 5: Run documentation gates when docs are changed.
 
 ```sh
 set -o pipefail
@@ -301,7 +303,7 @@ set -o pipefail
 make fmt | tee /tmp/fmt-zamburak-runtime-ids.out
 ```
 
-1. Mark roadmap completion after all gates pass.
+- Step 6: Mark roadmap completion after all gates pass.
 
 ```sh
 # edit docs/roadmap.md: change Task 0.5.1 checkbox from [ ] to [x]
