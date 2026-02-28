@@ -345,9 +345,61 @@ Snapshots preserve:
 - IFC state continuity across `start()` or `resume()` and `dump()` or `load()`
   boundaries, either through runtime-native persistence or versioned
   embedder-owned snapshot extension state.
+- host-only runtime IDs for values crossing suspendable host boundaries.
+  Runtime IDs are intentionally opaque and do not encode policy meaning.
+- runtime ID continuity for both positional and keyword argument payloads
+  emitted via Track A pause events in `run` and `repl` flows:
+  `RunProgress::{FunctionCall, OsCall}` and
+  `ReplProgress::{FunctionCall, OsCall}` with
+  `arg_runtime_ids: Vec<RuntimeValueId>` and
+  `kwarg_runtime_ids: Vec<(RuntimeValueId, RuntimeValueId)>`.
 
 Restored execution must be semantically equivalent to uninterrupted execution
 for policy evaluation outcomes.
+
+_Runtime-ID flow across start, function-call yield, host inspection, and
+resume._
+
+For screen readers: The following diagram shows the runtime-ID flow across
+start, function-call yield, host inspection, and resume.
+
+```mermaid
+sequenceDiagram
+    actor Host
+    participant MontyRun
+    participant VM
+    participant RunProgress
+
+    Host->>MontyRun: start()
+    MontyRun->>VM: execute()
+    VM-->>MontyRun: ExternalResult::FunctionCallPending(..., call_id)
+
+    MontyRun->>MontyRun: convert payload and attach RuntimeValueId metadata
+
+    MontyRun->>RunProgress: build RunProgress::FunctionCall { arg_runtime_ids, kwarg_runtime_ids, ... }
+    RunProgress-->>Host: yield RunProgress::FunctionCall
+
+    Host->>RunProgress: runtime_ids()
+    RunProgress-->>Host: (&[RuntimeValueId], &[(RuntimeValueId, RuntimeValueId)])
+
+    Host->>RunProgress: resume_with_result(...)
+    RunProgress->>MontyRun: snapshot state
+    MontyRun->>VM: resume(call_id, result)
+    VM-->>MontyRun: execution result
+    MontyRun-->>Host: final outcome
+```
+
+Figure 5: Runtime-ID flow across start, function-call pause, host inspection,
+and resume.
+
+Implementation decision (2026-02-26): Task 0.5.1 uses `Value::id()` as the
+runtime-ID substrate in `full-monty` and exposes it through additive,
+host-facing payload fields. This keeps Track A generic and upstream-friendly
+while providing continuity evidence across `start()` or `resume()` and `dump()`
+or `load()`.
+
+`ReplProgress::{FunctionCall, OsCall}` expose the same runtime-ID field shapes
+and `runtime_ids()` accessor contract as `RunProgress`.
 
 ## Information flow model
 

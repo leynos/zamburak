@@ -172,7 +172,7 @@ completion criteria so the work can be sequenced and assessed without ambiguity.
 
 ### Step 0.5: Track A (`full-monty`) upstream-friendly substrate
 
-- [ ] Task 0.5.1: Implement stable runtime IDs in `full-monty`.
+- [x] Task 0.5.1: Implement stable runtime IDs in `full-monty`.
   - Requirement signposts:
     - `docs/adr-001-monty-ifc-vm-hooks.md` section
       "A1. Stable, host-only runtime IDs",
