@@ -389,6 +389,9 @@ sequenceDiagram
     MontyRun-->>Host: final outcome
 ```
 
+Figure 5: Runtime-ID flow across start, function-call pause, host inspection,
+and resume.
+
 Implementation decision (2026-02-26): Task 0.5.1 uses `Value::id()` as the
 runtime-ID substrate in `full-monty` and exposes it through additive,
 host-facing payload fields. This keeps Track A generic and upstream-friendly
