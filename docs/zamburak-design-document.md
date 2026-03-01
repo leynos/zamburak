@@ -222,6 +222,33 @@ flow.
 No Zamburak policy semantics may be implemented in `Track A` APIs. All policy
 meaning is owned by `Track B`.
 
+### Track A observer event contract
+
+`full-monty` publishes a generic observer substrate through additive run and
+REPL entrypoints:
+
+- `MontyRun::start_with_observer(...)`,
+- `MontyRepl::start_with_observer(...)`,
+- `MontyRepl::start_no_print_with_observer(...)`.
+
+The canonical Track A event set is:
+
+- `ValueCreated`,
+- `OpResult`,
+- `ExternalCallRequested`,
+- `ExternalCallReturned`,
+- `ControlCondition`.
+
+Payloads are runtime-generic and identifier-focused so Track A stays
+upstream-friendly. Policy decisions, taint labels, and governance outcomes
+remain exclusively in Track B.
+
+Compatibility invariants for this contract are:
+
+- no observer installed preserves baseline runtime behaviour,
+- explicit no-op observer preserves baseline runtime behaviour,
+- observer-enabled mode adds events without changing suspend/resume semantics.
+
 ### `full-monty` fork governance contract
 
 Track A governance is fail-closed and repository-local:
