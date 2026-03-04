@@ -2,6 +2,7 @@
 //! guardrails, and localization contracts.
 
 mod full_monty_observer_bdd;
+mod full_monty_snapshot_extension_bdd;
 mod localization_contract;
 mod monty_fork_policy;
 mod phase_gate_bdd;

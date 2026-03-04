@@ -661,6 +661,11 @@ host-facing payload fields. This keeps Track A generic and upstream-friendly
 while providing continuity evidence across `start()` or `resume()` and `dump()`
 or `load()`.
 
+Implementation decision (2026-03-04): Task 0.5.3 adds optional, embedder-owned
+snapshot extension bytes to `Snapshot`, `FutureSnapshot`, `ReplSnapshot`, and
+`ReplFutureSnapshot`. The bytes are persisted by Monty without interpretation,
+so versioning and semantics remain entirely in Track B or host code.
+
 `ReplProgress::{FunctionCall, OsCall}` expose the same runtime-ID field shapes
 and `runtime_ids()` accessor contract as `RunProgress`.
 

@@ -5,7 +5,7 @@ This ExecPlan (execution plan) is a living document. The sections
 `Decision log`, and `Outcomes & retrospective` must be kept up to date as work
 proceeds.
 
-Status: DRAFT
+Status: COMPLETE
 
 ## Purpose / big picture
 
@@ -64,8 +64,8 @@ missing extensions preserve baseline semantics.
 
 - Risk: adding a new serialized field can break existing snapshot payloads if
   `serde` defaults are not configured. Severity: high Likelihood: medium
-  Mitigation: use `#[serde(default)]` plus `skip_serializing_if` for optional
-  fields and add dump/load regression tests.
+  Mitigation: use `#[serde(default)]` and add dump/load regression tests to
+  confirm backwards-compatible payloads.
 
 - Risk: extension bytes are large and could add unexpected memory pressure.
   Severity: medium Likelihood: medium Mitigation: keep the payload optional,
@@ -89,6 +89,20 @@ missing extensions preserve baseline semantics.
   `third_party/full-monty/crates/monty/src/repl.rs`.
 - [x] (2026-03-04 00:15Z) Drafted this ExecPlan with staged delivery, test-first
   sequencing, and completion gates.
+- [x] (2026-03-04 01:02Z) Began implementation: updated plan status and kicked
+  off Stage A preflight checks.
+- [x] (2026-03-04 02:08Z) Added snapshot extension bytes to run/repl snapshot
+  structs with additive accessors and serde defaults, plus resume propagation
+  for future snapshots.
+- [x] (2026-03-04 02:21Z) Added run/repl unit tests, `rstest-bdd` scenarios, and
+  a superproject compatibility probe for extension byte round-trips.
+- [x] (2026-03-04 02:42Z) Updated `docs/zamburak-design-document.md` and
+  `docs/users-guide.md` with the new extension seam.
+- [x] (2026-03-04 03:12Z) Completed submodule gates (`make format-rs`,
+  `make lint-rs`, `make test`) and queued superproject gates.
+- [x] (2026-03-04 04:30Z) Ran superproject gates (`make fmt`,
+  `make markdownlint`, `make nixie`, `make check-fmt`, `make lint`,
+  `make test`) and marked roadmap Task 0.5.3 done.
 
 ## Surprises & discoveries
 
@@ -96,6 +110,11 @@ missing extensions preserve baseline semantics.
   initialised. Evidence: `rg` fails until
   `git submodule update --init --recursive` has been run. Impact: concrete
   steps must include submodule initialisation for a new checkout.
+- Observation: `postcard` rejects optional fields that are skipped during
+  serialization; using `skip_serializing_if = "Option::is_none"` caused
+  `DeserializeUnexpectedEnd` on `RunProgress::load()` for `None` extension
+  values. Impact: omit `skip_serializing_if` and rely on `#[serde(default)]` so
+  `None` still serializes as an empty optional marker.
 
 ## Decision log
 
@@ -103,10 +122,22 @@ missing extensions preserve baseline semantics.
   with `serde` defaults. Rationale: optional bytes keep the API generic, avoid
   new dependencies, and permit backwards-compatible deserialization.
   Date/Author: 2026-03-04 / Codex.
+- Decision: name the internal field `extension_bytes` and set
+  `#[serde(rename = "snapshot_extension")]` to preserve the API signal while
+  avoiding `clippy::struct_field_names` warnings. Rationale: keep public
+  semantics stable without clippy suppressions. Date/Author: 2026-03-04 / Codex.
+- Decision: remove `skip_serializing_if` for optional extension bytes to avoid
+  `postcard` binary format deserialization failures when the field is absent in
+  `RunProgress::dump()` output. Rationale: ensure round-trip stability for
+  `None` values across snapshot persistence. Date/Author: 2026-03-04 / Codex.
 
 ## Outcomes & retrospective
 
-To be completed after implementation.
+Delivered additive snapshot-extension bytes on all run/repl snapshot types,
+plus unit, BDD, and compatibility probes covering round-trips and corruption
+handling. Documentation now calls out the extension seam and usage patterns for
+library consumers. Validation gates completed in the submodule and superproject
+(format, lint, and full test suites).
 
 ## Context and orientation
 
@@ -333,3 +364,6 @@ snapshot_extension: Option<Vec<u8>>,
 
 - Initial draft created for roadmap Task 0.5.3 with dependency gate, test-first
   sequencing, and completion gates.
+- Updated after implementation to record the `postcard` serialization constraint
+  (no `skip_serializing_if`) and the `extension_bytes` internal field name with
+  `serde` rename for stable API semantics.
