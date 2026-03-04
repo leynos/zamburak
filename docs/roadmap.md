@@ -185,7 +185,7 @@ completion criteria so the work can be sequenced and assessed without ambiguity.
   - Out of scope: policy meanings encoded in runtime IDs.
   - Completion criteria: tests prove ID uniqueness and round-trip continuity
     across suspend, resume, dump, and load.
-- [ ] Task 0.5.2: Introduce generic runtime observer events in `full-monty`.
+- [x] Task 0.5.2: Introduce generic runtime observer events in `full-monty`.
   - Requirement signposts:
     - `docs/adr-001-monty-ifc-vm-hooks.md` section
       "A2. Lightweight event emission hooks",

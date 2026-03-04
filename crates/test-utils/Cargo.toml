@@ -1,0 +1,8 @@
+[package]
+name = "test-utils"
+version = "0.1.0"
+edition = "2024"
+
+[lib]
+name = "test_utils"
+path = "src/lib.rs"

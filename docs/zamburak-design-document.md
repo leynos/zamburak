@@ -222,6 +222,269 @@ flow.
 No Zamburak policy semantics may be implemented in `Track A` APIs. All policy
 meaning is owned by `Track B`.
 
+### Track A observer event contract
+
+`full-monty` publishes a generic observer substrate through additive run and
+REPL entrypoints:
+
+- `MontyRun::start_with_observer(...)`,
+- `MontyRepl::start_with_observer(...)`,
+- `MontyRepl::start_no_print_with_observer(...)`.
+
+The canonical Track A event set is:
+
+- `ValueCreated`,
+- `OpResult`,
+- `ExternalCallRequested`,
+- `ExternalCallReturned`,
+- `ControlCondition`.
+
+Payloads are runtime-generic and identifier-focused, so Track A stays
+upstream-friendly. Policy decisions, taint labels, and governance outcomes
+remain exclusively in Track B.
+
+Compatibility invariants for this contract are:
+
+- no observer installed preserves baseline runtime behaviour,
+- explicit no-op observer preserves baseline runtime behaviour,
+- observer-enabled mode adds events without changing suspend/resume semantics.
+
+For screen readers: The following sequence diagram shows a synchronous external
+function call through `MontyRun::start_with_observer(...)`, where
+`ExternalCallRequested` is emitted on suspend, `ExternalCallReturned` is
+emitted on resume, and `ValueCreated` is emitted when execution completes.
+
+```mermaid
+sequenceDiagram
+    actor Host
+    participant MontyRun
+    participant VM
+    participant RuntimeObserverHandle as Observer
+
+    Note over Host,MontyRun: Synchronous external function call via MontyRun.start_with_observer
+
+    Host->>MontyRun: start_with_observer(inputs, tracker, print, observer)
+    MontyRun->>VM: new_with_observer(heap, namespaces, interns, print, observer)
+    MontyRun->>VM: run_module(module_code)
+    VM-->>MontyRun: FrameExit::FunctionCall{call_id, args, method_call}
+
+    MontyRun->>MontyRun: handle_vm_result(..., observer)
+    MontyRun->>MontyRun: build_function_call_progress(input)
+    MontyRun->>Observer: emit(RuntimeObserverEvent::ExternalCallRequested)
+    Note right of Observer: ExternalCallRequestedEvent{call_id, kind, arg_runtime_ids, kwarg_runtime_ids}
+
+    MontyRun-->>Host: RunProgress::FunctionCall{call_id, state}
+
+    Host->>MontyRun: resume(call_id, ExternalResult::Return(obj))
+    MontyRun->>VM: restore_with_observer(snapshot, module_code, ..., observer)
+    MontyRun->>Observer: emit(RuntimeObserverEvent::ExternalCallReturned)
+    Note right of Observer: ExternalCallReturnedEvent{call_id, kind=Return}
+    MontyRun->>VM: resume(obj)
+    VM-->>MontyRun: FrameExit::Return(value)
+
+    MontyRun->>Observer: emit(RuntimeObserverEvent::ValueCreated)
+    MontyRun-->>Host: RunProgress::Complete{return_value}
+```
+
+_Figure: Observer-enabled synchronous external call and resume sequence._
+
+For screen readers: The following class diagram shows how runtime observer
+types, events, and VM/run/repl snapshot components relate when observer-enabled
+execution is used.
+
+```mermaid
+classDiagram
+    direction LR
+
+    class RuntimeObserver {
+        <<interface>>
+        +on_event(event RuntimeObserverEvent) void
+    }
+
+    class NoopRuntimeObserver {
+        +on_event(event RuntimeObserverEvent) void
+    }
+
+    class RuntimeObserverHandle {
+        -inner Option~SharedRuntimeObserver~
+        +disabled() RuntimeObserverHandle
+        +new(observer RuntimeObserver) RuntimeObserverHandle
+        +from_shared(observer SharedRuntimeObserver) RuntimeObserverHandle
+        +is_enabled() bool
+        +emit(event RuntimeObserverEvent) void
+    }
+
+    class SharedRuntimeObserver {
+        <<alias Arc_Mutex_RuntimeObserver>>
+    }
+
+    class RuntimeObserverEvent {
+        <<enumeration>>
+        ValueCreated
+        OpResult
+        ExternalCallRequested
+        ExternalCallReturned
+        ControlCondition
+    }
+
+    class ValueCreatedEvent {
+        +value_id RuntimeValueId
+    }
+
+    class OpInputIds {
+        <<enumeration>>
+        None
+        One
+        Two
+        +none() OpInputIds
+    }
+
+    class OpResultEvent {
+        +output_id RuntimeValueId
+        +inputs OpInputIds
+    }
+
+    class ExternalCallKind {
+        <<enumeration>>
+        Function
+        Os
+        Method
+    }
+
+    class ExternalCallReturnKind {
+        <<enumeration>>
+        Return
+        Error
+        Future
+    }
+
+    class ExternalCallRequestedEvent {
+        +call_id u32
+        +kind ExternalCallKind
+        +arg_runtime_ids slice_RuntimeValueId
+        +kwarg_runtime_ids slice_tuple_RuntimeValueId_RuntimeValueId
+    }
+
+    class ExternalCallReturnedEvent {
+        +call_id u32
+        +kind ExternalCallReturnKind
+    }
+
+    class ControlConditionEvent {
+        +condition_id RuntimeValueId
+        +branch_taken bool
+    }
+
+    class VM {
+        -observer RuntimeObserverHandle
+        +new(heap Heap, namespaces Namespaces, interns Interns, print_writer PrintWriter) VM
+        +new_with_observer(..., observer RuntimeObserverHandle) VM
+        +restore(snapshot VMSnapshot, module_code Code, ...) VM
+        +restore_with_observer(snapshot VMSnapshot, module_code Code, ..., observer RuntimeObserverHandle) VM
+        +push(value Value) void
+        +resume(obj MontyObject) FrameExitResult
+        +resume_with_exception(exc SimpleException) FrameExitResult
+        +resolve_future(call_id CallId, value MontyObject) Result
+        +fail_future(call_id CallId, error RunError) void
+        +run_module(code Code) FrameExitResult
+        +run() FrameExitResult
+        -emit_value_created(value Value) void
+        -emit_op_result(output Value, inputs OpInputIds) void
+        -emit_unary_op_result(input_id RuntimeValueId, output Value) void
+        -emit_binary_op_result(lhs Value, rhs Value, output Value) void
+        -emit_control_condition(condition Value, branch_taken bool) void
+    }
+
+    class MontyRun {
+        +start(inputs Vec_MontyObject, resource_tracker ResourceTracker, print PrintWriter) RunProgress
+        +start_with_observer(inputs Vec_MontyObject, ..., observer RuntimeObserverHandle) RunProgress
+    }
+
+    class MontyRepl {
+        +start(code str, print PrintWriter) ReplProgress
+        +start_with_observer(code str, print PrintWriter, observer RuntimeObserverHandle) ReplProgress
+        +start_no_print(code str) ReplProgress
+        +start_no_print_with_observer(code str, observer RuntimeObserverHandle) ReplProgress
+    }
+
+    class Snapshot {
+        +executor Executor
+        +vm_state VMSnapshot
+        +heap Heap
+        +namespaces Namespaces
+        +pending_call_id u32
+        +observer RuntimeObserverHandle
+        +resume(result ExternalResult, print PrintWriter) RunProgress
+        +resume_with_future(print PrintWriter) RunProgress
+    }
+
+    class FutureSnapshot {
+        +executor Executor
+        +vm_state VMSnapshot
+        +heap Heap
+        +namespaces Namespaces
+        +pending_call_ids Vec_u32
+        +observer RuntimeObserverHandle
+        +resume(results Vec_tuple_u32_ExternalResult, print PrintWriter) RunProgress
+    }
+
+    class ReplSnapshot {
+        +repl MontyRepl
+        +executor ReplExecutor
+        +vm_state VMSnapshot
+        +pending_call_id u32
+        +observer RuntimeObserverHandle
+        +resume(result ExternalResult, print PrintWriter) ReplProgress
+    }
+
+    class ReplFutureSnapshot {
+        +repl MontyRepl
+        +executor ReplExecutor
+        +vm_state VMSnapshot
+        +pending_call_ids Vec_u32
+        +observer RuntimeObserverHandle
+        +resume(results Vec_tuple_u32_ExternalResult, print PrintWriter) ReplProgress
+    }
+
+    RuntimeObserver <|.. NoopRuntimeObserver
+    RuntimeObserverHandle o-- SharedRuntimeObserver
+    RuntimeObserverEvent --> ValueCreatedEvent
+    RuntimeObserverEvent --> OpResultEvent
+    RuntimeObserverEvent --> ExternalCallRequestedEvent
+    RuntimeObserverEvent --> ExternalCallReturnedEvent
+    RuntimeObserverEvent --> ControlConditionEvent
+
+    OpResultEvent --> OpInputIds
+    ExternalCallRequestedEvent --> ExternalCallKind
+    ExternalCallReturnedEvent --> ExternalCallReturnKind
+
+    VM --> RuntimeObserverHandle
+    VM ..> RuntimeObserverEvent
+    VM ..> ValueCreatedEvent
+    VM ..> OpResultEvent
+    VM ..> ControlConditionEvent
+
+    MontyRun --> VM
+    MontyRun --> RuntimeObserverHandle
+
+    MontyRepl --> VM
+    MontyRepl --> RuntimeObserverHandle
+
+    Snapshot --> VM
+    Snapshot --> RuntimeObserverHandle
+
+    FutureSnapshot --> VM
+    FutureSnapshot --> RuntimeObserverHandle
+
+    ReplSnapshot --> VM
+    ReplSnapshot --> RuntimeObserverHandle
+
+    ReplFutureSnapshot --> VM
+    ReplFutureSnapshot --> RuntimeObserverHandle
+```
+
+_Figure: Runtime observer and snapshot class relationships in Track A._
+
 ### `full-monty` fork governance contract
 
 Track A governance is fail-closed and repository-local:
