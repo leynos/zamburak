@@ -428,7 +428,7 @@ Acceptance behaviours:
   policy decision types.
 - No observer installed: existing API behaviour and outputs remain unchanged.
 - No-op observer installed: behaviour remains unchanged relative to baseline.
-- Unhappy paths remain fail-closed (for example invalid `call_id` resume still
+- Unhappy paths remain fail-closed (for example, invalid `call_id` resume still
   errors) and do not silently alter event invariants.
 - Behavioural tests using `rstest-bdd` v0.5.0 cover happy, unhappy, and edge
   scenarios in both `third_party/full-monty/` and Zamburak compatibility or

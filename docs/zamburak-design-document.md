@@ -239,7 +239,7 @@ The canonical Track A event set is:
 - `ExternalCallReturned`,
 - `ControlCondition`.
 
-Payloads are runtime-generic and identifier-focused so Track A stays
+Payloads are runtime-generic and identifier-focused, so Track A stays
 upstream-friendly. Policy decisions, taint labels, and governance outcomes
 remain exclusively in Track B.
 
