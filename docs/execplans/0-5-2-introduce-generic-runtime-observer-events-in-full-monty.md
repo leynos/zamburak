@@ -22,9 +22,9 @@ After this change, host integrations can attach an observer to Monty execution
 and receive canonical runtime events without changing interpreter semantics.
 Success is observable through unit and behavioural tests proving that events
 are emitted in expected scenarios, while hook-disabled and no-op-observer modes
-preserve baseline behaviour. As part of this task, behavioural coverage is
-required both in `third_party/full-monty/` and in Zamburak repository BDD tests
-under `tests/compatibility/` and `tests/security/`.
+preserve baseline behaviour. As part of this task, behaviour-driven development
+(BDD) coverage is required both in `third_party/full-monty/` and in Zamburak
+repository BDD tests under `tests/compatibility/` and `tests/security/`.
 
 ## Constraints
 
@@ -127,8 +127,8 @@ under `tests/compatibility/` and `tests/security/`.
 - Observation: `third_party/full-monty/` is empty until submodules are
   initialized. Evidence: initial `rg` calls failed for
   `third_party/full-monty/crates/monty` before
-  `git submodule update --init --recursive`. Impact: include explicit submodule
-  initialization in concrete steps.
+  `git submodule update --init --recursive`. Impact: this includes explicit
+  submodule initialization in the concrete steps.
 
 - Observation: no existing runtime observer substrate exists in
   `crates/monty/src`; event naming currently appears only in ADR and roadmap
