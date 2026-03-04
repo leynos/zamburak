@@ -2,9 +2,7 @@
 
 use rstest::fixture;
 use rstest_bdd_macros::{given, scenario, then, when};
-
-#[path = "../test_utils/full_monty_observer_probe_helpers.rs"]
-mod full_monty_observer_probe_helpers;
+use test_utils::full_monty_observer_probe_helpers;
 
 #[derive(Default)]
 struct FullMontyObserverProbeWorld {
