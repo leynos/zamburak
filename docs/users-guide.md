@@ -82,8 +82,10 @@ stable across `start()` or `resume()` boundaries and survive `dump()` or
 stores these bytes alongside snapshot state but never interprets them.
 
 - `Snapshot`, `FutureSnapshot`, `ReplSnapshot`, and `ReplFutureSnapshot` expose
-  `with_snapshot_extension(Vec<u8>)` for attaching bytes and
-  `snapshot_extension()` for read-only access.
+  `with_snapshot_extension(...)` for attaching bytes (accepting either
+  `Vec<u8>` or `SnapshotExtension`) and `snapshot_extension()` for read-only
+  byte access. Use `snapshot_extension_raw()` to access the `SnapshotExtension`
+  wrapper for future metadata expansion.
 - Extension bytes are optional and default to `None` when not provided.
 - `RunProgress::dump()`/`load()` and `ReplProgress::dump()`/`load()` preserve
   extension bytes across round trips.

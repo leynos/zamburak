@@ -664,7 +664,9 @@ or `load()`.
 Implementation decision (2026-03-04): Task 0.5.3 adds optional, embedder-owned
 snapshot extension bytes to `Snapshot`, `FutureSnapshot`, `ReplSnapshot`, and
 `ReplFutureSnapshot`. The bytes are persisted by Monty without interpretation,
-so versioning and semantics remain entirely in Track B or host code.
+so versioning and semantics remain entirely in Track B or host code. The bytes
+are wrapped in the `SnapshotExtension` newtype to keep the surface extensible
+if additional snapshot metadata is needed later.
 
 `ReplProgress::{FunctionCall, OsCall}` expose the same runtime-ID field shapes
 and `runtime_ids()` accessor contract as `RunProgress`.
