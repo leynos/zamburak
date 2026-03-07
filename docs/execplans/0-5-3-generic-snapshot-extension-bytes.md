@@ -185,7 +185,7 @@ bytes beyond basic serialization.
 
 3. Stage C: implement extension bytes in `full-monty` snapshot structs.
    Add an optional `snapshot_extension` field to each snapshot struct with
-   `#[serde(default, skip_serializing_if = "Option::is_none")]`. Provide
+   `#[serde(default)]` only (do not use `skip_serializing_if`). Provide
    `with_snapshot_extension` and `snapshot_extension` accessors on `Snapshot`,
    `FutureSnapshot`, `ReplSnapshot`, and `ReplFutureSnapshot`. Update snapshot
    constructors to initialise `snapshot_extension` as `None`. Ensure
@@ -356,7 +356,7 @@ impl<T: ResourceTracker> ReplFutureSnapshot<T> {
 The underlying structs should include:
 
 ```rust
-#[serde(default, skip_serializing_if = "Option::is_none")]
+#[serde(default)]
 snapshot_extension: Option<Vec<u8>>,
 ```
 
