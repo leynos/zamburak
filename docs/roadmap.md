@@ -199,7 +199,7 @@ completion criteria so the work can be sequenced and assessed without ambiguity.
   - Out of scope: policy decision types in observer payloads.
   - Completion criteria: observer events are emitted with no behavioural drift
     and no-op observers preserve baseline semantics.
-- [ ] Task 0.5.3: Add generic snapshot extension bytes in `full-monty` when
+- [x] Task 0.5.3: Add generic snapshot extension bytes in `full-monty` when
       required.
   - Requirement signposts:
     - `docs/adr-001-monty-ifc-vm-hooks.md` section
