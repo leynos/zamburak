@@ -302,7 +302,7 @@ Quality criteria (what "done" means):
   pass with no new warnings.
 - Formatting: `make check-fmt` and `make fmt` produce no diffs.
 
-Quality method (how we check):
+Quality method (verification steps):
 
 - Run the commands in the Concrete steps section and confirm each reports
   success.
@@ -323,9 +323,8 @@ Expected BDD probe output includes the new suite name and a green result. For
 example:
 
 ```plaintext
-running 1 test
-...
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out
+snapshot_extensions_bdd
+exit status: 0
 ```
 
 ## Interfaces and dependencies
