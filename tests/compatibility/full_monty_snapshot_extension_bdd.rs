@@ -50,9 +50,8 @@ fn then_snapshot_extension_probe_succeeds(world: &FullMontySnapshotExtensionProb
 fn then_probe_output_mentions_snapshot_extensions(world: &FullMontySnapshotExtensionProbeWorld) {
     let combined_output = format!("{}\n{}", world.stdout, world.stderr);
     assert!(
-        combined_output.contains("snapshot_extensions_bdd.rs")
-            && combined_output.contains("test result: ok."),
-        "expected snapshot_extensions_bdd.rs test result line in probe logs"
+        combined_output.contains("snapshot_extensions_bdd"),
+        "expected snapshot_extensions_bdd binary name in probe logs"
     );
 }
 

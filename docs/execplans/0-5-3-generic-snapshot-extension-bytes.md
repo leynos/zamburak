@@ -107,9 +107,9 @@ missing extensions preserve baseline semantics.
 ## Surprises & discoveries
 
 - Observation: `third_party/full-monty/` may be empty until submodules are
-  initialised. Evidence: `rg` fails until
+  initialized. Evidence: `rg` fails until
   `git submodule update --init --recursive` has been run. Impact: concrete
-  steps must include submodule initialisation for a new checkout.
+  steps must include submodule initialization for a new checkout.
 - Observation: `postcard` rejects optional fields that are skipped during
   serialization; using `skip_serializing_if = "Option::is_none"` caused
   `DeserializeUnexpectedEnd` on `RunProgress::load()` for `None` extension
@@ -134,10 +134,11 @@ missing extensions preserve baseline semantics.
 ## Outcomes & retrospective
 
 Delivered additive snapshot-extension bytes on all run/repl snapshot types,
-plus unit, BDD, and compatibility probes covering round-trips and corruption
-handling. Documentation now calls out the extension seam and usage patterns for
-library consumers. Validation gates completed in the submodule and superproject
-(format, lint, and full test suites).
+plus unit, Behaviour-Driven Development (BDD), and compatibility probes
+covering round-trips and corruption handling. Documentation now calls out the
+extension seam and usage patterns for library consumers. Validation gates
+completed in the submodule and superproject (format, lint, and full test
+suites).
 
 ## Context and orientation
 
@@ -174,8 +175,9 @@ bytes beyond basic serialization.
 
 2. Stage B: add failing tests for snapshot-extension behaviour.
    Add unit tests in `third_party/full-monty/crates/monty/tests/` for snapshot
-   extension round-trips on run and repl paths. Add BDD coverage with
-   `rstest-bdd` v0.5.0 in a new `snapshot_extensions_bdd.rs` test file plus a
+   extension round-trips on run and repl paths. Add Behaviour-Driven
+   Development (BDD) coverage with `rstest-bdd` v0.5.0 in a new
+   `snapshot_extensions_bdd.rs` test file plus a
    `tests/features/snapshot_extensions.feature` scenario. Add a superproject
    compatibility BDD probe under `tests/compatibility/` that executes the new
    `full-monty` BDD suite via
@@ -184,14 +186,16 @@ bytes beyond basic serialization.
    before the implementation changes.
 
 3. Stage C: implement extension bytes in `full-monty` snapshot structs.
-   Add an optional `snapshot_extension` field to each snapshot struct with
-   `#[serde(default)]` only (do not use `skip_serializing_if`). Provide
+   Add an optional `snapshot_extension` field to each snapshot struct (use
+   `extension_bytes` internally with
+   `#[serde(default, rename = "snapshot_extension")]`). Provide
    `with_snapshot_extension` and `snapshot_extension` accessors on `Snapshot`,
    `FutureSnapshot`, `ReplSnapshot`, and `ReplFutureSnapshot`. Update snapshot
-   constructors to initialise `snapshot_extension` as `None`. Ensure
-   `dump()`/`load()` workflows preserve extension bytes without changing
-   interpreter behaviour. Update doc comments in `run.rs` and `repl.rs` to
-   explain the extension seam.
+   constructors to initialize `snapshot_extension` as `None`. Do not
+   reintroduce `skip_serializing_if`; it was intentionally removed per the
+   Decision log. Ensure `dump()`/`load()` behaviour remains unchanged aside
+   from carrying extension bytes, and keep existing `run.rs`/`repl.rs` doc
+   comments unchanged.
 
 4. Stage D: documentation, roadmap update, and validation.
    Update `docs/zamburak-design-document.md` with a dated implementation
@@ -203,7 +207,7 @@ bytes beyond basic serialization.
 
 ## Concrete steps
 
-1. Initialise submodules if needed.
+1. Initialize submodules if needed.
 
 ```plaintext
 git submodule update --init --recursive
@@ -226,10 +230,10 @@ Expected outcome: `third_party/full-monty/` is populated and ready for search.
 
 - Edit `third_party/full-monty/crates/monty/src/run.rs`:
   add `snapshot_extension` to `Snapshot<T>` and `FutureSnapshot<T>`, add
-  accessors, and initialise fields in snapshot constructors.
+  accessors, and initialize fields in snapshot constructors.
 - Edit `third_party/full-monty/crates/monty/src/repl.rs`:
   add `snapshot_extension` to `ReplSnapshot<T>` and `ReplFutureSnapshot<T>`,
-  add accessors, and initialise fields in snapshot constructors.
+  add accessors, and initialize fields in snapshot constructors.
 
 1. Update documentation.
 
@@ -310,7 +314,7 @@ Quality method (how we check):
 
 All steps are safe to rerun. If tests fail after adding extension bytes, revert
 only the new snapshot fields and re-run the Stage B tests to re-establish the
-red state before proceeding. If the submodule is uninitialised, rerun
+red state before proceeding. If the submodule is uninitialized, rerun
 `git submodule update --init --recursive` before searching for files.
 
 ## Artifacts and notes
@@ -356,8 +360,8 @@ impl<T: ResourceTracker> ReplFutureSnapshot<T> {
 The underlying structs should include:
 
 ```rust
-#[serde(default)]
-snapshot_extension: Option<Vec<u8>>,
+#[serde(default, rename = "snapshot_extension")]
+extension_bytes: Option<Vec<u8>>,
 ```
 
 ## Revision note
