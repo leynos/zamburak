@@ -167,11 +167,12 @@ bytes beyond basic serialization.
 ## Plan of work
 
 1. Stage A: confirm prerequisites and shape the API.
-   Review Task 0.5.2 completion state in `docs/roadmap.md`. Read the ADR and
-   design doc sections to clarify the expected seam, then inspect `Snapshot`,
-   `FutureSnapshot`, `ReplSnapshot`, and `ReplFutureSnapshot` definitions to
-   decide on field names and method signatures. Capture the decision in
-   `docs/zamburak-design-document.md` before coding.
+   Review Task 0.5.2 completion state in `docs/roadmap.md`. Read the
+   Architecture Decision Record (ADR) and design doc sections to clarify the
+   expected seam, then inspect `Snapshot`, `FutureSnapshot`, `ReplSnapshot`,
+   and `ReplFutureSnapshot` definitions to decide on field names and method
+   signatures. Capture the decision in `docs/zamburak-design-document.md`
+   before coding.
 
 2. Stage B: add failing tests for snapshot-extension behaviour.
    Add unit tests in `third_party/full-monty/crates/monty/tests/` for snapshot
