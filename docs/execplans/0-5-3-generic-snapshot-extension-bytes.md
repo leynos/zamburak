@@ -206,90 +206,94 @@ bytes beyond basic serialization.
 
 ## Concrete steps
 
+<!-- markdownlint-disable MD029 -->
 1. Initialize submodules if needed.
 
-```plaintext
-git submodule update --init --recursive
-```
+   ```plaintext
+   git submodule update --init --recursive
+   ```
 
-Expected outcome: `third_party/full-monty/` is populated and ready for search.
+   Expected outcome: `third_party/full-monty/` is populated and ready for
+   search.
 
-1. Add test scaffolding for snapshot extension bytes.
+2. Add test scaffolding for snapshot extension bytes.
 
-- Create `third_party/full-monty/crates/monty/tests/snapshot_extensions.rs`
-  with unit tests for run and repl round-trips.
-- Create `third_party/full-monty/crates/monty/tests/snapshot_extensions_bdd.rs`
-  and `third_party/full-monty/crates/monty/tests/features/`
-  `snapshot_extensions.feature` for BDD coverage.
-- Create `tests/compatibility/full_monty_snapshot_extension_bdd.rs` and
-  `tests/compatibility/features/full_monty_snapshot_extension.feature` to run
-  the submodule BDD suite from the superproject.
+   - Create `third_party/full-monty/crates/monty/tests/snapshot_extensions.rs`
+     with unit tests for run and repl round-trips.
+   - Create
+     `third_party/full-monty/crates/monty/tests/snapshot_extensions_bdd.rs`
+     and `third_party/full-monty/crates/monty/tests/features/`
+     `snapshot_extensions.feature` for BDD coverage.
+   - Create `tests/compatibility/full_monty_snapshot_extension_bdd.rs` and
+     `tests/compatibility/features/full_monty_snapshot_extension.feature` to
+     run the submodule BDD suite from the superproject.
 
-1. Implement snapshot extension fields and accessors.
+3. Implement snapshot extension fields and accessors.
 
-- Edit `third_party/full-monty/crates/monty/src/run.rs`:
-  add `extension_bytes` to `Snapshot<T>` and `FutureSnapshot<T>`, add
-  accessors, and initialize fields in snapshot constructors.
-- Edit `third_party/full-monty/crates/monty/src/repl.rs`:
-  add `extension_bytes` to `ReplSnapshot<T>` and `ReplFutureSnapshot<T>`, add
-  accessors, and initialize fields in snapshot constructors.
+   - Edit `third_party/full-monty/crates/monty/src/run.rs`:
+     add `extension_bytes` to `Snapshot<T>` and `FutureSnapshot<T>`, add
+     accessors, and initialize fields in snapshot constructors.
+   - Edit `third_party/full-monty/crates/monty/src/repl.rs`:
+     add `extension_bytes` to `ReplSnapshot<T>` and `ReplFutureSnapshot<T>`,
+     add accessors, and initialize fields in snapshot constructors.
 
-1. Update documentation.
+4. Update documentation.
 
-- Edit `docs/zamburak-design-document.md` with a dated implementation decision
-  in "Snapshot and resume semantics".
-- Add a description to `docs/users-guide.md` covering the snapshot extension
-  bytes API.
-- Mark Task 0.5.3 as complete in `docs/roadmap.md` after gates pass.
+   - Edit `docs/zamburak-design-document.md` with a dated implementation
+     decision in "Snapshot and resume semantics".
+   - Add a description to `docs/users-guide.md` covering the snapshot
+     extension bytes API.
+   - Mark Task 0.5.3 as complete in `docs/roadmap.md` after gates pass.
 
-1. Run formatting and lint gates (superproject).
+5. Run formatting and lint gates (superproject).
 
-```plaintext
-set -o pipefail
-make fmt | tee /tmp/make-fmt.log
-```
+   ```plaintext
+   set -o pipefail
+   make fmt | tee /tmp/make-fmt.log
+   ```
 
-```plaintext
-set -o pipefail
-make markdownlint | tee /tmp/make-markdownlint.log
-```
+   ```plaintext
+   set -o pipefail
+   make markdownlint | tee /tmp/make-markdownlint.log
+   ```
 
-```plaintext
-set -o pipefail
-make nixie | tee /tmp/make-nixie.log
-```
+   ```plaintext
+   set -o pipefail
+   make nixie | tee /tmp/make-nixie.log
+   ```
 
-```plaintext
-set -o pipefail
-make check-fmt | tee /tmp/make-check-fmt.log
-```
+   ```plaintext
+   set -o pipefail
+   make check-fmt | tee /tmp/make-check-fmt.log
+   ```
 
-```plaintext
-set -o pipefail
-make lint | tee /tmp/make-lint.log
-```
+   ```plaintext
+   set -o pipefail
+   make lint | tee /tmp/make-lint.log
+   ```
 
-```plaintext
-set -o pipefail
-make test | tee /tmp/make-test.log
-```
+   ```plaintext
+   set -o pipefail
+   make test | tee /tmp/make-test.log
+   ```
 
-1. Run focused `full-monty` gates for submodule evidence.
+6. Run focused `full-monty` gates for submodule evidence.
 
-```plaintext
-set -o pipefail
-make -C third_party/full-monty format-rs | tee /tmp/full-monty-format-rs.log
-```
+   ```plaintext
+   set -o pipefail
+   make -C third_party/full-monty format-rs | tee /tmp/full-monty-format-rs.log
+   ```
 
-```plaintext
-set -o pipefail
-make -C third_party/full-monty lint-rs-local | tee /tmp/full-monty-lint-rs-local.log
-```
+   ```plaintext
+   set -o pipefail
+   make -C third_party/full-monty lint-rs-local | tee /tmp/full-monty-lint-rs-local.log
+   ```
 
-```plaintext
-set -o pipefail
-make -C third_party/full-monty test | tee /tmp/full-monty-test.log
-```
+   ```plaintext
+   set -o pipefail
+   make -C third_party/full-monty test | tee /tmp/full-monty-test.log
+   ```
+<!-- markdownlint-enable MD029 -->
 
 ## Validation and acceptance
 
