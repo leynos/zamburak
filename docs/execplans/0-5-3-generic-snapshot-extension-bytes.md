@@ -228,18 +228,19 @@ Expected outcome: `third_party/full-monty/` is populated and ready for search.
 1. Implement snapshot extension fields and accessors.
 
 - Edit `third_party/full-monty/crates/monty/src/run.rs`:
-  add `snapshot_extension` to `Snapshot<T>` and `FutureSnapshot<T>`, add
+  add `extension_bytes` to `Snapshot<T>` and `FutureSnapshot<T>`, add
   accessors, and initialize fields in snapshot constructors.
 - Edit `third_party/full-monty/crates/monty/src/repl.rs`:
-  add `snapshot_extension` to `ReplSnapshot<T>` and `ReplFutureSnapshot<T>`,
-  add accessors, and initialize fields in snapshot constructors.
+  add `extension_bytes` to `ReplSnapshot<T>` and `ReplFutureSnapshot<T>`, add
+  accessors, and initialize fields in snapshot constructors.
 
 1. Update documentation.
 
 - Edit `docs/zamburak-design-document.md` with a dated implementation decision
   in "Snapshot and resume semantics".
-- Edit `docs/users-guide.md` to describe the new snapshot extension bytes API.
-- Edit `docs/roadmap.md` to mark Task 0.5.3 done after gates pass.
+- Add a description to `docs/users-guide.md` covering the snapshot extension
+  bytes API.
+- Mark Task 0.5.3 as complete in `docs/roadmap.md` after gates pass.
 
 1. Run formatting and lint gates (superproject).
 
