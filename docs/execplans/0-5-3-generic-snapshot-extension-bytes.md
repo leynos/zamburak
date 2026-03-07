@@ -186,16 +186,15 @@ bytes beyond basic serialization.
    before the implementation changes.
 
 3. Stage C: implement extension bytes in `full-monty` snapshot structs.
-   Add an optional `snapshot_extension` field to each snapshot struct (use
-   `extension_bytes` internally with
-   `#[serde(default, rename = "snapshot_extension")]`). Provide
-   `with_snapshot_extension` and `snapshot_extension` accessors on `Snapshot`,
-   `FutureSnapshot`, `ReplSnapshot`, and `ReplFutureSnapshot`. Update snapshot
-   constructors to initialize `snapshot_extension` as `None`. Do not
-   reintroduce `skip_serializing_if`; it was intentionally removed per the
-   Decision log. Ensure `dump()`/`load()` behaviour remains unchanged aside
-   from carrying extension bytes, and keep existing `run.rs`/`repl.rs` doc
-   comments unchanged.
+   Add an `extension_bytes: Option<Vec<u8>>` field to `Snapshot`,
+   `FutureSnapshot`, `ReplSnapshot`, and `ReplFutureSnapshot`, annotated with
+   `#[serde(default, rename = "snapshot_extension")]`. Keep the public
+   `with_snapshot_extension` and `snapshot_extension` accessors on each
+   snapshot type, and initialize `extension_bytes` as `None` in snapshot
+   constructors. Do not reintroduce `skip_serializing_if`; it was intentionally
+   removed per the Decision log. Ensure `dump()`/`load()` behaviour remains
+   unchanged aside from carrying extension bytes, and keep existing
+   `run.rs`/`repl.rs` doc comments unchanged.
 
 4. Stage D: documentation, roadmap update, and validation.
    Update `docs/zamburak-design-document.md` with a dated implementation
