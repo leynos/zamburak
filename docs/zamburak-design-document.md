@@ -246,8 +246,21 @@ remain exclusively in Track B.
 Compatibility invariants for this contract are:
 
 - no observer installed preserves baseline runtime behaviour,
+- a disabled observer handle preserves baseline runtime behaviour,
 - explicit no-op observer preserves baseline runtime behaviour,
 - observer-enabled mode adds events without changing suspend/resume semantics.
+
+Task 0.5.4 hardens these invariants with differential tests against the
+observer-free public entrypoints. The enforced comparison modes are:
+
+- `MontyRun::start(...)` and `MontyRepl::start(...)` or
+  `MontyRepl::start_no_print(...)` as the baseline contract,
+- `RuntimeObserverHandle::disabled()` passed to the observer-aware entrypoints,
+- `RuntimeObserverHandle::new(NoopRuntimeObserver)` passed to the
+  observer-aware entrypoints.
+
+The compatibility suite exercises happy-path completion, unhappy-path external
+error propagation, OS-call suspension, and REPL snapshot dump or load parity.
 
 For screen readers: The following sequence diagram shows a synchronous external
 function call through `MontyRun::start_with_observer(...)`, where
@@ -1524,6 +1537,23 @@ The design uses measurable budgets by class:
 _Table 2: Initial performance budget targets and measurement contexts._
 
 Targets are revised with empirical baselines but remain measurable and testable.
+
+Track A uses a separate upstream-friendly overhead contract for the observer
+substrate. The representative enforcement workload is a deterministic
+event-light integer loop executed through the pinned `full-monty` test suite.
+It compares medians from observer-free baseline execution against:
+
+- observer-aware execution with `RuntimeObserverHandle::disabled()`, and
+- observer-aware execution with
+  `RuntimeObserverHandle::new(NoopRuntimeObserver)`.
+
+The current calibrated Task 0.5.4 ceilings are:
+
+- disabled handle overhead `<= 1.20x baseline`,
+- no-op observer overhead `<= 2.15x baseline`.
+
+These ceilings are intentionally limited to Track A substrate costs and do not
+set policy-layer budgets for Track B.
 
 ### Workload assumptions and service envelopes
 

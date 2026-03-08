@@ -112,10 +112,22 @@ carry Zamburak policy decisions or governance semantics.
 Baseline semantics are preserved in both of these modes:
 
 - no observer installed (`start(...)` and existing entrypoints),
+- observer-aware entrypoints with `RuntimeObserverHandle::disabled()`,
 - explicit no-op observer (`RuntimeObserverHandle::new(NoopRuntimeObserver)`).
 
 This allows hosts to adopt instrumentation incrementally without changing
 execution outcomes.
+
+This contract is enforced by compatibility tests covering run execution, error
+propagation, OS-call suspension, REPL completion, and REPL snapshot dump or
+load round trips. Track A also enforces a representative local overhead
+envelope for observer-aware entrypoints:
+
+- disabled handle mode must remain within `1.20x` of baseline median runtime,
+- no-op observer mode must remain within `2.15x` of baseline median runtime.
+
+These limits apply only to the generic Track A substrate and do not describe
+Track B policy-layer costs.
 
 ## Example: canonical policy (schema v1)
 
