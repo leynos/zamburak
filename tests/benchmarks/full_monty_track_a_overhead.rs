@@ -12,10 +12,10 @@ fn full_monty_track_a_overhead_probe() {
             "-p".to_owned(),
             "monty".to_owned(),
             "--test".to_owned(),
-            "track_a_invariants".to_owned(),
+            "track_a_benchmarks".to_owned(),
             "--".to_owned(),
             "--nocapture".to_owned(),
-            "track_a_overhead".to_owned(),
+            "track_a_overhead_within_budget".to_owned(),
         ],
         "track-a overhead probe should execute",
     );
@@ -24,8 +24,8 @@ fn full_monty_track_a_overhead_probe() {
 
     let combined_output = format!("{}\n{}", output.stdout, output.stderr);
     assert!(
-        combined_output.contains("track_a_overhead disabled")
-            && combined_output.contains("track_a_overhead noop"),
+        combined_output.contains("track_a_overhead DisabledHandle")
+            && combined_output.contains("track_a_overhead NoopObserver"),
         "expected overhead markers in probe output"
     );
 }
