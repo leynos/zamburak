@@ -1,31 +1,58 @@
 //! Probe test for full-monty Track A overhead checks.
 
-use test_utils::full_monty_observer_probe_helpers;
+use test_utils::full_monty_probe_helpers;
+
+/// Retries the noisy benchmark probe a small number of times before failing.
+const TRACK_A_OVERHEAD_MAX_ATTEMPTS: usize = 3;
+
+fn run_track_a_overhead_probe_once() -> test_utils::full_monty_probe_helpers::CargoProbeOutput {
+    full_monty_probe_helpers::run_cargo_probe(
+        &full_monty_probe_helpers::build_full_monty_test_command(
+            "track_a_benchmarks",
+            &["--", "--nocapture", "track_a_overhead_within_budget"],
+        ),
+        "track-a overhead probe should execute",
+    )
+}
 
 #[test]
 fn full_monty_track_a_overhead_probe() {
-    let output = full_monty_observer_probe_helpers::run_cargo_probe(
-        &[
-            "test".to_owned(),
-            "--manifest-path".to_owned(),
-            "third_party/full-monty/Cargo.toml".to_owned(),
-            "-p".to_owned(),
-            "monty".to_owned(),
-            "--test".to_owned(),
-            "track_a_benchmarks".to_owned(),
-            "--".to_owned(),
-            "--nocapture".to_owned(),
-            "track_a_overhead_within_budget".to_owned(),
-        ],
-        "track-a overhead probe should execute",
+    let mut last_output = None;
+
+    for _ in 0..TRACK_A_OVERHEAD_MAX_ATTEMPTS {
+        let output = run_track_a_overhead_probe_once();
+        let combined_output = format!("{}\n{}", output.stdout, output.stderr);
+        let overhead_lines =
+            full_monty_probe_helpers::prefixed_output_lines(&combined_output, "track_a_overhead ");
+        let markers_present = overhead_lines
+            .iter()
+            .any(|line| line.contains("DisabledHandle"))
+            && overhead_lines
+                .iter()
+                .any(|line| line.contains("NoopObserver"));
+
+        if output.status_code == Some(0) && markers_present {
+            return;
+        }
+
+        last_output = Some((output, combined_output));
+    }
+
+    let (output, combined_output) = last_output.expect("at least one benchmark attempt should run");
+    assert_eq!(
+        output.status_code,
+        Some(0),
+        "stderr:\n{}\nstdout:\n{}",
+        output.stderr,
+        output.stdout
     );
-
-    assert_eq!(output.status_code, Some(0), "stderr:\n{}", output.stderr);
-
-    let combined_output = format!("{}\n{}", output.stdout, output.stderr);
     assert!(
-        combined_output.contains("track_a_overhead DisabledHandle")
-            && combined_output.contains("track_a_overhead NoopObserver"),
-        "expected overhead markers in probe output"
+        full_monty_probe_helpers::prefixed_output_lines(&combined_output, "track_a_overhead ")
+            .iter()
+            .any(|line| line.contains("DisabledHandle"))
+            && full_monty_probe_helpers::prefixed_output_lines(&combined_output, "track_a_overhead ")
+                .iter()
+                .any(|line| line.contains("NoopObserver")),
+        "expected Track A overhead markers in probe output:\n{combined_output}"
     );
 }

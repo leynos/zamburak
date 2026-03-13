@@ -255,7 +255,8 @@ observer-free public entrypoints. The enforced comparison modes are:
 
 - `MontyRun::start(...)` and `MontyRepl::start(...)` or
   `MontyRepl::start_no_print(...)` as the baseline contract,
-- `RuntimeObserverHandle::disabled()` passed to the observer-aware entrypoints,
+- `RuntimeObserverHandle::disabled()` passed to the observer-aware
+  entrypoints,
 - `RuntimeObserverHandle::new(NoopRuntimeObserver)` passed to the
   observer-aware entrypoints.
 

@@ -59,7 +59,7 @@ that Track A additions do not change baseline runtime behaviour.
   performance contract.
 - Update `docs/verification-targets.md` if evidence artefacts or gate language
   change.
-- Update `docs/repository-layout.md` if `tests/benchmarks/` becomes a realised
+- Update `docs/repository-layout.md` if `tests/benchmarks/` becomes a realized
   suite rather than a planned placeholder.
 - Mark roadmap Task 0.5.4 done in `docs/roadmap.md` only after all gates are
   green.
@@ -115,16 +115,16 @@ that Track A additions do not change baseline runtime behaviour.
   and keep the authoritative acceptance gates at the superproject root.
 
 - Risk: the current shared superproject helper
-  `crates/test-utils/src/full_monty_observer_probe_helpers.rs` is named around
-  observer probes and may be awkward for broader compatibility or benchmark
-  probes. Severity: low Likelihood: high Mitigation: add a sibling generic
-  helper module if broadening the existing one would create avoidable churn.
+  `crates/test-utils/src/full_monty_probe_helpers.rs` is named around observer
+  probes and may be awkward for broader compatibility or benchmark probes.
+  Severity: low Likelihood: high Mitigation: add a sibling generic helper
+  module if broadening the existing one would create avoidable churn.
 
 ## Progress
 
-- [x] (2026-03-07 23:01Z) Reviewed roadmap Task 0.5.4 and the governing ADR,
-  engineering standards, verification targets, design doc, user guide, and
-  neighbouring Track A ExecPlans.
+- [x] (2026-03-07 23:01Z) Reviewed roadmap Task 0.5.4 and the governing
+  Architecture Decision Record (ADR), engineering standards, verification
+  targets, design doc, user guide, and neighbouring Track A ExecPlans.
 - [x] (2026-03-07 23:01Z) Initialized `third_party/full-monty/` and inspected
   the current observer, snapshot, test, and benchmark surfaces needed for this
   plan.
@@ -169,7 +169,7 @@ that Track A additions do not change baseline runtime behaviour.
   normal test targets, with benches remaining optional supporting evidence.
 
 - Observation: the superproject documents `tests/benchmarks/` in
-  `docs/repository-layout.md`, but no realised benchmark test crate exists in
+  `docs/repository-layout.md`, but no realized benchmark test crate exists in
   the checkout yet. Impact: implementation should create the suite and then
   update the repository-layout doc so the documentation matches reality.
 
@@ -231,13 +231,19 @@ this plan.
 
 Current repository state relevant to Task 0.5.4:
 
-- `docs/roadmap.md` marks Tasks 0.5.1, 0.5.2, and 0.5.3 complete, while
-  Task 0.5.4 remains unchecked.
+- `docs/roadmap.md` marks Tasks 0.5.1, 0.5.2, 0.5.3, and 0.5.4 complete.
 - The current observer substrate lives in:
   - `third_party/full-monty/crates/monty/src/observer.rs`,
   - `third_party/full-monty/crates/monty/src/bytecode/vm/observer_hooks.rs`,
   - `third_party/full-monty/crates/monty/src/run_progress.rs`,
   - `third_party/full-monty/crates/monty/src/repl.rs`.
+- The current compatibility and performance enforcement now lives in:
+  - `third_party/full-monty/crates/monty/tests/track_a_invariants.rs`,
+  - `third_party/full-monty/crates/monty/tests/track_a_invariants_bdd.rs`,
+  - `third_party/full-monty/crates/monty/tests/track_a_benchmarks.rs`,
+  - `tests/compatibility/full_monty_track_a_invariants_bdd.rs`,
+  - `tests/benchmarks/full_monty_track_a_overhead.rs`,
+  - `crates/test-utils/src/full_monty_probe_helpers.rs`.
 - Existing observer integration coverage is in:
   - `third_party/full-monty/crates/monty/tests/runtime_observer_events.rs`,
   - `third_party/full-monty/crates/monty/tests/runtime_observer_events_bdd.rs`,
@@ -251,7 +257,7 @@ Current repository state relevant to Task 0.5.4:
   - `tests/compatibility/full_monty_observer_bdd.rs`,
   - `tests/compatibility/full_monty_snapshot_extension_bdd.rs`,
   - `tests/security/full_monty_observer_security_bdd.rs`,
-  - `crates/test-utils/src/full_monty_observer_probe_helpers.rs`.
+  - `crates/test-utils/src/full_monty_probe_helpers.rs`.
 - `third_party/full-monty/crates/monty/benches/main.rs` already provides a
   non-gating Criterion harness that can be extended for supporting evidence if
   needed, but it does not satisfy the root `make test` gate by itself.
@@ -271,8 +277,7 @@ Files expected to change:
 - `tests/benchmarks/main.rs` (new)
 - `tests/benchmarks/full_monty_track_a_overhead.rs` (new)
 - `crates/test-utils/src/lib.rs`
-- `crates/test-utils/src/full_monty_probe_helpers.rs` (new) or the existing
-  `full_monty_observer_probe_helpers.rs` if reusing that file is lower risk
+- `crates/test-utils/src/full_monty_probe_helpers.rs` (new)
 - `docs/zamburak-design-document.md`
 - `docs/users-guide.md`
 - `docs/verification-targets.md`
@@ -493,7 +498,7 @@ Files expected to change:
      `docs/zamburak-design-document.md`.
    - Update the observer section in `docs/users-guide.md`.
    - Adjust `docs/verification-targets.md` and `docs/repository-layout.md` if
-     the evidence artefacts or realised suite layout changed.
+     the evidence artefacts or realized suite layout changed.
    - Mark Task 0.5.4 complete in `docs/roadmap.md` only after all gates pass.
 
 10. Run documentation gates.

@@ -2,7 +2,7 @@
 
 use rstest::fixture;
 use rstest_bdd_macros::{given, scenario, then, when};
-use test_utils::full_monty_observer_probe_helpers;
+use test_utils::full_monty_probe_helpers;
 
 #[derive(Default)]
 struct FullMontyObserverProbeWorld {
@@ -19,20 +19,13 @@ fn world() -> FullMontyObserverProbeWorld {
 
 #[given("a full-monty observer BDD probe command")]
 fn given_observer_probe_command(world: &mut FullMontyObserverProbeWorld) {
-    world.command_args = vec![
-        "test".to_owned(),
-        "--manifest-path".to_owned(),
-        "third_party/full-monty/Cargo.toml".to_owned(),
-        "-p".to_owned(),
-        "monty".to_owned(),
-        "--test".to_owned(),
-        "runtime_observer_events_bdd".to_owned(),
-    ];
+    world.command_args =
+        full_monty_probe_helpers::build_full_monty_test_command("runtime_observer_events_bdd", &[]);
 }
 
 #[when("the probe command is executed")]
 fn when_probe_command_executes(world: &mut FullMontyObserverProbeWorld) {
-    let output = full_monty_observer_probe_helpers::run_cargo_probe(
+    let output = full_monty_probe_helpers::run_cargo_probe(
         &world.command_args,
         "probe command should execute",
     );
