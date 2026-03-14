@@ -46,16 +46,15 @@ fn full_monty_track_a_overhead_probe() {
         output.stderr,
         output.stdout
     );
+    let overhead_lines =
+        full_monty_probe_helpers::prefixed_output_lines(&combined_output, "track_a_overhead ");
     assert!(
-        full_monty_probe_helpers::prefixed_output_lines(&combined_output, "track_a_overhead ")
+        overhead_lines
             .iter()
             .any(|line| line.contains("DisabledHandle"))
-            && full_monty_probe_helpers::prefixed_output_lines(
-                &combined_output,
-                "track_a_overhead "
-            )
-            .iter()
-            .any(|line| line.contains("NoopObserver")),
+            && overhead_lines
+                .iter()
+                .any(|line| line.contains("NoopObserver")),
         "expected Track A overhead markers in probe output:\n{combined_output}"
     );
 }
