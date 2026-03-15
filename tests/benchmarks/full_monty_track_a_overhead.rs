@@ -1,9 +1,13 @@
 //! Probe test for full-monty Track A overhead checks.
 
+use std::{thread, time::Duration};
+
 use test_utils::full_monty_probe_helpers;
 
 /// Retries the noisy benchmark probe a small number of times before failing.
 const TRACK_A_OVERHEAD_MAX_ATTEMPTS: usize = 3;
+/// Sleeps briefly between failed attempts to reduce immediate CI contention.
+const TRACK_A_OVERHEAD_RETRY_BACKOFF: Duration = Duration::from_millis(200);
 
 fn run_track_a_overhead_probe_once() -> test_utils::full_monty_probe_helpers::CargoProbeOutput {
     full_monty_probe_helpers::run_cargo_probe(
@@ -19,7 +23,7 @@ fn run_track_a_overhead_probe_once() -> test_utils::full_monty_probe_helpers::Ca
 fn full_monty_track_a_overhead_probe() {
     let mut last_output = None;
 
-    for _ in 0..TRACK_A_OVERHEAD_MAX_ATTEMPTS {
+    for attempt in 0..TRACK_A_OVERHEAD_MAX_ATTEMPTS {
         let output = run_track_a_overhead_probe_once();
         let combined_output = format!("{}\n{}", output.stdout, output.stderr);
         let overhead_lines =
@@ -36,6 +40,9 @@ fn full_monty_track_a_overhead_probe() {
         }
 
         last_output = Some((output, combined_output));
+        if attempt + 1 < TRACK_A_OVERHEAD_MAX_ATTEMPTS {
+            thread::sleep(TRACK_A_OVERHEAD_RETRY_BACKOFF);
+        }
     }
 
     let (output, combined_output) = last_output.expect("at least one benchmark attempt should run");
