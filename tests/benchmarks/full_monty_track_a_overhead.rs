@@ -19,6 +19,15 @@ fn run_track_a_overhead_probe_once() -> test_utils::full_monty_probe_helpers::Ca
     )
 }
 
+fn has_overhead_markers(overhead_lines: &[&str]) -> bool {
+    overhead_lines
+        .iter()
+        .any(|line| line.contains("DisabledHandle"))
+        && overhead_lines
+            .iter()
+            .any(|line| line.contains("NoopObserver"))
+}
+
 #[test]
 fn full_monty_track_a_overhead_probe() {
     let mut last_output = None;
@@ -28,12 +37,7 @@ fn full_monty_track_a_overhead_probe() {
         let combined_output = format!("{}\n{}", output.stdout, output.stderr);
         let overhead_lines =
             full_monty_probe_helpers::prefixed_output_lines(&combined_output, "track_a_overhead ");
-        let markers_present = overhead_lines
-            .iter()
-            .any(|line| line.contains("DisabledHandle"))
-            && overhead_lines
-                .iter()
-                .any(|line| line.contains("NoopObserver"));
+        let markers_present = has_overhead_markers(&overhead_lines);
 
         if output.status_code == Some(0) && markers_present {
             return;
@@ -56,12 +60,7 @@ fn full_monty_track_a_overhead_probe() {
     let overhead_lines =
         full_monty_probe_helpers::prefixed_output_lines(&combined_output, "track_a_overhead ");
     assert!(
-        overhead_lines
-            .iter()
-            .any(|line| line.contains("DisabledHandle"))
-            && overhead_lines
-                .iter()
-                .any(|line| line.contains("NoopObserver")),
+        has_overhead_markers(&overhead_lines),
         "expected Track A overhead markers in probe output:\n{combined_output}"
     );
 }
