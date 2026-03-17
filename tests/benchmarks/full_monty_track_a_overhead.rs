@@ -9,7 +9,7 @@ const TRACK_A_OVERHEAD_MAX_ATTEMPTS: usize = 3;
 /// Sleeps briefly between failed attempts to reduce immediate CI contention.
 const TRACK_A_OVERHEAD_RETRY_BACKOFF: Duration = Duration::from_millis(200);
 
-fn run_track_a_overhead_probe_once() -> test_utils::full_monty_probe_helpers::CargoProbeOutput {
+fn run_track_a_overhead_probe_once() -> full_monty_probe_helpers::CargoProbeOutput {
     full_monty_probe_helpers::run_cargo_probe(
         &full_monty_probe_helpers::build_full_monty_test_command(
             "track_a_benchmarks",
