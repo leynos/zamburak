@@ -229,7 +229,7 @@ completion criteria so the work can be sequenced and assessed without ambiguity.
 
 ### Step 0.6: Track B (Zamburak governance) integration workstream
 
-- [ ] Task 0.6.1: Add `crates/zamburak-monty` adapter crate for governed
+- [x] Task 0.6.1: Add `crates/zamburak-monty` adapter crate for governed
       execution.
   - Requirement signposts:
     - `docs/adr-001-monty-ifc-vm-hooks.md` section "Track B staged pull

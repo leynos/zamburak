@@ -129,6 +129,86 @@ envelope for observer-aware entrypoints:
 These limits apply only to the generic Track A substrate and do not describe
 Track B policy-layer costs.
 
+## Governed execution with `zamburak-monty`
+
+The `zamburak-monty` crate provides a governed execution path around the
+vendored `full-monty` interpreter. A `GovernedRunner` wraps a compiled
+`MontyRun` with a Zamburak observer and mediates every external-function call
+through a deterministic `ExternalCallMediator` hook.
+
+### Constructing a `GovernedRunner`
+
+```rust
+use std::sync::{Arc, Mutex};
+use zamburak_monty::{
+    AllowAllMediator, ExternalCallMediator, GovernedRunner,
+};
+
+let monty_run = monty::MontyRun::new(
+    "x = 1 + 2\nx".to_owned(), "test.py", vec![],
+).expect("parse failed");
+
+let mediator: Arc<Mutex<dyn ExternalCallMediator>> =
+    Arc::new(Mutex::new(AllowAllMediator));
+let runner = GovernedRunner::new(monty_run, mediator);
+```
+
+### Selecting an `ExternalCallMediator`
+
+The mediator trait defines the deterministic hook invoked at each
+external-call boundary. Implementations receive a `CallContext` and return a
+`MediationDecision`:
+
+- `MediationDecision::Allow` — proceed with the external call,
+- `MediationDecision::Deny { reason }` — block the call with an explanation,
+- `MediationDecision::RequireConfirmation { request }` — yield to the host
+  for interactive approval.
+
+Built-in mediators:
+
+- `AllowAllMediator` — unconditionally allows every call (testing and
+  permissive mode),
+- `DenyAllMediator` — unconditionally denies every call (deny-path testing).
+
+### `GovernedRunProgress` yield states
+
+After execution, the governed runner returns a `GovernedRunProgress` enum:
+
+- `Complete(MontyObject)` — execution finished with a final value,
+- `Denied { reason, function_name, call_id }` — an external call was denied
+  by the mediator,
+- `AwaitConfirmation { context, suspended }` — execution paused pending host
+  confirmation; the `SuspendedCall` can be resumed after approval,
+- `NameLookup { name, inner }` — execution paused for an unresolved name
+  lookup,
+- `ResolveFutures(...)` — execution paused waiting for async futures.
+
+### Minimal governed run example
+
+```rust
+use std::sync::{Arc, Mutex};
+use monty::{MontyObject, MontyRun, NoLimitTracker, PrintWriter};
+use zamburak_monty::{
+    AllowAllMediator, ExternalCallMediator, GovernedRunProgress,
+    GovernedRunner,
+};
+
+let monty_run = MontyRun::new(
+    "x = 1 + 2\nx".to_owned(), "test.py", vec![],
+).expect("parse failed");
+
+let mediator: Arc<Mutex<dyn ExternalCallMediator>> =
+    Arc::new(Mutex::new(AllowAllMediator));
+let runner = GovernedRunner::new(monty_run, mediator);
+
+match runner.run_no_limits(vec![]) {
+    Ok(GovernedRunProgress::Complete(value)) => {
+        assert_eq!(value, MontyObject::Int(3));
+    }
+    other => panic!("unexpected result: {other:?}"),
+}
+```
+
 ## Example: canonical policy (schema v1)
 
 ```yaml

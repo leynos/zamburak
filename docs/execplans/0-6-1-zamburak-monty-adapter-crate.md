@@ -5,9 +5,7 @@ This ExecPlan (execution plan) is a living document. The sections
 `Decision log`, and `Outcomes & retrospective` must be kept up to date as work
 proceeds.
 
-Status: IN-PROGRESS
-
-Approval gate: awaiting explicit user approval before implementation begins.
+Status: COMPLETE
 
 ## Purpose / big picture
 
@@ -112,19 +110,19 @@ machinery out of scope for this task.
 
 ## Progress
 
-- [ ] Reviewed roadmap Task 0.6.1, governing ADR, engineering standards,
+- [x] Reviewed roadmap Task 0.6.1, governing ADR, engineering standards,
   design document, user guide, repository layout, and neighbouring ExecPlans.
-- [ ] Initialized `third_party/full-monty/` and verified Track A API
+- [x] Initialized `third_party/full-monty/` and verified Track A API
   accessibility from an external crate.
-- [ ] Drafted this ExecPlan.
-- [ ] Implemented Stage A: crate scaffold and workspace registration.
-- [ ] Implemented Stage B: observer bridge and event recording.
-- [ ] Implemented Stage C: governed run entrypoint and external-call
+- [x] Drafted this ExecPlan.
+- [x] Implemented Stage A: crate scaffold and workspace registration.
+- [x] Implemented Stage B: observer bridge and event recording.
+- [x] Implemented Stage C: governed run entrypoint and external-call
   mediation hooks.
-- [ ] Implemented Stage D: unit tests and rstest parameterized cases.
-- [ ] Implemented Stage E: BDD behavioural tests with rstest-bdd v0.5.0.
-- [ ] Implemented Stage F: documentation and roadmap sync.
-- [ ] Final gate run: `make check-fmt`, `make lint`, `make test` all pass.
+- [x] Implemented Stage D: unit tests and rstest parameterized cases.
+- [x] Implemented Stage E: BDD behavioural tests with rstest-bdd v0.5.0.
+- [x] Implemented Stage F: documentation and roadmap sync.
+- [x] Final gate run: `make check-fmt`, `make lint`, `make test` all pass.
 
 ## Surprises & discoveries
 
