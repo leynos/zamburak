@@ -5,14 +5,43 @@ use std::time::Duration;
 use backon::{BlockingRetryable, ExponentialBuilder};
 use test_utils::full_monty_probe_helpers;
 
+const TRACK_A_OVERHEAD_CASE_NAMES: [&str; 2] = [
+    "track_a_overhead_within_budget::case_1",
+    "track_a_overhead_within_budget::case_2",
+];
+
 fn run_track_a_overhead_probe_once() -> full_monty_probe_helpers::CargoProbeOutput {
-    full_monty_probe_helpers::run_cargo_probe(
-        &full_monty_probe_helpers::build_full_monty_test_command(
-            "track_a_benchmarks",
-            &["--", "--nocapture", "track_a_overhead_within_budget"],
-        ),
-        "track-a overhead probe should execute",
-    )
+    let mut combined_output = full_monty_probe_helpers::CargoProbeOutput {
+        status_code: Some(0),
+        stdout: String::new(),
+        stderr: String::new(),
+    };
+
+    for case_name in TRACK_A_OVERHEAD_CASE_NAMES {
+        let output = full_monty_probe_helpers::run_cargo_probe(
+            &full_monty_probe_helpers::build_full_monty_test_command(
+                "track_a_benchmarks",
+                &["--", "--nocapture", "--exact", case_name],
+            ),
+            "track-a overhead probe should execute",
+        );
+
+        if output.status_code != Some(0) {
+            combined_output.status_code = output.status_code;
+        }
+
+        if !combined_output.stdout.is_empty() {
+            combined_output.stdout.push('\n');
+        }
+        combined_output.stdout.push_str(&output.stdout);
+
+        if !combined_output.stderr.is_empty() {
+            combined_output.stderr.push('\n');
+        }
+        combined_output.stderr.push_str(&output.stderr);
+    }
+
+    combined_output
 }
 
 fn has_overhead_markers(overhead_lines: &[&str]) -> bool {
