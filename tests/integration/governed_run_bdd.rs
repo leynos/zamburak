@@ -38,18 +38,18 @@ fn world() -> GovernedRunWorld {
 
 #[given("a simple arithmetic Monty program")]
 fn given_arithmetic_program(world: &mut GovernedRunWorld) {
-    world.source = "x = 1 + 2\nx".to_owned();
+    "x = 1 + 2\nx".clone_into(&mut world.source);
 }
 
 #[given("a Monty program that calls an external function {name}")]
 fn given_external_call_program(world: &mut GovernedRunWorld, name: String) {
-    let name = name.trim_matches('"');
-    world.source = format!("{name}()");
+    let function_name = name.trim_matches('"');
+    world.source = format!("{function_name}()");
 }
 
 #[given("a Monty program with conditional branching")]
 fn given_branching_program(world: &mut GovernedRunWorld) {
-    world.source = concat!(
+    concat!(
         "x = 10\n",
         "if x > 5:\n",
         "    result = \"big\"\n",
@@ -57,12 +57,12 @@ fn given_branching_program(world: &mut GovernedRunWorld) {
         "    result = \"small\"\n",
         "result",
     )
-    .to_owned();
+    .clone_into(&mut world.source);
 }
 
 #[given("a Monty program with two numeric inputs")]
 fn given_program_with_inputs(world: &mut GovernedRunWorld) {
-    world.source = "a + b".to_owned();
+    "a + b".clone_into(&mut world.source);
     world.input_names = vec!["a".to_owned(), "b".to_owned()];
 }
 
@@ -84,8 +84,7 @@ fn when_run(world: &mut GovernedRunWorld) {
         .mediator
         .clone()
         .unwrap_or_else(|| Arc::new(Mutex::new(AllowAllMediator)));
-    let monty_run = MontyRun::new(world.source.clone(), "test.py", world.input_names.clone())
-        .expect("parse should succeed");
+    let monty_run = build_monty_run(&world.source, world.input_names.clone());
     let runner = GovernedRunner::new(monty_run, mediator);
     world.result = Some(runner.run_no_limits(world.input_values.clone()));
 }
@@ -100,7 +99,7 @@ fn when_run_with_inputs(world: &mut GovernedRunWorld, a: i64, b: i64) {
 
 #[then("the result is Complete with integer value {expected:i64}")]
 fn then_complete_int(world: &GovernedRunWorld, expected: i64) {
-    let result = world.result.as_ref().expect("run step must execute first");
+    let result = require_result(world);
     match result {
         Ok(GovernedRunProgress::Complete(value)) => {
             assert_eq!(
@@ -116,7 +115,7 @@ fn then_complete_int(world: &GovernedRunWorld, expected: i64) {
 #[then("the result is Complete with string value {expected}")]
 fn then_complete_string(world: &GovernedRunWorld, expected: String) {
     let expected_str = expected.trim_matches('"');
-    let result = world.result.as_ref().expect("run step must execute first");
+    let result = require_result(world);
     match result {
         Ok(GovernedRunProgress::Complete(value)) => {
             assert_eq!(
@@ -131,7 +130,7 @@ fn then_complete_string(world: &GovernedRunWorld, expected: String) {
 
 #[then("the result is Complete")]
 fn then_complete(world: &GovernedRunWorld) {
-    let result = world.result.as_ref().expect("run step must execute first");
+    let result = require_result(world);
     assert!(
         matches!(result, Ok(GovernedRunProgress::Complete(_))),
         "expected Complete, got {result:?}"
@@ -140,25 +139,28 @@ fn then_complete(world: &GovernedRunWorld) {
 
 #[then("the result is Denied for function {name}")]
 fn then_denied(world: &GovernedRunWorld, name: String) {
-    let name = name.trim_matches('"');
-    let result = world.result.as_ref().expect("run step must execute first");
+    let expected_function_name = name.trim_matches('"');
+    let result = require_result(world);
     match result {
         Ok(GovernedRunProgress::Denied { function_name, .. }) => {
-            assert_eq!(function_name, name, "denied function name mismatch");
+            assert_eq!(
+                function_name, expected_function_name,
+                "denied function name mismatch"
+            );
         }
-        other => panic!("expected Denied for \"{name}\", got {other:?}"),
+        other => panic!("expected Denied for \"{expected_function_name}\", got {other:?}"),
     }
 }
 
 #[then("the denial reason mentions {fragment}")]
 fn then_denial_reason_contains(world: &GovernedRunWorld, fragment: String) {
-    let fragment = fragment.trim_matches('"');
-    let result = world.result.as_ref().expect("run step must execute first");
+    let expected_fragment = fragment.trim_matches('"');
+    let result = require_result(world);
     match result {
         Ok(GovernedRunProgress::Denied { reason, .. }) => {
             assert!(
-                reason.contains(fragment),
-                "expected reason to contain \"{fragment}\", got: {reason}"
+                reason.contains(expected_fragment),
+                "expected reason to contain \"{expected_fragment}\", got: {reason}"
             );
         }
         other => panic!("expected Denied, got {other:?}"),
@@ -207,15 +209,13 @@ fn count_events_for(source: &str) -> EventSnapshot {
     };
     let handle = RuntimeObserverHandle::new(observer);
 
-    let monty_run =
-        MontyRun::new(source.to_owned(), "test.py", vec![]).expect("parse should succeed");
-    let _progress = monty_run
-        .start_with_observer(vec![], NoLimitTracker, PrintWriter::Stdout, handle)
-        .expect("execution should not raise");
+    let monty_run = build_monty_run(source, vec![]);
+    match monty_run.start_with_observer(vec![], NoLimitTracker, PrintWriter::Stdout, handle) {
+        Ok(_) => {}
+        Err(error) => panic!("execution should not raise: {error}"),
+    }
 
-    let guard = snapshot
-        .lock()
-        .expect("snapshot lock should not be poisoned");
+    let guard = lock_snapshot(&snapshot);
     guard.clone()
 }
 
@@ -226,10 +226,7 @@ struct SharedCountingObserver {
 
 impl monty::RuntimeObserver for SharedCountingObserver {
     fn on_event(&mut self, event: RuntimeObserverEvent<'_>) {
-        let mut snap = self
-            .snapshot
-            .lock()
-            .expect("snapshot lock should not be poisoned");
+        let mut snap = lock_snapshot(&self.snapshot);
         match event {
             RuntimeObserverEvent::ValueCreated(_) => snap.value_created += 1,
             RuntimeObserverEvent::OpResult(_) => snap.op_result += 1,
@@ -238,6 +235,29 @@ impl monty::RuntimeObserver for SharedCountingObserver {
             }
             _ => {}
         }
+    }
+}
+
+fn build_monty_run(source: &str, input_names: Vec<String>) -> MontyRun {
+    match MontyRun::new(source.to_owned(), "test.py", input_names) {
+        Ok(run) => run,
+        Err(error) => panic!("parse should succeed: {error}"),
+    }
+}
+
+fn require_result(
+    world: &GovernedRunWorld,
+) -> &Result<GovernedRunProgress<NoLimitTracker>, zamburak_monty::GovernedRunError> {
+    world
+        .result
+        .as_ref()
+        .unwrap_or_else(|| panic!("run step must execute first"))
+}
+
+fn lock_snapshot(snapshot: &Arc<Mutex<EventSnapshot>>) -> std::sync::MutexGuard<'_, EventSnapshot> {
+    match snapshot.lock() {
+        Ok(guard) => guard,
+        Err(error) => panic!("snapshot lock should not be poisoned: {error}"),
     }
 }
 
