@@ -155,8 +155,8 @@ let runner = GovernedRunner::new(monty_run, mediator);
 
 ### Selecting an `ExternalCallMediator`
 
-The mediator trait defines the deterministic hook invoked at each
-external-call boundary. Implementations receive a `CallContext` and return a
+The mediator trait defines the deterministic hook invoked at each external-call
+boundary. Implementations receive a `CallContext` and return a
 `MediationDecision`:
 
 - `MediationDecision::Allow` — proceed with the external call,

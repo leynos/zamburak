@@ -1643,12 +1643,42 @@ mediates every external-call yield through an `ExternalCallMediator`:
    the `MediationDecision` (Allow, Deny, or RequireConfirmation),
 5. on `RunProgress::Complete`: returns `GovernedRunProgress::Complete`.
 
+For screen readers: The following flowchart shows the governed external-call
+mediation loop. An `ExternalCallRequested` event is converted into an
+`ExternalCallContext`, passed to `ExternalCallMediator::mediate`, and then
+branches on the returned `MediationDecision`. `Allow` resumes the VM, yields an
+external-call-pending progress state, accepts a host-supplied result, and
+resumes execution. `Deny` resumes or terminates execution with a denial and
+returns `GovernedRunError::Denied`. `RequireConfirmation` yields an await
+confirmation progress state, lets the host collect confirmation and update
+mediator state or call context, and then re-enters mediation.
+
+```mermaid
+flowchart TD
+  A[ExternalCallRequested event] --> B[Construct ExternalCallContext]
+  B --> C[ExternalCallMediator.mediate]
+  C --> D{MediationDecision}
+
+  D -->|Allow| E[Resume VM with external call allowed]
+  E --> F[Yield GovernedRunProgress ExternalCallPending]
+  F --> G[Host supplies ExternalResult]
+  G --> H[Resume VM with result]
+
+  D -->|Deny| I[Resume or terminate with denial]
+  I --> J[Return GovernedRunError Denied]
+
+  D -->|RequireConfirmation| K[Yield GovernedRunProgress AwaitConfirmation]
+  K --> L[Host collects confirmation]
+  L --> M[Host updates mediator or context]
+  M --> C
+```
+
 ### `ExternalCallMediator` trait boundary
 
-The mediation hook is a trait (`ExternalCallMediator`) rather than a
-hard-wired `PolicyEngine` reference. This allows Tasks 0.6.3 and 0.6.4 to
-provide progressively richer mediator implementations without changing the
-adapter crate's public run API.
+The mediation hook is a trait (`ExternalCallMediator`) rather than a hard-wired
+`PolicyEngine` reference. This allows Tasks 0.6.3 and 0.6.4 to provide
+progressively richer mediator implementations without changing the adapter
+crate's public run API.
 
 The mediator receives a `CallContext` describing the pending call (call ID,
 call kind, function name) and returns a `MediationDecision`:
