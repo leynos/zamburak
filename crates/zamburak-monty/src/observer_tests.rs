@@ -18,6 +18,23 @@ fn allow_all_observer() -> ZamburakObserver {
     ZamburakObserver::new(mediator)
 }
 
+/// Helper: build a `ZamburakObserver` that has already recorded one pending
+/// external-call event with the given `call_id` and `kind`.
+fn observer_with_one_pending_call(call_id: u64, kind: ExternalCallKind) -> ZamburakObserver {
+    let mut obs = allow_all_observer();
+    let arg_ids: Vec<RuntimeValueId> = vec![];
+    let kwarg_ids: Vec<(RuntimeValueId, RuntimeValueId)> = vec![];
+    obs.on_event(RuntimeObserverEvent::ExternalCallRequested(
+        ExternalCallRequestedEvent {
+            call_id: u32::try_from(call_id).expect("helper call_id should fit in u32"),
+            kind,
+            arg_runtime_ids: &arg_ids,
+            kwarg_runtime_ids: &kwarg_ids,
+        },
+    ));
+    obs
+}
+
 #[rstest]
 fn new_observer_starts_with_empty_state() {
     let obs = allow_all_observer();
@@ -47,17 +64,7 @@ fn op_result_event_increments_counter() {
 
 #[rstest]
 fn external_call_requested_records_pending_call() {
-    let mut obs = allow_all_observer();
-    let arg_ids: Vec<RuntimeValueId> = vec![];
-    let kwarg_ids: Vec<(RuntimeValueId, RuntimeValueId)> = vec![];
-    obs.on_event(RuntimeObserverEvent::ExternalCallRequested(
-        ExternalCallRequestedEvent {
-            call_id: 42,
-            kind: ExternalCallKind::Function,
-            arg_runtime_ids: &arg_ids,
-            kwarg_runtime_ids: &kwarg_ids,
-        },
-    ));
+    let obs = observer_with_one_pending_call(42, ExternalCallKind::Function);
     assert_eq!(obs.event_counts().external_call_requested, 1);
     assert_eq!(obs.pending_calls().len(), 1);
 
@@ -92,17 +99,7 @@ fn control_condition_increments_counter() {
 
 #[rstest]
 fn take_pending_calls_drains_list() {
-    let mut obs = allow_all_observer();
-    let arg_ids: Vec<RuntimeValueId> = vec![];
-    let kwarg_ids: Vec<(RuntimeValueId, RuntimeValueId)> = vec![];
-    obs.on_event(RuntimeObserverEvent::ExternalCallRequested(
-        ExternalCallRequestedEvent {
-            call_id: 1,
-            kind: ExternalCallKind::Os,
-            arg_runtime_ids: &arg_ids,
-            kwarg_runtime_ids: &kwarg_ids,
-        },
-    ));
+    let mut obs = observer_with_one_pending_call(1, ExternalCallKind::Os);
     assert_eq!(obs.pending_calls().len(), 1);
     let taken = obs.take_pending_calls();
     assert_eq!(taken.len(), 1);
