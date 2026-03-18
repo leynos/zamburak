@@ -20,6 +20,7 @@ zamburak-core = { path = "crates/zamburak-core" }
 zamburak-policy = { path = "crates/zamburak-policy" }
 
 [dev-dependencies]
+backon = { version = "1", features = ["std-blocking-sleep"] }
 rstest = "0.26.1"
 rstest-bdd = "0.5.0"
 rstest-bdd-macros = { version = "0.5.0", features = ["compile-time-validation"] }
