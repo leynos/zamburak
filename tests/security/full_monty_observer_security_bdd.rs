@@ -2,7 +2,7 @@
 
 use rstest::fixture;
 use rstest_bdd_macros::{given, scenario, then, when};
-use test_utils::full_monty_observer_probe_helpers;
+use test_utils::full_monty_probe_helpers;
 
 #[derive(Default)]
 struct FullMontyObserverSecurityWorld {
@@ -19,23 +19,19 @@ fn world() -> FullMontyObserverSecurityWorld {
 
 #[given("a full-monty observer error-path probe command")]
 fn given_error_path_probe_command(world: &mut FullMontyObserverSecurityWorld) {
-    world.command_args = vec![
-        "test".to_owned(),
-        "--manifest-path".to_owned(),
-        "third_party/full-monty/Cargo.toml".to_owned(),
-        "-p".to_owned(),
-        "monty".to_owned(),
-        "--test".to_owned(),
-        "runtime_observer_events".to_owned(),
-        "runtime_observer_emits_external_return_kinds::case_2_error".to_owned(),
-        "--".to_owned(),
-        "--exact".to_owned(),
-    ];
+    world.command_args = full_monty_probe_helpers::build_full_monty_test_command(
+        "runtime_observer_events",
+        &[
+            "runtime_observer_emits_external_return_kinds::case_2_error",
+            "--",
+            "--exact",
+        ],
+    );
 }
 
 #[when("the security probe command is executed")]
 fn when_security_probe_executes(world: &mut FullMontyObserverSecurityWorld) {
-    let output = full_monty_observer_probe_helpers::run_cargo_probe(
+    let output = full_monty_probe_helpers::run_cargo_probe(
         &world.command_args,
         "security probe command should execute",
     );

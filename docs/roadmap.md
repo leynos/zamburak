@@ -213,7 +213,7 @@ completion criteria so the work can be sequenced and assessed without ambiguity.
   - Out of scope: Zamburak-specific encoding formats in `full-monty`.
   - Completion criteria: snapshot extension round-trips are stable and API
     contracts remain generic.
-- [ ] Task 0.5.4: Enforce Track A compatibility and performance invariants.
+- [x] Task 0.5.4: Enforce Track A compatibility and performance invariants.
   - Requirement signposts:
     - `docs/adr-001-monty-ifc-vm-hooks.md` section
       "A4. Compatibility and upstreamability invariants",

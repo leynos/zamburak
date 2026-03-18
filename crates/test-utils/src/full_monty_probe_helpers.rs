@@ -1,4 +1,4 @@
-//! Shared helpers for full-monty observer probe command execution.
+//! Shared helpers for full-monty probe command execution.
 
 use std::path::PathBuf;
 use std::sync::{Mutex, OnceLock};
@@ -12,6 +12,38 @@ pub struct CargoProbeOutput {
     pub stdout: String,
     /// Collected UTF-8 stderr (lossy-decoded from bytes).
     pub stderr: String,
+}
+
+/// Builds a `cargo test` command for a vendored `full-monty` integration test.
+pub fn build_full_monty_test_command(test_binary: &str, test_args: &[&str]) -> Vec<String> {
+    let mut command_args = vec![
+        "test".to_owned(),
+        "--manifest-path".to_owned(),
+        "third_party/full-monty/Cargo.toml".to_owned(),
+        "-p".to_owned(),
+        "monty".to_owned(),
+        "--test".to_owned(),
+        test_binary.to_owned(),
+    ];
+    command_args.extend(test_args.iter().map(|arg| (*arg).to_owned()));
+    command_args
+}
+
+/// Returns the number of passed tests from a standard Rust test summary line.
+pub fn parse_passed_test_count(combined_output: &str) -> Option<usize> {
+    combined_output.lines().find_map(|line| {
+        let remainder = line.trim().strip_prefix("test result: ok. ")?;
+        let (passed, _) = remainder.split_once(" passed")?;
+        passed.parse().ok()
+    })
+}
+
+/// Returns output lines that start with the supplied prefix.
+pub fn prefixed_output_lines<'a>(combined_output: &'a str, prefix: &str) -> Vec<&'a str> {
+    combined_output
+        .lines()
+        .filter(|line| line.starts_with(prefix))
+        .collect()
 }
 
 /// Runs a cargo probe command under a global lock to avoid concurrent probe

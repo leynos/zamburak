@@ -218,7 +218,7 @@ _Table 10: Policy directory artefacts and purposes._
 | `tests/test_utils/`    | Shared test utilities, fixtures, and policy data            |
 | `tests/integration/`   | (planned) End-to-end crate integration and call-path tests  |
 | `tests/property/`      | (planned) Property tests for monotonicity and closure       |
-| `tests/benchmarks/`    | (planned) Performance and overhead measurement tests        |
+| `tests/benchmarks/`    | Performance and overhead measurement tests                  |
 
 _Table 11: Test suite directories and purposes._
 

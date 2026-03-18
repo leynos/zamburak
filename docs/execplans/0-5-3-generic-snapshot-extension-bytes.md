@@ -156,8 +156,8 @@ remain generic and avoid policy naming. Existing behavioural coverage lives in
 `third_party/full-monty/crates/monty/tests/binary_serde.rs`, and
 `third_party/full-monty/crates/monty/tests/repl.rs`. Zamburak-level
 compatibility probes for `full-monty` live under `tests/compatibility/` and
-reuse the `test_utils::full_monty_observer_probe_helpers` helper to execute
-submodule BDD suites from the superproject.
+reuse the `test_utils::full_monty_probe_helpers` helper to execute submodule
+BDD suites from the superproject.
 
 In this plan, "snapshot extension bytes" means an opaque byte vector supplied
 by the embedder, persisted alongside snapshot state, and returned untouched
