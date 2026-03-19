@@ -21,14 +21,24 @@ fn shared_mediator(m: impl ExternalCallMediator + 'static) -> Arc<Mutex<dyn Exte
 }
 
 #[rstest]
-fn simple_program_completes_without_external_calls() {
-    let runner = governed_runner("x = 1 + 2\nx", shared_mediator(AllowAllMediator));
+#[case::simple_program("x = 1 + 2\nx", MontyObject::Int(3))]
+#[case::string_operations(
+    "\nx = \"hello\"\ny = \" world\"\nx + y\n",
+    MontyObject::String("hello world".to_owned())
+)]
+#[case::boolean_and_none("True", MontyObject::Bool(true))]
+#[case::conditional(
+    "\nx = 10\nif x > 5:\n    result = \"big\"\nelse:\n    result = \"small\"\nresult\n",
+    MontyObject::String("big".to_owned())
+)]
+fn complete_without_external_calls(#[case] code: &str, #[case] expected: MontyObject) {
+    let runner = governed_runner(code, shared_mediator(AllowAllMediator));
     let result = runner.run_no_limits(vec![]);
     match result {
         Ok(GovernedRunProgress::Complete(value)) => {
-            assert_eq!(value, MontyObject::Int(3));
+            assert_eq!(value, expected);
         }
-        other => panic!("expected Complete(3), got {other:?}"),
+        other => panic!("expected Complete({expected:?}), got {other:?}"),
     }
 }
 
@@ -67,54 +77,5 @@ fn program_with_inputs_completes_correctly() {
             assert_eq!(value, MontyObject::Int(42));
         }
         other => panic!("expected Complete(42), got {other:?}"),
-    }
-}
-
-#[rstest]
-fn string_operations_complete_under_governed_execution() {
-    let code = r#"
-x = "hello"
-y = " world"
-x + y
-"#;
-    let runner = governed_runner(code, shared_mediator(AllowAllMediator));
-    let result = runner.run_no_limits(vec![]);
-    match result {
-        Ok(GovernedRunProgress::Complete(value)) => {
-            assert_eq!(value, MontyObject::String("hello world".to_owned()));
-        }
-        other => panic!("expected Complete(\"hello world\"), got {other:?}"),
-    }
-}
-
-#[rstest]
-fn boolean_and_none_values_complete() {
-    let runner = governed_runner("True", shared_mediator(AllowAllMediator));
-    let result = runner.run_no_limits(vec![]);
-    match result {
-        Ok(GovernedRunProgress::Complete(value)) => {
-            assert_eq!(value, MontyObject::Bool(true));
-        }
-        other => panic!("expected Complete(True), got {other:?}"),
-    }
-}
-
-#[rstest]
-fn conditional_execution_completes() {
-    let code = r#"
-x = 10
-if x > 5:
-    result = "big"
-else:
-    result = "small"
-result
-"#;
-    let runner = governed_runner(code, shared_mediator(AllowAllMediator));
-    let result = runner.run_no_limits(vec![]);
-    match result {
-        Ok(GovernedRunProgress::Complete(value)) => {
-            assert_eq!(value, MontyObject::String("big".to_owned()));
-        }
-        other => panic!("expected Complete(\"big\"), got {other:?}"),
     }
 }
