@@ -91,9 +91,9 @@ machinery out of scope for this task.
   shim in `full-monty` is justified (escalate per submodule tolerance) or
   whether an integration-test-only approach is preferable.
 
-- Risk: the submodule may not be initialised in the working tree. Severity:
+- Risk: the submodule may not be initialized in the working tree. Severity:
   low. Likelihood: high. Mitigation: concrete steps include submodule
-  initialisation as the first action.
+  initialization as the first action.
 
 - Risk: the strict Clippy lint configuration in the workspace
   (`expect_used = "deny"`, `unwrap_used = "deny"`, `indexing_slicing = "deny"`,

@@ -2,11 +2,12 @@
 
 use std::sync::{Arc, Mutex};
 
-use monty::{ExtFunctionResult, ExternalCallKind, PrintWriter, ResourceTracker, RunProgress};
-
-use crate::external_call::{
-    CallContext, ConfirmationContext, ExternalCallMediator, MediationDecision,
+use monty::{
+    ExtFunctionResult, ExternalCallKind, NameLookupResult, PrintWriter, ResourceTracker,
+    RunProgress,
 };
+
+use crate::external_call::{CallContext, ExternalCallMediator, MediationDecision};
 use crate::observer::SharedObserverState;
 use crate::run::{GovernedRunError, GovernedRunProgress};
 
@@ -51,6 +52,82 @@ impl<T: ResourceTracker> SuspendedCall<T> {
     }
 }
 
+/// A suspended name lookup that must resume through governed mediation.
+pub struct SuspendedNameLookup<T: ResourceTracker> {
+    inner: monty::NameLookup<T>,
+    mediator: Arc<Mutex<dyn ExternalCallMediator>>,
+    observer_state: SharedObserverState,
+}
+
+impl<T: ResourceTracker> std::fmt::Debug for SuspendedNameLookup<T> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("SuspendedNameLookup")
+            .field("name", &self.inner.name)
+            .finish_non_exhaustive()
+    }
+}
+
+impl<T: ResourceTracker> SuspendedNameLookup<T> {
+    /// Returns the unresolved name.
+    #[must_use]
+    pub fn name(&self) -> &str {
+        &self.inner.name
+    }
+
+    /// Resumes execution after the host resolves the name lookup.
+    ///
+    /// # Errors
+    ///
+    /// Returns `GovernedRunError::Interpreter` if the interpreter raises an
+    /// exception on resume.
+    pub fn resume(
+        self,
+        result: impl Into<NameLookupResult>,
+        print: PrintWriter<'_>,
+    ) -> Result<GovernedRunProgress<T>, GovernedRunError> {
+        let progress = self.inner.resume(result, print)?;
+        step(progress, &self.mediator, &self.observer_state)
+    }
+}
+
+/// Suspended async work awaiting future resolution through governed mediation.
+pub struct SuspendedResolveFutures<T: ResourceTracker> {
+    inner: monty::ResolveFutures<T>,
+    mediator: Arc<Mutex<dyn ExternalCallMediator>>,
+    observer_state: SharedObserverState,
+}
+
+impl<T: ResourceTracker> std::fmt::Debug for SuspendedResolveFutures<T> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("SuspendedResolveFutures")
+            .field("pending_call_ids", &self.inner.pending_call_ids())
+            .finish_non_exhaustive()
+    }
+}
+
+impl<T: ResourceTracker> SuspendedResolveFutures<T> {
+    /// Returns unresolved external-call identifiers.
+    #[must_use]
+    pub fn pending_call_ids(&self) -> &[u32] {
+        self.inner.pending_call_ids()
+    }
+
+    /// Resumes execution with results for one or more pending futures.
+    ///
+    /// # Errors
+    ///
+    /// Returns `GovernedRunError::Interpreter` if the interpreter raises an
+    /// exception on resume.
+    pub fn resume(
+        self,
+        results: Vec<(u32, ExtFunctionResult)>,
+        print: PrintWriter<'_>,
+    ) -> Result<GovernedRunProgress<T>, GovernedRunError> {
+        let progress = self.inner.resume(results, print)?;
+        step(progress, &self.mediator, &self.observer_state)
+    }
+}
+
 struct MediationResources<'a> {
     mediator: &'a Arc<Mutex<dyn ExternalCallMediator>>,
     observer_state: &'a SharedObserverState,
@@ -66,25 +143,18 @@ pub(crate) fn step<T: ResourceTracker>(
         mediator,
         observer_state,
     };
-    if is_complete_progress(&progress) {
-        return finish_complete_progress(progress);
+    match progress {
+        RunProgress::Complete(value) => Ok(GovernedRunProgress::Complete(value)),
+        RunProgress::FunctionCall(call) => mediate_function_call(call, &resources),
+        RunProgress::OsCall(call) => mediate_os_call(call, &resources),
+        RunProgress::NameLookup(lookup) => Ok(GovernedRunProgress::NameLookup {
+            name: lookup.name.clone(),
+            suspended: suspended_name_lookup(lookup, &resources),
+        }),
+        RunProgress::ResolveFutures(resolve_futures) => Ok(GovernedRunProgress::ResolveFutures(
+            suspended_resolve_futures(resolve_futures, &resources),
+        )),
     }
-    if is_function_call_progress(&progress) {
-        let call = progress
-            .into_function_call()
-            .expect("function-call progress should contain FunctionCall");
-        return mediate_function_call(call, &resources);
-    }
-    if is_os_call_progress(&progress) {
-        let call = progress
-            .into_os_call()
-            .expect("OS-call progress should contain OsCall");
-        return mediate_os_call(call, &resources);
-    }
-    if is_name_lookup_progress(&progress) {
-        return suspend_name_lookup(progress);
-    }
-    suspend_resolve_futures(progress)
 }
 
 fn mediate_function_call<T: ResourceTracker>(
@@ -140,26 +210,23 @@ fn resolve_function_call_decision<T: ResourceTracker>(
     decision: MediationDecision,
     resources: &MediationResources<'_>,
 ) -> Result<GovernedRunProgress<T>, GovernedRunError> {
-    if is_allow_decision(&decision) {
-        return Ok(GovernedRunProgress::ExternalCallPending {
+    match decision {
+        MediationDecision::Allow => Ok(GovernedRunProgress::ExternalCallPending {
             context,
             suspended: suspended_function_call(call, resources),
-        });
-    }
-    if is_deny_decision(&decision) {
-        let reason = deny_reason(decision).expect("deny decision should include reason");
-        return Ok(GovernedRunProgress::Denied {
+        }),
+        MediationDecision::Deny { reason } => Ok(GovernedRunProgress::Denied {
             reason,
             function_name: context.function_name,
             call_id: context.call_id,
-        });
+        }),
+        MediationDecision::RequireConfirmation { request } => {
+            Ok(GovernedRunProgress::AwaitConfirmation {
+                context: request,
+                suspended: suspended_function_call(call, resources),
+            })
+        }
     }
-    let request =
-        confirmation_request(decision).expect("confirmation decision should include request");
-    Ok(GovernedRunProgress::AwaitConfirmation {
-        context: request,
-        suspended: suspended_function_call(call, resources),
-    })
 }
 
 fn resolve_os_call_decision<T: ResourceTracker>(
@@ -168,26 +235,23 @@ fn resolve_os_call_decision<T: ResourceTracker>(
     decision: MediationDecision,
     resources: &MediationResources<'_>,
 ) -> Result<GovernedRunProgress<T>, GovernedRunError> {
-    if is_allow_decision(&decision) {
-        return Ok(GovernedRunProgress::ExternalCallPending {
+    match decision {
+        MediationDecision::Allow => Ok(GovernedRunProgress::ExternalCallPending {
             context,
             suspended: suspended_os_call(call, resources),
-        });
-    }
-    if is_deny_decision(&decision) {
-        let reason = deny_reason(decision).expect("deny decision should include reason");
-        return Ok(GovernedRunProgress::Denied {
+        }),
+        MediationDecision::Deny { reason } => Ok(GovernedRunProgress::Denied {
             reason,
             function_name: context.function_name,
             call_id: context.call_id,
-        });
+        }),
+        MediationDecision::RequireConfirmation { request } => {
+            Ok(GovernedRunProgress::AwaitConfirmation {
+                context: request,
+                suspended: suspended_os_call(call, resources),
+            })
+        }
     }
-    let request =
-        confirmation_request(decision).expect("confirmation decision should include request");
-    Ok(GovernedRunProgress::AwaitConfirmation {
-        context: request,
-        suspended: suspended_os_call(call, resources),
-    })
 }
 
 fn suspended_function_call<T: ResourceTracker>(
@@ -212,36 +276,26 @@ fn suspended_os_call<T: ResourceTracker>(
     }
 }
 
-fn finish_complete_progress<T: ResourceTracker>(
-    progress: RunProgress<T>,
-) -> Result<GovernedRunProgress<T>, GovernedRunError> {
-    Ok(GovernedRunProgress::Complete(
-        progress
-            .into_complete()
-            .expect("complete progress should contain a final value"),
-    ))
-}
-
-fn suspend_name_lookup<T: ResourceTracker>(
-    progress: RunProgress<T>,
-) -> Result<GovernedRunProgress<T>, GovernedRunError> {
-    let lookup = progress
-        .into_name_lookup()
-        .expect("name-lookup progress should contain NameLookup");
-    Ok(GovernedRunProgress::NameLookup {
-        name: lookup.name.clone(),
+fn suspended_name_lookup<T: ResourceTracker>(
+    lookup: monty::NameLookup<T>,
+    resources: &MediationResources<'_>,
+) -> SuspendedNameLookup<T> {
+    SuspendedNameLookup {
         inner: lookup,
-    })
+        mediator: Arc::clone(resources.mediator),
+        observer_state: resources.observer_state.clone(),
+    }
 }
 
-fn suspend_resolve_futures<T: ResourceTracker>(
-    progress: RunProgress<T>,
-) -> Result<GovernedRunProgress<T>, GovernedRunError> {
-    Ok(GovernedRunProgress::ResolveFutures(
-        progress
-            .into_resolve_futures()
-            .expect("resolve-futures progress should contain ResolveFutures"),
-    ))
+fn suspended_resolve_futures<T: ResourceTracker>(
+    resolve_futures: monty::ResolveFutures<T>,
+    resources: &MediationResources<'_>,
+) -> SuspendedResolveFutures<T> {
+    SuspendedResolveFutures {
+        inner: resolve_futures,
+        mediator: Arc::clone(resources.mediator),
+        observer_state: resources.observer_state.clone(),
+    }
 }
 
 fn resume_suspended_call<T: ResourceTracker>(
@@ -265,42 +319,4 @@ fn query_mediator(
         .lock()
         .map_err(|_| GovernedRunError::MediatorPoisoned)?;
     Ok(guard.mediate(context))
-}
-
-fn is_complete_progress<T: ResourceTracker>(progress: &RunProgress<T>) -> bool {
-    matches!(progress, RunProgress::Complete(_))
-}
-
-fn is_function_call_progress<T: ResourceTracker>(progress: &RunProgress<T>) -> bool {
-    matches!(progress, RunProgress::FunctionCall(_))
-}
-
-fn is_os_call_progress<T: ResourceTracker>(progress: &RunProgress<T>) -> bool {
-    matches!(progress, RunProgress::OsCall(_))
-}
-
-fn is_name_lookup_progress<T: ResourceTracker>(progress: &RunProgress<T>) -> bool {
-    matches!(progress, RunProgress::NameLookup(_))
-}
-
-fn is_allow_decision(decision: &MediationDecision) -> bool {
-    matches!(decision, MediationDecision::Allow)
-}
-
-fn is_deny_decision(decision: &MediationDecision) -> bool {
-    matches!(decision, MediationDecision::Deny { .. })
-}
-
-fn deny_reason(decision: MediationDecision) -> Option<String> {
-    if let MediationDecision::Deny { reason } = decision {
-        return Some(reason);
-    }
-    None
-}
-
-fn confirmation_request(decision: MediationDecision) -> Option<ConfirmationContext> {
-    if let MediationDecision::RequireConfirmation { request } = decision {
-        return Some(request);
-    }
-    None
 }

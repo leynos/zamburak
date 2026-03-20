@@ -2,9 +2,9 @@
 //!
 //! [`ZamburakObserver`] implements the `full-monty` [`RuntimeObserver`] trait and
 //! records external-call events for the governed run entrypoint to intercept.
-//! Non-call events (`ValueCreated`, `OpResult`, `ControlCondition`) are passed
-//! through to an optional downstream event sink, preparing for Task 0.6.3 IFC
-//! wiring without implementing it now.
+//! Non-call events (`ValueCreated`, `OpResult`, `ControlCondition`) are counted
+//! locally for diagnostics, while the pending-call queue is used only as
+//! bookkeeping alongside `RunProgress`-driven mediation.
 
 use std::sync::{Arc, Mutex};
 
@@ -12,8 +12,8 @@ use monty::{ExternalCallKind, ExternalCallRequestedEvent, RuntimeObserver, Runti
 
 /// Recorded metadata from an `ExternalCallRequested` observer event.
 ///
-/// The governed run entrypoint inspects these records to determine which
-/// external calls require mediation.
+/// The governed run entrypoint consumes these records as bookkeeping while it
+/// mediates external-call `RunProgress` yields.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct RecordedCallRequest {
     /// Host-visible call identifier.

@@ -19,8 +19,8 @@ use crate::observer::ZamburakObserver;
 
 mod flow;
 
-pub use flow::SuspendedCall;
 use flow::step;
+pub use flow::{SuspendedCall, SuspendedNameLookup, SuspendedResolveFutures};
 
 /// Errors arising from governed execution.
 #[derive(Debug, Error)]
@@ -80,12 +80,12 @@ pub enum GovernedRunProgress<T: ResourceTracker> {
     NameLookup {
         /// The name being looked up.
         name: String,
-        /// The underlying Monty `NameLookup` state for resume.
-        inner: monty::NameLookup<T>,
+        /// Suspended execution state resumable through governed mediation.
+        suspended: SuspendedNameLookup<T>,
     },
 
     /// Execution paused waiting for async futures to resolve.
-    ResolveFutures(monty::ResolveFutures<T>),
+    ResolveFutures(SuspendedResolveFutures<T>),
 }
 
 /// Orchestrates governed execution of a Monty program.

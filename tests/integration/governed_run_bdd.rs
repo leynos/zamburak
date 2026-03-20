@@ -256,7 +256,8 @@ impl monty::RuntimeObserver for SharedCountingObserver {
             RuntimeObserverEvent::ControlCondition(_) => {
                 snap.control_condition += 1;
             }
-            _ => {}
+            RuntimeObserverEvent::ExternalCallRequested(_)
+            | RuntimeObserverEvent::ExternalCallReturned(_) => {}
         }
     }
 }

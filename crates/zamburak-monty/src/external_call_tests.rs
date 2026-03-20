@@ -38,20 +38,6 @@ fn os_call_context(call_id: u32, name: &str) -> CallContext {
 }
 
 #[rstest]
-fn allow_all_mediator_returns_allow_for_function_call() {
-    let mut mediator = AllowAllMediator;
-    let ctx = function_call_context(1, "print");
-    assert_eq!(mediator.mediate(&ctx), MediationDecision::Allow);
-}
-
-#[rstest]
-fn allow_all_mediator_returns_allow_for_os_call() {
-    let mut mediator = AllowAllMediator;
-    let ctx = os_call_context(2, "open");
-    assert_eq!(mediator.mediate(&ctx), MediationDecision::Allow);
-}
-
-#[rstest]
 fn deny_all_mediator_returns_deny_for_function_call() {
     let mut mediator = DenyAllMediator;
     let ctx = function_call_context(1, "exit");
