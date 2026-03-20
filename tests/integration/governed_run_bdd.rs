@@ -95,6 +95,12 @@ fn when_run_with_inputs(world: &mut GovernedRunWorld, a: i64, b: i64) {
     when_run(world);
 }
 
+#[when("the host resumes the pending external call with integer result {value:i64}")]
+fn when_resume_pending_call(world: &mut GovernedRunWorld, value: i64) {
+    let suspended = take_pending_call(world);
+    world.result = Some(suspended.resume(MontyObject::Int(value), PrintWriter::Stdout));
+}
+
 // ── Then steps ───────────────────────────────────────────────────────
 
 #[then("the result is Complete with integer value {expected:i64}")]
@@ -149,6 +155,23 @@ fn then_denied(world: &GovernedRunWorld, name: String) {
             );
         }
         other => panic!("expected Denied for \"{expected_function_name}\", got {other:?}"),
+    }
+}
+
+#[then("the result is ExternalCallPending for function {name}")]
+fn then_external_call_pending(world: &GovernedRunWorld, name: String) {
+    let expected_function_name = name.trim_matches('"');
+    let result = require_result(world);
+    match result {
+        Ok(GovernedRunProgress::ExternalCallPending { context, .. }) => {
+            assert_eq!(
+                context.function_name, expected_function_name,
+                "pending function name mismatch"
+            );
+        }
+        other => {
+            panic!("expected ExternalCallPending for \"{expected_function_name}\", got {other:?}")
+        }
     }
 }
 
@@ -254,6 +277,19 @@ fn require_result(
         .unwrap_or_else(|| panic!("run step must execute first"))
 }
 
+fn take_pending_call(
+    world: &mut GovernedRunWorld,
+) -> zamburak_monty::SuspendedCall<NoLimitTracker> {
+    let result = world
+        .result
+        .take()
+        .unwrap_or_else(|| panic!("run step must execute first"));
+    match result {
+        Ok(GovernedRunProgress::ExternalCallPending { suspended, .. }) => suspended,
+        other => panic!("expected ExternalCallPending, got {other:?}"),
+    }
+}
+
 fn lock_snapshot(snapshot: &Arc<Mutex<EventSnapshot>>) -> std::sync::MutexGuard<'_, EventSnapshot> {
     match snapshot.lock() {
         Ok(guard) => guard,
@@ -276,6 +312,14 @@ fn simple_program_completes(world: GovernedRunWorld) {
     name = "External function call is denied by DenyAll mediator"
 )]
 fn external_call_denied(world: GovernedRunWorld) {
+    assert!(world.result.is_some());
+}
+
+#[scenario(
+    path = "tests/integration/features/governed_run.feature",
+    name = "External function call allowed by mediator yields pending host resume"
+)]
+fn external_call_pending_then_resumed(world: GovernedRunWorld) {
     assert!(world.result.is_some());
 }
 

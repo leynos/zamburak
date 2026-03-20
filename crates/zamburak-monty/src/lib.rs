@@ -18,4 +18,4 @@ pub use external_call::{
     MediationDecision,
 };
 pub use observer::ZamburakObserver;
-pub use run::{GovernedRunError, GovernedRunProgress, GovernedRunner};
+pub use run::{GovernedRunError, GovernedRunProgress, GovernedRunner, SuspendedCall};

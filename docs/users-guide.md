@@ -175,6 +175,9 @@ Built-in mediators:
 After execution, the governed runner returns a `GovernedRunProgress` enum:
 
 - `Complete(MontyObject)` — execution finished with a final value,
+- `ExternalCallPending { context, suspended }` — an external call was allowed
+  and execution paused so the host can provide the actual result via the
+  `SuspendedCall`,
 - `Denied { reason, function_name, call_id }` — an external call was denied
   by the mediator,
 - `AwaitConfirmation { context, suspended }` — execution paused pending host

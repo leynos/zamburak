@@ -9,15 +9,18 @@
 use std::sync::{Arc, Mutex};
 
 use monty::{
-    ExtFunctionResult, ExternalCallKind, MontyException, MontyObject, MontyRun, NoLimitTracker,
-    PrintWriter, ResourceTracker, RunProgress, RuntimeObserverHandle,
+    MontyException, MontyObject, MontyRun, NoLimitTracker, PrintWriter, ResourceTracker,
+    RuntimeObserverHandle,
 };
 use thiserror::Error;
 
-use crate::external_call::{
-    CallContext, ConfirmationContext, ExternalCallMediator, MediationDecision,
-};
+use crate::external_call::{CallContext, ConfirmationContext, ExternalCallMediator};
 use crate::observer::ZamburakObserver;
+
+mod flow;
+
+pub use flow::SuspendedCall;
+use flow::step;
 
 /// Errors arising from governed execution.
 #[derive(Debug, Error)]
@@ -47,6 +50,14 @@ pub enum GovernedRunProgress<T: ResourceTracker> {
     /// Execution completed with a final value.
     Complete(MontyObject),
 
+    /// Execution paused so the host can provide an external-call result.
+    ExternalCallPending {
+        /// Mediation context for the paused call.
+        context: CallContext,
+        /// Suspended execution state resumable with a host-provided result.
+        suspended: SuspendedCall<T>,
+    },
+
     /// Execution was denied at an external-call boundary.
     Denied {
         /// Human-readable reason the call was denied.
@@ -65,7 +76,7 @@ pub enum GovernedRunProgress<T: ResourceTracker> {
         suspended: SuspendedCall<T>,
     },
 
-    /// Execution paused for a name lookup the governed runner cannot resolve.
+    /// Execution paused for an unresolved name lookup.
     NameLookup {
         /// The name being looked up.
         name: String,
@@ -75,45 +86,6 @@ pub enum GovernedRunProgress<T: ResourceTracker> {
 
     /// Execution paused waiting for async futures to resolve.
     ResolveFutures(monty::ResolveFutures<T>),
-}
-
-/// A suspended external call awaiting host confirmation before resume.
-#[derive(Debug)]
-pub struct SuspendedCall<T: ResourceTracker> {
-    /// The kind of suspension (function or OS call).
-    kind: SuspendedCallKind<T>,
-}
-
-/// Internal discriminant for the two suspendable call types.
-#[derive(Debug)]
-enum SuspendedCallKind<T: ResourceTracker> {
-    /// A suspended external function call.
-    Function(monty::FunctionCall<T>),
-    /// A suspended OS call.
-    Os(monty::OsCall<T>),
-}
-
-impl<T: ResourceTracker> SuspendedCall<T> {
-    /// Resumes the suspended call with a host-provided result.
-    ///
-    /// # Errors
-    ///
-    /// Returns `GovernedRunError::Interpreter` if the interpreter raises an
-    /// exception on resume.
-    pub fn resume(
-        self,
-        result: impl Into<ExtFunctionResult>,
-        print: PrintWriter<'_>,
-    ) -> Result<RunProgress<T>, GovernedRunError> {
-        match self.kind {
-            SuspendedCallKind::Function(call) => {
-                call.resume(result, print).map_err(GovernedRunError::from)
-            }
-            SuspendedCallKind::Os(call) => {
-                call.resume(result, print).map_err(GovernedRunError::from)
-            }
-        }
-    }
 }
 
 /// Orchestrates governed execution of a Monty program.
@@ -157,10 +129,6 @@ impl GovernedRunner {
     /// Executes the program to completion with no resource limits, mediating
     /// all external calls and printing to stdout.
     ///
-    /// This is the simplest governed entrypoint. It loops through execution
-    /// yields, mediating each external call, and returns the final result or
-    /// the first denial encountered.
-    ///
     /// # Errors
     ///
     /// Returns `GovernedRunError` if the interpreter raises an exception or
@@ -186,122 +154,14 @@ impl GovernedRunner {
         print: PrintWriter<'_>,
     ) -> Result<GovernedRunProgress<T>, GovernedRunError> {
         let mediator = self.mediator;
-        let observer = ZamburakObserver::new(Arc::clone(&mediator));
+        let observer = ZamburakObserver::new();
+        let observer_state = observer.shared_state();
         let handle = RuntimeObserverHandle::new(observer);
-
         let progress =
             self.monty_run
                 .start_with_observer(inputs, resource_tracker, print, handle)?;
-
-        step(progress, &mediator)
+        step(progress, &mediator, &observer_state)
     }
-}
-
-/// Processes a single `RunProgress` step, mediating external calls.
-fn step<T: ResourceTracker>(
-    progress: RunProgress<T>,
-    mediator: &Arc<Mutex<dyn ExternalCallMediator>>,
-) -> Result<GovernedRunProgress<T>, GovernedRunError> {
-    match progress {
-        RunProgress::Complete(value) => Ok(GovernedRunProgress::Complete(value)),
-        RunProgress::FunctionCall(call) => mediate_function_call(call, mediator),
-        RunProgress::OsCall(call) => mediate_os_call(call, mediator),
-        RunProgress::NameLookup(lookup) => Ok(GovernedRunProgress::NameLookup {
-            name: lookup.name.clone(),
-            inner: lookup,
-        }),
-        RunProgress::ResolveFutures(futures) => Ok(GovernedRunProgress::ResolveFutures(futures)),
-    }
-}
-
-/// Mediates an external function call yield.
-fn mediate_function_call<T: ResourceTracker>(
-    call: monty::FunctionCall<T>,
-    mediator: &Arc<Mutex<dyn ExternalCallMediator>>,
-) -> Result<GovernedRunProgress<T>, GovernedRunError> {
-    let context = CallContext {
-        call_id: call.call_id,
-        kind: if call.method_call {
-            ExternalCallKind::Method
-        } else {
-            ExternalCallKind::Function
-        },
-        function_name: call.function_name.clone(),
-    };
-
-    let decision = query_mediator(mediator, &context)?;
-
-    match decision {
-        MediationDecision::Allow => {
-            // The governed runner does not natively implement external
-            // functions. When a call is allowed, it resumes with NotFound
-            // so the interpreter raises NameError — the host is expected
-            // to catch the FunctionCall yield and provide the actual
-            // return value externally.
-            let result = ExtFunctionResult::NotFound(call.function_name.clone());
-            let next = call.resume(result, PrintWriter::Stdout)?;
-            step(next, mediator)
-        }
-        MediationDecision::Deny { reason } => Ok(GovernedRunProgress::Denied {
-            reason,
-            function_name: context.function_name,
-            call_id: context.call_id,
-        }),
-        MediationDecision::RequireConfirmation { request } => {
-            Ok(GovernedRunProgress::AwaitConfirmation {
-                context: request,
-                suspended: SuspendedCall {
-                    kind: SuspendedCallKind::Function(call),
-                },
-            })
-        }
-    }
-}
-
-/// Mediates an OS call yield.
-fn mediate_os_call<T: ResourceTracker>(
-    call: monty::OsCall<T>,
-    mediator: &Arc<Mutex<dyn ExternalCallMediator>>,
-) -> Result<GovernedRunProgress<T>, GovernedRunError> {
-    let context = CallContext {
-        call_id: call.call_id,
-        kind: ExternalCallKind::Os,
-        function_name: format!("{:?}", call.function),
-    };
-
-    let decision = query_mediator(mediator, &context)?;
-
-    match decision {
-        MediationDecision::Allow => {
-            let result = ExtFunctionResult::NotFound(context.function_name);
-            let next = call.resume(result, PrintWriter::Stdout)?;
-            step(next, mediator)
-        }
-        MediationDecision::Deny { reason } => Ok(GovernedRunProgress::Denied {
-            reason,
-            function_name: context.function_name,
-            call_id: context.call_id,
-        }),
-        MediationDecision::RequireConfirmation { request } => {
-            Ok(GovernedRunProgress::AwaitConfirmation {
-                context: request,
-                suspended: SuspendedCall {
-                    kind: SuspendedCallKind::Os(call),
-                },
-            })
-        }
-    }
-}
-
-/// Queries the mediator for a decision, handling mutex poisoning.
-fn query_mediator(
-    mediator: &Arc<Mutex<dyn ExternalCallMediator>>,
-    context: &CallContext,
-) -> Result<MediationDecision, GovernedRunError> {
-    let mut guard = mediator
-        .lock()
-        .map_err(|_| GovernedRunError::MediatorPoisoned)?;
-    Ok(guard.mediate(context))
 }
 
 #[cfg(test)]

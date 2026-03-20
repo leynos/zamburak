@@ -13,6 +13,14 @@ Feature: Governed execution with zamburak-monty
     Then the result is Denied for function "foo"
     And the denial reason mentions "DenyAllMediator"
 
+  Scenario: External function call allowed by mediator yields pending host resume
+    Given a Monty program that calls an external function "foo"
+    And an AllowAll mediator
+    When the governed runner executes the program
+    Then the result is ExternalCallPending for function "foo"
+    When the host resumes the pending external call with integer result 7
+    Then the result is Complete with integer value 7
+
   Scenario: Conditional execution completes under governance
     Given a Monty program with conditional branching
     And an AllowAll mediator

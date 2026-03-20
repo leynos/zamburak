@@ -2,11 +2,11 @@
 
 use std::sync::{Arc, Mutex};
 
-use monty::{MontyObject, MontyRun};
+use monty::{MontyObject, MontyRun, NoLimitTracker, PrintWriter};
 use rstest::rstest;
 
 use crate::external_call::{AllowAllMediator, DenyAllMediator, ExternalCallMediator};
-use crate::run::{GovernedRunProgress, GovernedRunner};
+use crate::run::{GovernedRunError, GovernedRunProgress, GovernedRunner};
 
 /// Helper: build a `GovernedRunner` from source code with the given mediator.
 fn governed_runner(code: &str, mediator: Arc<Mutex<dyn ExternalCallMediator>>) -> GovernedRunner {
@@ -58,6 +58,61 @@ fn program_with_external_call_denied_by_deny_all_mediator() {
             assert_eq!(function_name, "foo");
         }
         other => panic!("expected Denied, got {other:?}"),
+    }
+}
+
+#[rstest]
+fn allowed_external_call_yields_pending_call_and_resumes_to_completion() {
+    let runner = governed_runner("foo()", shared_mediator(AllowAllMediator));
+    let result = runner.run_no_limits(vec![]);
+    let suspended = match result {
+        Ok(GovernedRunProgress::ExternalCallPending { context, suspended }) => {
+            assert_eq!(context.function_name, "foo");
+            suspended
+        }
+        other => panic!("expected ExternalCallPending, got {other:?}"),
+    };
+
+    let resumed = suspended.resume(MontyObject::Int(7), PrintWriter::Stdout);
+    match resumed {
+        Ok(GovernedRunProgress::Complete(value)) => {
+            assert_eq!(value, MontyObject::Int(7));
+        }
+        other => panic!("expected Complete(7), got {other:?}"),
+    }
+}
+
+#[rstest]
+fn custom_print_writer_is_used_after_resuming_pending_external_call() {
+    let runner = governed_runner(
+        "print(\"before\")\nfoo()\nprint(\"after\")",
+        shared_mediator(AllowAllMediator),
+    );
+    let mut output = String::new();
+    let result = runner.run(vec![], NoLimitTracker, PrintWriter::Collect(&mut output));
+    let suspended = match result {
+        Ok(GovernedRunProgress::ExternalCallPending { suspended, .. }) => suspended,
+        other => panic!("expected ExternalCallPending, got {other:?}"),
+    };
+    assert_eq!(output, "before\n");
+
+    let resumed = suspended.resume(MontyObject::None, PrintWriter::Collect(&mut output));
+    match resumed {
+        Ok(GovernedRunProgress::Complete(value)) => {
+            assert_eq!(value, MontyObject::None);
+        }
+        other => panic!("expected Complete(None), got {other:?}"),
+    }
+    assert_eq!(output, "before\nafter\n");
+}
+
+#[rstest]
+fn program_with_interpreter_error_mapped_to_governed_run_error_interpreter() {
+    let runner = governed_runner("1 / 0", shared_mediator(DenyAllMediator));
+    let result = runner.run_no_limits(vec![]);
+    match result {
+        Err(GovernedRunError::Interpreter(_)) => {}
+        other => panic!("expected Err(GovernedRunError::Interpreter(_)), got {other:?}"),
     }
 }
 

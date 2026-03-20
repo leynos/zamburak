@@ -4,8 +4,22 @@ use monty::ExternalCallKind;
 use rstest::rstest;
 
 use crate::external_call::{
-    AllowAllMediator, CallContext, DenyAllMediator, ExternalCallMediator, MediationDecision,
+    AllowAllMediator, CallContext, ConfirmationContext, DenyAllMediator, ExternalCallMediator,
+    MediationDecision,
 };
+
+struct RequireConfirmationMediator;
+
+impl ExternalCallMediator for RequireConfirmationMediator {
+    fn mediate(&mut self, context: &CallContext) -> MediationDecision {
+        MediationDecision::RequireConfirmation {
+            request: ConfirmationContext {
+                description: format!("confirm {}", context.function_name),
+                call: context.clone(),
+            },
+        }
+    }
+}
 
 fn function_call_context(call_id: u32, name: &str) -> CallContext {
     CallContext {
@@ -99,4 +113,23 @@ fn deny_all_mediator_denies_all_call_kinds(#[case] kind: ExternalCallKind) {
         mediator.mediate(&ctx),
         MediationDecision::Deny { .. }
     ));
+}
+
+#[rstest]
+fn require_confirmation_round_trips_confirmation_context() {
+    let mut mediator = RequireConfirmationMediator;
+    let ctx = function_call_context(42, "test_require_confirmation_roundtrip");
+
+    let decision = mediator.mediate(&ctx);
+
+    match decision {
+        MediationDecision::RequireConfirmation { request } => {
+            assert_eq!(request.call, ctx);
+            assert_eq!(
+                request.description,
+                "confirm test_require_confirmation_roundtrip"
+            );
+        }
+        other => panic!("expected RequireConfirmation, got {other:?}"),
+    }
 }

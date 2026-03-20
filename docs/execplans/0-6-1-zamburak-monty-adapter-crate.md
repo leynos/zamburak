@@ -91,9 +91,9 @@ machinery out of scope for this task.
   shim in `full-monty` is justified (escalate per submodule tolerance) or
   whether an integration-test-only approach is preferable.
 
-- Risk: the submodule may not be initialized in the working tree. Severity:
+- Risk: the submodule may not be initialised in the working tree. Severity:
   low. Likelihood: high. Mitigation: concrete steps include submodule
-  initialization as the first action.
+  initialisation as the first action.
 
 - Risk: the strict Clippy lint configuration in the workspace
   (`expect_used = "deny"`, `unwrap_used = "deny"`, `indexing_slicing = "deny"`,
@@ -177,7 +177,7 @@ Current repository state relevant to Task 0.6.1:
     (`RuntimeObserver`, `RuntimeObserverHandle`, `NoopRuntimeObserver`,
     `SharedRuntimeObserver`),
   - `third_party/full-monty/crates/monty/src/bytecode/vm/observer_hooks.rs`
-    (VM-level event emission),
+    (virtual machine (VM)-level event emission),
   - `third_party/full-monty/crates/monty/src/run.rs` and `run_progress.rs`
     (`MontyRun`, `RunProgress`, `start_with_observer`),
   - `third_party/full-monty/crates/monty/src/repl.rs`

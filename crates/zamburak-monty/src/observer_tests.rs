@@ -1,7 +1,5 @@
 //! Unit tests for the [`ZamburakObserver`] bridge.
 
-use std::sync::{Arc, Mutex};
-
 use monty::{
     ControlConditionEvent, ExternalCallKind, ExternalCallRequestedEvent, ExternalCallReturnKind,
     ExternalCallReturnedEvent, OpInputIds, OpResultEvent, RuntimeObserver, RuntimeObserverEvent,
@@ -9,13 +7,11 @@ use monty::{
 };
 use rstest::rstest;
 
-use crate::external_call::{AllowAllMediator, ExternalCallMediator};
 use crate::observer::{EventCounts, ZamburakObserver};
 
-/// Helper: build a `ZamburakObserver` with an `AllowAllMediator`.
+/// Helper: build a `ZamburakObserver`.
 fn allow_all_observer() -> ZamburakObserver {
-    let mediator: Arc<Mutex<dyn ExternalCallMediator>> = Arc::new(Mutex::new(AllowAllMediator));
-    ZamburakObserver::new(mediator)
+    ZamburakObserver::new()
 }
 
 /// Helper: build a `ZamburakObserver` that has already recorded one pending
@@ -39,7 +35,7 @@ fn observer_with_one_pending_call(call_id: u64, kind: ExternalCallKind) -> Zambu
 fn new_observer_starts_with_empty_state() {
     let obs = allow_all_observer();
     assert!(obs.pending_calls().is_empty());
-    assert_eq!(*obs.event_counts(), EventCounts::default());
+    assert_eq!(obs.event_counts(), EventCounts::default());
 }
 
 #[rstest]
@@ -66,9 +62,9 @@ fn op_result_event_increments_counter() {
 fn external_call_requested_records_pending_call() {
     let obs = observer_with_one_pending_call(42, ExternalCallKind::Function);
     assert_eq!(obs.event_counts().external_call_requested, 1);
-    assert_eq!(obs.pending_calls().len(), 1);
-
-    let recorded = &obs.pending_calls()[0];
+    let pending_calls = obs.pending_calls();
+    assert_eq!(pending_calls.len(), 1);
+    let recorded = &pending_calls[0];
     assert_eq!(recorded.call_id, 42);
     assert_eq!(recorded.kind, ExternalCallKind::Function);
 }
