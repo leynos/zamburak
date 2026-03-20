@@ -103,35 +103,53 @@ fn when_resume_pending_call(world: &mut GovernedRunWorld, value: i64) {
 
 // ── Then steps ───────────────────────────────────────────────────────
 
-#[then("the result is Complete with integer value {expected:i64}")]
-fn then_complete_int(world: &GovernedRunWorld, expected: i64) {
+/// Helper: assert the run completed with a specific [`MontyObject`] value.
+fn assert_complete_with_value(world: &GovernedRunWorld, expected: MontyObject) {
     let result = require_result(world);
     match result {
         Ok(GovernedRunProgress::Complete(value)) => {
-            assert_eq!(
-                *value,
-                MontyObject::Int(expected),
-                "expected integer {expected}"
-            );
+            assert_eq!(*value, expected, "expected Complete({expected:?})");
         }
-        other => panic!("expected Complete({expected}), got {other:?}"),
+        other => panic!("expected Complete({expected:?}), got {other:?}"),
     }
+}
+
+/// Helper: assert that the run produced a progress variant exposing a
+/// `function_name` equal to `expected_fn_name`.
+///
+/// `extract` returns `Some(&str)` when the progress is the expected variant,
+/// and `None` otherwise. `variant_label` appears only in panic messages.
+fn assert_progress_function_name<'a, F>(
+    world: &'a GovernedRunWorld,
+    expected_fn_name: &str,
+    variant_label: &str,
+    extract: F,
+) where
+    F: FnOnce(&'a GovernedRunProgress<NoLimitTracker>) -> Option<&'a str>,
+{
+    let result = require_result(world);
+    let progress = match result {
+        Ok(p) => p,
+        other => panic!("expected {variant_label} for \"{expected_fn_name}\", got {other:?}"),
+    };
+    match extract(progress) {
+        Some(fn_name) => assert_eq!(
+            fn_name, expected_fn_name,
+            "{variant_label} function name mismatch"
+        ),
+        None => panic!("expected {variant_label} for \"{expected_fn_name}\", got {progress:?}"),
+    }
+}
+
+#[then("the result is Complete with integer value {expected:i64}")]
+fn then_complete_int(world: &GovernedRunWorld, expected: i64) {
+    assert_complete_with_value(world, MontyObject::Int(expected));
 }
 
 #[then("the result is Complete with string value {expected}")]
 fn then_complete_string(world: &GovernedRunWorld, expected: String) {
-    let expected_str = expected.trim_matches('"');
-    let result = require_result(world);
-    match result {
-        Ok(GovernedRunProgress::Complete(value)) => {
-            assert_eq!(
-                *value,
-                MontyObject::String(expected_str.to_owned()),
-                "expected string \"{expected_str}\""
-            );
-        }
-        other => panic!("expected Complete(\"{expected_str}\"), got {other:?}"),
-    }
+    let expected_str = expected.trim_matches('"').to_owned();
+    assert_complete_with_value(world, MontyObject::String(expected_str));
 }
 
 #[then("the result is Complete")]
@@ -145,34 +163,26 @@ fn then_complete(world: &GovernedRunWorld) {
 
 #[then("the result is Denied for function {name}")]
 fn then_denied(world: &GovernedRunWorld, name: String) {
-    let expected_function_name = name.trim_matches('"');
-    let result = require_result(world);
-    match result {
-        Ok(GovernedRunProgress::Denied { function_name, .. }) => {
-            assert_eq!(
-                function_name, expected_function_name,
-                "denied function name mismatch"
-            );
+    let expected = name.trim_matches('"').to_owned();
+    assert_progress_function_name(world, &expected, "Denied", |p| {
+        if let GovernedRunProgress::Denied { function_name, .. } = p {
+            Some(function_name.as_str())
+        } else {
+            None
         }
-        other => panic!("expected Denied for \"{expected_function_name}\", got {other:?}"),
-    }
+    });
 }
 
 #[then("the result is ExternalCallPending for function {name}")]
 fn then_external_call_pending(world: &GovernedRunWorld, name: String) {
-    let expected_function_name = name.trim_matches('"');
-    let result = require_result(world);
-    match result {
-        Ok(GovernedRunProgress::ExternalCallPending { context, .. }) => {
-            assert_eq!(
-                context.function_name, expected_function_name,
-                "pending function name mismatch"
-            );
+    let expected = name.trim_matches('"').to_owned();
+    assert_progress_function_name(world, &expected, "ExternalCallPending", |p| {
+        if let GovernedRunProgress::ExternalCallPending { context, .. } = p {
+            Some(context.function_name.as_str())
+        } else {
+            None
         }
-        other => {
-            panic!("expected ExternalCallPending for \"{expected_function_name}\", got {other:?}")
-        }
-    }
+    });
 }
 
 #[then("the denial reason mentions {fragment}")]
@@ -263,10 +273,8 @@ impl monty::RuntimeObserver for SharedCountingObserver {
 }
 
 fn build_monty_run(source: &str, input_names: Vec<String>) -> MontyRun {
-    match MontyRun::new(source.to_owned(), "test.py", input_names) {
-        Ok(run) => run,
-        Err(error) => panic!("parse should succeed: {error}"),
-    }
+    MontyRun::new(source.to_owned(), "test.py", input_names)
+        .expect("failed to create MontyRun for test source")
 }
 
 fn require_result(

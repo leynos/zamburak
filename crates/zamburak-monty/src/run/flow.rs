@@ -163,7 +163,7 @@ fn mediate_function_call<T: ResourceTracker>(
 ) -> Result<GovernedRunProgress<T>, GovernedRunError> {
     let call_context = build_function_call_context(&call, resources.observer_state);
     let decision = query_mediator(resources.mediator, &call_context)?;
-    resolve_function_call_decision(call, call_context, decision, resources)
+    resolve_call_decision(SuspendedCallKind::Function(call), call_context, decision, resources)
 }
 
 fn mediate_os_call<T: ResourceTracker>(
@@ -172,7 +172,7 @@ fn mediate_os_call<T: ResourceTracker>(
 ) -> Result<GovernedRunProgress<T>, GovernedRunError> {
     let call_context = build_os_call_context(&call, resources.observer_state);
     let decision = query_mediator(resources.mediator, &call_context)?;
-    resolve_os_call_decision(call, call_context, decision, resources)
+    resolve_call_decision(SuspendedCallKind::Os(call), call_context, decision, resources)
 }
 
 fn build_function_call_context<T: ResourceTracker>(
@@ -204,8 +204,8 @@ fn build_os_call_context<T: ResourceTracker>(
     }
 }
 
-fn resolve_function_call_decision<T: ResourceTracker>(
-    call: monty::FunctionCall<T>,
+fn resolve_call_decision<T: ResourceTracker>(
+    kind: SuspendedCallKind<T>,
     context: CallContext,
     decision: MediationDecision,
     resources: &MediationResources<'_>,
@@ -213,7 +213,7 @@ fn resolve_function_call_decision<T: ResourceTracker>(
     match decision {
         MediationDecision::Allow => Ok(GovernedRunProgress::ExternalCallPending {
             context,
-            suspended: suspended_function_call(call, resources),
+            suspended: make_suspended_call(kind, resources),
         }),
         MediationDecision::Deny { reason } => Ok(GovernedRunProgress::Denied {
             reason,
@@ -223,54 +223,18 @@ fn resolve_function_call_decision<T: ResourceTracker>(
         MediationDecision::RequireConfirmation { request } => {
             Ok(GovernedRunProgress::AwaitConfirmation {
                 context: request,
-                suspended: suspended_function_call(call, resources),
+                suspended: make_suspended_call(kind, resources),
             })
         }
     }
 }
 
-fn resolve_os_call_decision<T: ResourceTracker>(
-    call: monty::OsCall<T>,
-    context: CallContext,
-    decision: MediationDecision,
-    resources: &MediationResources<'_>,
-) -> Result<GovernedRunProgress<T>, GovernedRunError> {
-    match decision {
-        MediationDecision::Allow => Ok(GovernedRunProgress::ExternalCallPending {
-            context,
-            suspended: suspended_os_call(call, resources),
-        }),
-        MediationDecision::Deny { reason } => Ok(GovernedRunProgress::Denied {
-            reason,
-            function_name: context.function_name,
-            call_id: context.call_id,
-        }),
-        MediationDecision::RequireConfirmation { request } => {
-            Ok(GovernedRunProgress::AwaitConfirmation {
-                context: request,
-                suspended: suspended_os_call(call, resources),
-            })
-        }
-    }
-}
-
-fn suspended_function_call<T: ResourceTracker>(
-    call: monty::FunctionCall<T>,
+fn make_suspended_call<T: ResourceTracker>(
+    kind: SuspendedCallKind<T>,
     resources: &MediationResources<'_>,
 ) -> SuspendedCall<T> {
     SuspendedCall {
-        kind: SuspendedCallKind::Function(call),
-        mediator: Arc::clone(resources.mediator),
-        observer_state: resources.observer_state.clone(),
-    }
-}
-
-fn suspended_os_call<T: ResourceTracker>(
-    call: monty::OsCall<T>,
-    resources: &MediationResources<'_>,
-) -> SuspendedCall<T> {
-    SuspendedCall {
-        kind: SuspendedCallKind::Os(call),
+        kind,
         mediator: Arc::clone(resources.mediator),
         observer_state: resources.observer_state.clone(),
     }

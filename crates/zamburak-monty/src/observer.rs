@@ -141,71 +141,34 @@ impl SharedObserverState {
 
     fn record_event(&self, event: RuntimeObserverEvent<'_>) {
         let mut state = lock_state(&self.inner);
-        if try_record_value_created(&mut state, event) {
-            return;
+        dispatch_event(&mut state, event);
+    }
+}
+
+fn dispatch_event(state: &mut ObserverState, event: RuntimeObserverEvent<'_>) {
+    match event {
+        RuntimeObserverEvent::ValueCreated(_) => {
+            state.event_counts.value_created += 1;
         }
-        if try_record_op_result(&mut state, event) {
-            return;
+        RuntimeObserverEvent::OpResult(_) => {
+            state.event_counts.op_result += 1;
         }
-        if try_record_external_call_requested(&mut state, event) {
-            return;
+        RuntimeObserverEvent::ExternalCallRequested(ExternalCallRequestedEvent {
+            call_id,
+            kind,
+            ..
+        }) => {
+            state.event_counts.external_call_requested += 1;
+            state
+                .pending_calls
+                .push(RecordedCallRequest { call_id, kind });
         }
-        if try_record_external_call_returned(&mut state, event) {
-            return;
+        RuntimeObserverEvent::ExternalCallReturned(_) => {
+            state.event_counts.external_call_returned += 1;
         }
-        record_control_condition(&mut state, event);
-    }
-}
-
-fn try_record_value_created(state: &mut ObserverState, event: RuntimeObserverEvent<'_>) -> bool {
-    if let RuntimeObserverEvent::ValueCreated(_) = event {
-        state.event_counts.value_created += 1;
-        return true;
-    }
-    false
-}
-
-fn try_record_op_result(state: &mut ObserverState, event: RuntimeObserverEvent<'_>) -> bool {
-    if let RuntimeObserverEvent::OpResult(_) = event {
-        state.event_counts.op_result += 1;
-        return true;
-    }
-    false
-}
-
-fn try_record_external_call_requested(
-    state: &mut ObserverState,
-    event: RuntimeObserverEvent<'_>,
-) -> bool {
-    if let RuntimeObserverEvent::ExternalCallRequested(ExternalCallRequestedEvent {
-        call_id,
-        kind,
-        ..
-    }) = event
-    {
-        state.event_counts.external_call_requested += 1;
-        state
-            .pending_calls
-            .push(RecordedCallRequest { call_id, kind });
-        return true;
-    }
-    false
-}
-
-fn try_record_external_call_returned(
-    state: &mut ObserverState,
-    event: RuntimeObserverEvent<'_>,
-) -> bool {
-    if let RuntimeObserverEvent::ExternalCallReturned(_) = event {
-        state.event_counts.external_call_returned += 1;
-        return true;
-    }
-    false
-}
-
-fn record_control_condition(state: &mut ObserverState, event: RuntimeObserverEvent<'_>) {
-    if let RuntimeObserverEvent::ControlCondition(_) = event {
-        state.event_counts.control_condition += 1;
+        RuntimeObserverEvent::ControlCondition(_) => {
+            state.event_counts.control_condition += 1;
+        }
     }
 }
 
