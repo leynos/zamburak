@@ -1,0 +1,15 @@
+[package]
+name = "zamburak-monty"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+monty = { path = "../../third_party/full-monty/crates/monty" }
+thiserror.workspace = true
+zamburak-core = { path = "../zamburak-core" }
+zamburak-policy = { path = "../zamburak-policy" }
+
+[dev-dependencies]
+rstest = "0.26.1"
+rstest-bdd = "0.5.0"
+rstest-bdd-macros = { version = "0.5.0", features = ["compile-time-validation"] }

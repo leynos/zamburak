@@ -1623,6 +1623,89 @@ Repository path mapping and file-purpose documentation are tracked in
 Technology baseline and verification target expectations are tracked in
 `docs/tech-baseline.md` and `docs/verification-targets.md`.
 
+## Track B adapter contract (`zamburak-monty`)
+
+The `zamburak-monty` crate is the first Track B adapter layer (PR B1). It
+bridges the generic Track A observer substrate into Zamburak governance
+semantics without implementing full IFC propagation (deferred to Tasks 0.6.2
+and 0.6.3).
+
+### `GovernedRunner` orchestration pattern
+
+`GovernedRunner` wraps a compiled `MontyRun` with a `ZamburakObserver` and
+mediates every external-call yield through an `ExternalCallMediator`:
+
+1. accepts compiled Monty inputs and a shared mediator handle,
+2. constructs a `RuntimeObserverHandle` wrapping the `ZamburakObserver`,
+3. calls `MontyRun::start_with_observer(...)`,
+4. on each `RunProgress::FunctionCall` or `RunProgress::OsCall` yield:
+   invokes the mediator's `mediate(...)` method with call context and acts on
+   the `MediationDecision` (Allow, Deny, or RequireConfirmation),
+5. on `RunProgress::Complete`: returns `GovernedRunProgress::Complete`.
+
+For screen readers: The following flowchart shows the governed external-call
+mediation loop. An `ExternalCallRequested` event is converted into an
+`ExternalCallContext`, passed to `ExternalCallMediator::mediate`, and then
+branches on the returned `MediationDecision`. `Allow` resumes the VM, yields an
+external-call-pending progress state, accepts a host-supplied result, and
+resumes execution. `Deny` resumes or terminates execution with a denial and
+returns `GovernedRunError::Denied`. `RequireConfirmation` yields an await
+confirmation progress state, lets the host collect confirmation and update
+mediator state or call context, and then re-enters mediation.
+
+```mermaid
+flowchart TD
+  A[ExternalCallRequested event] --> B[Construct ExternalCallContext]
+  B --> C[ExternalCallMediator.mediate]
+  C --> D{MediationDecision}
+
+  D -->|Allow| E[Resume VM with external call allowed]
+  E --> F[Yield GovernedRunProgress ExternalCallPending]
+  F --> G[Host supplies ExternalResult]
+  G --> H[Resume VM with result]
+
+  D -->|Deny| I[Resume or terminate with denial]
+  I --> J[Return GovernedRunError Denied]
+
+  D -->|RequireConfirmation| K[Yield GovernedRunProgress AwaitConfirmation]
+  K --> L[Host collects confirmation]
+  L --> M[Host updates mediator or context]
+  M --> C
+```
+
+### `ExternalCallMediator` trait boundary
+
+The mediation hook is a trait (`ExternalCallMediator`) rather than a hard-wired
+`PolicyEngine` reference. This allows Tasks 0.6.3 and 0.6.4 to provide
+progressively richer mediator implementations without changing the adapter
+crate's public run API.
+
+The mediator receives a `CallContext` describing the pending call (call ID,
+call kind, function name) and returns a `MediationDecision`:
+
+- `Allow` — proceed with execution,
+- `Deny { reason }` — block the call with an explanation,
+- `RequireConfirmation { request }` — yield to the host for interactive
+  approval.
+
+The shared mediator handle uses `Arc<Mutex<dyn ExternalCallMediator>>`,
+consistent with `full-monty`'s own `SharedRuntimeObserver` pattern.
+
+### Built-in mediators
+
+Two built-in mediators are provided for testing and permissive operation:
+
+- `AllowAllMediator` — unconditionally allows every external call,
+- `DenyAllMediator` — unconditionally denies every external call with a
+  descriptive reason.
+
+Implementation decision (2026-03-18): the `zamburak-monty` adapter crate does
+not re-export `full-monty` types directly; consumers interact through
+Zamburak-owned wrapper types (`GovernedRunProgress`, `GovernedRunError`,
+`SuspendedCall`). This keeps the public API stable even if `full-monty`
+internal types change and avoids leaking Track A internals into Track B
+consumers.
+
 ## References
 
 - Pydantic Monty: <https://github.com/pydantic/monty>

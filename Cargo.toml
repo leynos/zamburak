@@ -4,12 +4,42 @@ version = "0.1.0"
 edition = "2024"
 
 [workspace]
-members = ["crates/test-utils", "crates/zamburak-core", "crates/zamburak-policy"]
+members = ["crates/test-utils", "crates/zamburak-core", "crates/zamburak-monty", "crates/zamburak-policy"]
+exclude = ["third_party/full-monty"]
 resolver = "3"
+
+# Workspace package metadata used by both zamburak crates and the vendored
+# monty crate (which inherits edition, version, etc. from its workspace root).
+# Defining these fields here allows monty to resolve its workspace-inherited
+# fields when referenced as a path dependency from zamburak-monty.
+[workspace.package]
+edition = "2024"
+version = "0.1.0"
+rust-version = "1.85"
+license = "MIT"
+authors = []
+description = "Zamburak workspace"
+keywords = []
+categories = []
+homepage = ""
+repository = ""
 
 [workspace.dependencies]
 newt-hype = "0.2.0"
 thiserror = "2.0.11"
+
+# Dependencies inherited by the vendored monty crate via workspace = true.
+# These mirror the definitions in third_party/full-monty/Cargo.toml and must
+# be kept in sync when the submodule is updated.
+ruff_python_parser = { git = "https://github.com/astral-sh/ruff.git", package = "ruff_python_parser", rev = "6ded4bed1651e30b34dd04cdaa50c763036abb0d" }
+ruff_python_ast = { git = "https://github.com/astral-sh/ruff.git", package = "ruff_python_ast", rev = "6ded4bed1651e30b34dd04cdaa50c763036abb0d" }
+ruff_text_size = { git = "https://github.com/astral-sh/ruff.git", package = "ruff_text_size", rev = "6ded4bed1651e30b34dd04cdaa50c763036abb0d" }
+indexmap = { version = "2.9", features = ["serde"] }
+serde = { version = "1.0", features = ["derive"] }
+postcard = { version = "1.1", features = ["alloc"] }
+num-bigint = { version = "0.4", features = ["serde"] }
+num-traits = "0.2"
+num-integer = "0.1"
 
 [dependencies]
 camino = "1.2.2"
@@ -21,10 +51,12 @@ zamburak-policy = { path = "crates/zamburak-policy" }
 
 [dev-dependencies]
 backon = { version = "1.6.0", features = ["std-blocking-sleep"] }
+monty = { path = "third_party/full-monty/crates/monty" }
 rstest = "0.26.1"
 rstest-bdd = "0.5.0"
 rstest-bdd-macros = { version = "0.5.0", features = ["compile-time-validation"] }
 test-utils = { path = "crates/test-utils" }
+zamburak-monty = { path = "crates/zamburak-monty" }
 
 [lints.clippy]
 pedantic = { level = "warn", priority = -1 }

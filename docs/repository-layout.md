@@ -109,7 +109,7 @@ _Table 2: Core crate file-purpose mapping._
 | `crates/zamburak-monty/src/run.rs`             | Governed run orchestration around `MontyRun`       |
 | `crates/zamburak-monty/src/observer.rs`        | Runtime observer implementation and event bridging |
 | `crates/zamburak-monty/src/external_call.rs`   | External-call mediation and policy gate hand-off   |
-| `crates/zamburak-monty/src/snapshot_bridge.rs` | Snapshot extension persistence bridge              |
+| `crates/zamburak-monty/src/snapshot_bridge.rs` | (planned) Snapshot extension persistence bridge    |
 
 _Table 3: `full-monty` adapter crate file-purpose mapping._
 
@@ -216,7 +216,7 @@ _Table 10: Policy directory artefacts and purposes._
 | `tests/compatibility/` | Behavioural comparisons against upstream Monty              |
 | `tests/security/`      | Prompt-injection, exfiltration, and bypass regression tests |
 | `tests/test_utils/`    | Shared test utilities, fixtures, and policy data            |
-| `tests/integration/`   | (planned) End-to-end crate integration and call-path tests  |
+| `tests/integration/`   | End-to-end crate integration and governed-execution tests   |
 | `tests/property/`      | (planned) Property tests for monotonicity and closure       |
 | `tests/benchmarks/`    | Performance and overhead measurement tests                  |
 
