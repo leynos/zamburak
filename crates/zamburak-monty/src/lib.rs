@@ -17,7 +17,7 @@ pub use external_call::{
     AllowAllMediator, CallContext, ConfirmationContext, DenyAllMediator, ExternalCallMediator,
     MediationDecision,
 };
-pub use observer::ZamburakObserver;
+pub use observer::{EventCounts, ZamburakObserver};
 pub use run::{
     GovernedRunError, GovernedRunProgress, GovernedRunner, SuspendedCall, SuspendedNameLookup,
     SuspendedResolveFutures,

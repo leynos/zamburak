@@ -134,7 +134,7 @@ impl SharedObserverState {
         std::mem::take(&mut state.pending_calls)
     }
 
-    fn event_counts(&self) -> EventCounts {
+    pub(crate) fn event_counts(&self) -> EventCounts {
         let state = lock_state(&self.inner);
         state.event_counts.clone()
     }

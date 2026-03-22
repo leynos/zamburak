@@ -9,13 +9,13 @@
 use std::sync::{Arc, Mutex};
 
 use monty::{
-    MontyException, MontyObject, MontyRun, NoLimitTracker, PrintWriter, ResourceTracker,
-    RuntimeObserverHandle,
+    ExternalCallKind, MontyException, MontyObject, MontyRun, NoLimitTracker, PrintWriter,
+    ResourceTracker, RuntimeObserverHandle,
 };
 use thiserror::Error;
 
 use crate::external_call::{CallContext, ConfirmationContext, ExternalCallMediator};
-use crate::observer::ZamburakObserver;
+use crate::observer::{EventCounts, ZamburakObserver};
 
 mod flow;
 
@@ -32,6 +32,15 @@ pub enum GovernedRunError {
     /// The mediator's mutex was poisoned.
     #[error("mediator lock poisoned")]
     MediatorPoisoned,
+
+    /// Observer bookkeeping diverged from yielded external-call progress.
+    #[error("observer mismatch for call_id {call_id} with kind {kind:?}")]
+    ObserverMismatch {
+        /// The yielded call identifier whose observer bookkeeping was missing.
+        call_id: u32,
+        /// The yielded external-call kind.
+        kind: ExternalCallKind,
+    },
 }
 
 impl From<MontyException> for GovernedRunError {
@@ -140,6 +149,21 @@ impl GovernedRunner {
         self.run(inputs, NoLimitTracker, PrintWriter::Stdout)
     }
 
+    /// Executes the program with no resource limits and returns observer event
+    /// counts captured by the governed path.
+    ///
+    /// # Errors
+    ///
+    /// Returns `GovernedRunError` if the interpreter raises an exception, the
+    /// mediator lock is poisoned, or observer bookkeeping diverges from a
+    /// yielded external call.
+    pub fn run_no_limits_with_event_counts(
+        self,
+        inputs: Vec<MontyObject>,
+    ) -> Result<(GovernedRunProgress<NoLimitTracker>, EventCounts), GovernedRunError> {
+        self.run_with_event_counts(inputs, NoLimitTracker, PrintWriter::Stdout)
+    }
+
     /// Executes the program with a custom resource tracker and print writer,
     /// mediating all external calls.
     ///
@@ -153,6 +177,16 @@ impl GovernedRunner {
         resource_tracker: T,
         print: PrintWriter<'_>,
     ) -> Result<GovernedRunProgress<T>, GovernedRunError> {
+        let (progress, _) = self.run_with_event_counts(inputs, resource_tracker, print)?;
+        Ok(progress)
+    }
+
+    fn run_with_event_counts<T: ResourceTracker>(
+        self,
+        inputs: Vec<MontyObject>,
+        resource_tracker: T,
+        print: PrintWriter<'_>,
+    ) -> Result<(GovernedRunProgress<T>, EventCounts), GovernedRunError> {
         let mediator = self.mediator;
         let observer = ZamburakObserver::new();
         let observer_state = observer.shared_state();
@@ -160,7 +194,9 @@ impl GovernedRunner {
         let progress =
             self.monty_run
                 .start_with_observer(inputs, resource_tracker, print, handle)?;
-        step(progress, &mediator, &observer_state)
+        let progress = step(progress, &mediator, &observer_state)?;
+        let counts = observer_state.event_counts();
+        Ok((progress, counts))
     }
 }
 

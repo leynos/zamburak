@@ -2,9 +2,7 @@
 
 use std::sync::{Arc, Mutex};
 
-use monty::{
-    MontyObject, MontyRun, NoLimitTracker, PrintWriter, RuntimeObserverEvent, RuntimeObserverHandle,
-};
+use monty::{MontyObject, MontyRun, NoLimitTracker, PrintWriter};
 use rstest::fixture;
 use rstest_bdd_macros::{given, scenario, then, when};
 use zamburak_monty::{
@@ -104,11 +102,11 @@ fn when_resume_pending_call(world: &mut GovernedRunWorld, value: i64) {
 // ── Then steps ───────────────────────────────────────────────────────
 
 /// Helper: assert the run completed with a specific [`MontyObject`] value.
-fn assert_complete_with_value(world: &GovernedRunWorld, expected: MontyObject) {
+fn assert_complete_with_value(world: &GovernedRunWorld, expected: &MontyObject) {
     let result = require_result(world);
     match result {
         Ok(GovernedRunProgress::Complete(value)) => {
-            assert_eq!(*value, expected, "expected Complete({expected:?})");
+            assert_eq!(value, expected, "expected Complete({expected:?})");
         }
         other => panic!("expected Complete({expected:?}), got {other:?}"),
     }
@@ -143,13 +141,13 @@ fn assert_progress_function_name<'a, F>(
 
 #[then("the result is Complete with integer value {expected:i64}")]
 fn then_complete_int(world: &GovernedRunWorld, expected: i64) {
-    assert_complete_with_value(world, MontyObject::Int(expected));
+    assert_complete_with_value(world, &MontyObject::Int(expected));
 }
 
 #[then("the result is Complete with string value {expected}")]
 fn then_complete_string(world: &GovernedRunWorld, expected: String) {
     let expected_str = expected.trim_matches('"').to_owned();
-    assert_complete_with_value(world, MontyObject::String(expected_str));
+    assert_complete_with_value(world, &MontyObject::String(expected_str));
 }
 
 #[then("the result is Complete")]
@@ -231,50 +229,27 @@ fn then_observer_control_condition(world: &GovernedRunWorld) {
 
 /// Re-runs the program with a shared-state observer to capture event counts.
 ///
-/// The governed runner owns its observer internally, so event counts are not
-/// directly accessible from the consumer API. This helper uses a
-/// `SharedCountingObserver` that writes counts into a shared `EventSnapshot`
-/// so we can inspect them after execution completes.
+/// The governed runner owns its observer internally, so this helper uses the
+/// governed entrypoint that returns the observer event counts captured during
+/// execution.
 fn count_events_for(source: &str) -> EventSnapshot {
-    let snapshot = Arc::new(Mutex::new(EventSnapshot::default()));
-    let observer = SharedCountingObserver {
-        snapshot: Arc::clone(&snapshot),
-    };
-    let handle = RuntimeObserverHandle::new(observer);
-
     let monty_run = build_monty_run(source, vec![]);
-    match monty_run.start_with_observer(vec![], NoLimitTracker, PrintWriter::Stdout, handle) {
-        Ok(_) => {}
+    let runner = GovernedRunner::new(monty_run, Arc::new(Mutex::new(AllowAllMediator)));
+    match runner.run_no_limits_with_event_counts(vec![]) {
+        Ok((_, counts)) => EventSnapshot {
+            value_created: counts.value_created,
+            op_result: counts.op_result,
+            control_condition: counts.control_condition,
+        },
         Err(error) => panic!("execution should not raise: {error}"),
-    }
-
-    let guard = lock_snapshot(&snapshot);
-    guard.clone()
-}
-
-/// Observer that writes event counts into a shared `EventSnapshot`.
-struct SharedCountingObserver {
-    snapshot: Arc<Mutex<EventSnapshot>>,
-}
-
-impl monty::RuntimeObserver for SharedCountingObserver {
-    fn on_event(&mut self, event: RuntimeObserverEvent<'_>) {
-        let mut snap = lock_snapshot(&self.snapshot);
-        match event {
-            RuntimeObserverEvent::ValueCreated(_) => snap.value_created += 1,
-            RuntimeObserverEvent::OpResult(_) => snap.op_result += 1,
-            RuntimeObserverEvent::ControlCondition(_) => {
-                snap.control_condition += 1;
-            }
-            RuntimeObserverEvent::ExternalCallRequested(_)
-            | RuntimeObserverEvent::ExternalCallReturned(_) => {}
-        }
     }
 }
 
 fn build_monty_run(source: &str, input_names: Vec<String>) -> MontyRun {
-    MontyRun::new(source.to_owned(), "test.py", input_names)
-        .expect("failed to create MontyRun for test source")
+    match MontyRun::new(source.to_owned(), "test.py", input_names) {
+        Ok(run) => run,
+        Err(error) => panic!("failed to create MontyRun for test source: {error}"),
+    }
 }
 
 fn require_result(
@@ -296,13 +271,6 @@ fn take_pending_call(
     match result {
         Ok(GovernedRunProgress::ExternalCallPending { suspended, .. }) => suspended,
         other => panic!("expected ExternalCallPending, got {other:?}"),
-    }
-}
-
-fn lock_snapshot(snapshot: &Arc<Mutex<EventSnapshot>>) -> std::sync::MutexGuard<'_, EventSnapshot> {
-    match snapshot.lock() {
-        Ok(guard) => guard,
-        Err(error) => panic!("snapshot lock should not be poisoned: {error}"),
     }
 }
 

@@ -161,47 +161,67 @@ fn mediate_function_call<T: ResourceTracker>(
     call: monty::FunctionCall<T>,
     resources: &MediationResources<'_>,
 ) -> Result<GovernedRunProgress<T>, GovernedRunError> {
-    let call_context = build_function_call_context(&call, resources.observer_state);
+    let call_context = build_function_call_context(&call, resources.observer_state)?;
     let decision = query_mediator(resources.mediator, &call_context)?;
-    resolve_call_decision(SuspendedCallKind::Function(call), call_context, decision, resources)
+    resolve_call_decision(
+        SuspendedCallKind::Function(call),
+        call_context,
+        decision,
+        resources,
+    )
 }
 
 fn mediate_os_call<T: ResourceTracker>(
     call: monty::OsCall<T>,
     resources: &MediationResources<'_>,
 ) -> Result<GovernedRunProgress<T>, GovernedRunError> {
-    let call_context = build_os_call_context(&call, resources.observer_state);
+    let call_context = build_os_call_context(&call, resources.observer_state)?;
     let decision = query_mediator(resources.mediator, &call_context)?;
-    resolve_call_decision(SuspendedCallKind::Os(call), call_context, decision, resources)
+    resolve_call_decision(
+        SuspendedCallKind::Os(call),
+        call_context,
+        decision,
+        resources,
+    )
 }
 
 fn build_function_call_context<T: ResourceTracker>(
     call: &monty::FunctionCall<T>,
     observer_state: &SharedObserverState,
-) -> CallContext {
+) -> Result<CallContext, GovernedRunError> {
     let kind = if call.method_call {
         ExternalCallKind::Method
     } else {
         ExternalCallKind::Function
     };
-    observer_state.consume_pending_call(call.call_id, kind);
-    CallContext {
+    if !observer_state.consume_pending_call(call.call_id, kind) {
+        return Err(GovernedRunError::ObserverMismatch {
+            call_id: call.call_id,
+            kind,
+        });
+    }
+    Ok(CallContext {
         call_id: call.call_id,
         kind,
         function_name: call.function_name.clone(),
-    }
+    })
 }
 
 fn build_os_call_context<T: ResourceTracker>(
     call: &monty::OsCall<T>,
     observer_state: &SharedObserverState,
-) -> CallContext {
-    observer_state.consume_pending_call(call.call_id, ExternalCallKind::Os);
-    CallContext {
+) -> Result<CallContext, GovernedRunError> {
+    if !observer_state.consume_pending_call(call.call_id, ExternalCallKind::Os) {
+        return Err(GovernedRunError::ObserverMismatch {
+            call_id: call.call_id,
+            kind: ExternalCallKind::Os,
+        });
+    }
+    Ok(CallContext {
         call_id: call.call_id,
         kind: ExternalCallKind::Os,
         function_name: format!("{:?}", call.function),
-    }
+    })
 }
 
 fn resolve_call_decision<T: ResourceTracker>(
