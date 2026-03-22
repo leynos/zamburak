@@ -243,7 +243,7 @@ completion criteria so the work can be sequenced and assessed without ambiguity.
   - Out of scope: full IFC propagation semantics.
   - Completion criteria: governed execution path uses `full-monty` adapter with
     deterministic external-call mediation hooks.
-- [ ] Task 0.6.2: Add IFC core crate with `ValueId`-keyed dependency graph.
+- [x] Task 0.6.2: Add IFC core crate with `ValueId`-keyed dependency graph.
   - Requirement signposts:
     - `docs/adr-001-monty-ifc-vm-hooks.md` section "B1. IFC substrate",
     - `docs/zamburak-design-document.md` sections
