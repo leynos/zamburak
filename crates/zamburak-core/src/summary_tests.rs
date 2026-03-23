@@ -1,7 +1,7 @@
 //! Unit tests for dependency summary computation.
 
 use crate::AuthorityCapability;
-use crate::dependency_graph::{DependencyGraph, GraphBudgets};
+use crate::dependency_graph::{DependencyGraph, GraphBudgets, ValueLabels};
 use crate::trust::{AuthoritySet, DataLabel, DataLabels, IntegrityLabel};
 use crate::value_id::ValueId;
 
@@ -28,9 +28,11 @@ fn from_node_captures_all_labels() {
     graph
         .insert_value(
             ValueId::new(1),
-            IntegrityLabel::Verified,
-            labels.clone(),
-            auth.clone(),
+            ValueLabels {
+                integrity: IntegrityLabel::Verified,
+                confidentiality: labels.clone(),
+                authority: auth.clone(),
+            },
         )
         .expect("insert ok");
 
@@ -187,9 +189,11 @@ fn compute_summary_single_node() {
     graph
         .insert_value(
             ValueId::new(1),
-            IntegrityLabel::Verified,
-            DataLabels::new(),
-            AuthoritySet::new(),
+            ValueLabels {
+                integrity: IntegrityLabel::Verified,
+                confidentiality: DataLabels::new(),
+                authority: AuthoritySet::new(),
+            },
         )
         .expect("insert ok");
 
@@ -208,18 +212,22 @@ fn compute_summary_chain_propagates_labels() {
     graph
         .insert_value(
             ValueId::new(1),
-            IntegrityLabel::Untrusted,
-            DataLabels::from_iter([DataLabel::Pii]),
-            AuthoritySet::new(),
+            ValueLabels {
+                integrity: IntegrityLabel::Untrusted,
+                confidentiality: DataLabels::from_iter([DataLabel::Pii]),
+                authority: AuthoritySet::new(),
+            },
         )
         .expect("insert A");
 
     graph
         .insert_value(
             ValueId::new(2),
-            IntegrityLabel::Trusted,
-            DataLabels::new(),
-            AuthoritySet::new(),
+            ValueLabels {
+                integrity: IntegrityLabel::Trusted,
+                confidentiality: DataLabels::new(),
+                authority: AuthoritySet::new(),
+            },
         )
         .expect("insert B");
     graph
@@ -229,9 +237,11 @@ fn compute_summary_chain_propagates_labels() {
     graph
         .insert_value(
             ValueId::new(3),
-            IntegrityLabel::Verified,
-            DataLabels::new(),
-            AuthoritySet::new(),
+            ValueLabels {
+                integrity: IntegrityLabel::Verified,
+                confidentiality: DataLabels::new(),
+                authority: AuthoritySet::new(),
+            },
         )
         .expect("insert C");
     graph
@@ -255,18 +265,22 @@ fn compute_summary_diamond_deduplicates() {
     graph
         .insert_value(
             ValueId::new(1),
-            IntegrityLabel::Untrusted,
-            DataLabels::from_iter([DataLabel::AuthSecret]),
-            AuthoritySet::new(),
+            ValueLabels {
+                integrity: IntegrityLabel::Untrusted,
+                confidentiality: DataLabels::from_iter([DataLabel::AuthSecret]),
+                authority: AuthoritySet::new(),
+            },
         )
         .expect("insert A");
 
     graph
         .insert_value(
             ValueId::new(2),
-            IntegrityLabel::Trusted,
-            DataLabels::new(),
-            AuthoritySet::new(),
+            ValueLabels {
+                integrity: IntegrityLabel::Trusted,
+                confidentiality: DataLabels::new(),
+                authority: AuthoritySet::new(),
+            },
         )
         .expect("insert B");
     graph
@@ -276,9 +290,11 @@ fn compute_summary_diamond_deduplicates() {
     graph
         .insert_value(
             ValueId::new(3),
-            IntegrityLabel::Trusted,
-            DataLabels::new(),
-            AuthoritySet::new(),
+            ValueLabels {
+                integrity: IntegrityLabel::Trusted,
+                confidentiality: DataLabels::new(),
+                authority: AuthoritySet::new(),
+            },
         )
         .expect("insert C");
     graph
@@ -288,9 +304,11 @@ fn compute_summary_diamond_deduplicates() {
     graph
         .insert_value(
             ValueId::new(4),
-            IntegrityLabel::Verified,
-            DataLabels::new(),
-            AuthoritySet::new(),
+            ValueLabels {
+                integrity: IntegrityLabel::Verified,
+                confidentiality: DataLabels::new(),
+                authority: AuthoritySet::new(),
+            },
         )
         .expect("insert D");
     graph
@@ -323,17 +341,21 @@ fn compute_summary_budget_overflow_yields_unknown_top() {
     graph
         .insert_value(
             ValueId::new(1),
-            IntegrityLabel::Verified,
-            DataLabels::new(),
-            AuthoritySet::new(),
+            ValueLabels {
+                integrity: IntegrityLabel::Verified,
+                confidentiality: DataLabels::new(),
+                authority: AuthoritySet::new(),
+            },
         )
         .expect("insert A");
     graph
         .insert_value(
             ValueId::new(2),
-            IntegrityLabel::Verified,
-            DataLabels::new(),
-            AuthoritySet::new(),
+            ValueLabels {
+                integrity: IntegrityLabel::Verified,
+                confidentiality: DataLabels::new(),
+                authority: AuthoritySet::new(),
+            },
         )
         .expect("insert B");
     graph

@@ -2,7 +2,7 @@
 
 use proptest::prelude::*;
 
-use super::{DependencyGraph, GraphBudgets};
+use super::{DependencyGraph, GraphBudgets, ValueLabels};
 use crate::trust::{AuthoritySet, DataLabels, IntegrityLabel};
 use crate::value_id::ValueId;
 
@@ -23,9 +23,11 @@ proptest! {
         for i in 0..max_values + 5 {
             let _ = graph.insert_value(
                 ValueId::new(i),
-                IntegrityLabel::Trusted,
-                DataLabels::new(),
-                AuthoritySet::new(),
+                ValueLabels {
+                    integrity: IntegrityLabel::Trusted,
+                    confidentiality: DataLabels::new(),
+                    authority: AuthoritySet::new(),
+                },
             );
         }
 
@@ -46,9 +48,11 @@ proptest! {
         for i in 0..max_values + 5 {
             let _ = graph.insert_value(
                 ValueId::new(i),
-                IntegrityLabel::Trusted,
-                DataLabels::new(),
-                AuthoritySet::new(),
+                ValueLabels {
+                    integrity: IntegrityLabel::Trusted,
+                    confidentiality: DataLabels::new(),
+                    authority: AuthoritySet::new(),
+                },
             );
             if seen_truncated {
                 prop_assert!(graph.is_truncated(),
@@ -73,9 +77,11 @@ proptest! {
         for i in 0..max_parents + 3 {
             graph.insert_value(
                 ValueId::new(i),
-                IntegrityLabel::Trusted,
-                DataLabels::new(),
-                AuthoritySet::new(),
+                ValueLabels {
+                    integrity: IntegrityLabel::Trusted,
+                    confidentiality: DataLabels::new(),
+                    authority: AuthoritySet::new(),
+                },
             ).map_err(|e| TestCaseError::Fail(format!("{e}").into()))?;
         }
 
@@ -83,9 +89,11 @@ proptest! {
         let child_id = max_parents + 3;
         graph.insert_value(
             ValueId::new(child_id),
-            IntegrityLabel::Trusted,
-            DataLabels::new(),
-            AuthoritySet::new(),
+            ValueLabels {
+                integrity: IntegrityLabel::Trusted,
+                confidentiality: DataLabels::new(),
+                authority: AuthoritySet::new(),
+            },
         ).map_err(|e| TestCaseError::Fail(format!("{e}").into()))?;
 
         for i in 0..max_parents + 3 {

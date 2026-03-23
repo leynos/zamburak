@@ -17,14 +17,23 @@ fn effect_counters_start_at_zero() {
     assert_eq!(counters.tool_effects("file_write"), 0);
 }
 
-#[test]
-fn effect_counters_record_increments() {
+fn make_mixed_effect_counters() -> EffectCounters {
     let mut counters = EffectCounters::new();
     counters.record("file_write");
     counters.record("file_write");
     counters.record("http_get");
+    counters
+}
 
+#[test]
+fn effect_counters_total_reflects_all_recordings() {
+    let counters = make_mixed_effect_counters();
     assert_eq!(counters.total_effects(), 3);
+}
+
+#[test]
+fn effect_counters_per_tool_counts_match_recordings() {
+    let counters = make_mixed_effect_counters();
     assert_eq!(counters.tool_effects("file_write"), 2);
     assert_eq!(counters.tool_effects("http_get"), 1);
     assert_eq!(counters.tool_effects("unknown_tool"), 0);
@@ -35,11 +44,15 @@ fn effect_counters_record_increments() {
 // ---------------------------------------------------------------------------
 
 #[test]
-fn new_context_is_trusted_and_empty() {
+fn new_context_has_verified_integrity_and_empty_confidentiality() {
     let ctx = ExecutionContextSummary::new();
-
     assert_eq!(ctx.pc_integrity(), IntegrityLabel::Verified);
     assert!(ctx.pc_confidentiality().is_empty());
+}
+
+#[test]
+fn new_context_has_no_control_dependencies_or_effects() {
+    let ctx = ExecutionContextSummary::new();
     assert!(ctx.control_dependencies().is_empty());
     assert_eq!(ctx.effect_counters().total_effects(), 0);
 }
@@ -114,23 +127,36 @@ fn push_condition_tracks_control_dependencies() {
 // as_summary
 // ---------------------------------------------------------------------------
 
-#[test]
-fn as_summary_reflects_context_labels() {
-    let mut ctx = ExecutionContextSummary::new();
-
-    let condition = DependencySummary {
+fn make_untrusted_pii_condition() -> DependencySummary {
+    DependencySummary {
         integrity_join: IntegrityLabel::Untrusted,
         confidentiality_join: DataLabels::from_iter([DataLabel::Pii]),
         authority_join: AuthoritySet::new(),
         origin_count: 1,
         truncated: false,
-    };
+    }
+}
+
+#[test]
+fn as_summary_reflects_integrity_and_confidentiality() {
+    let mut ctx = ExecutionContextSummary::new();
+    let condition = make_untrusted_pii_condition();
     ctx.push_condition(ValueId::new(1), &condition);
 
     let summary = ctx.as_summary();
 
     assert_eq!(summary.integrity_join, IntegrityLabel::Untrusted);
     assert!(summary.confidentiality_join.contains(&DataLabel::Pii));
+}
+
+#[test]
+fn as_summary_has_empty_authority_correct_origin_and_is_not_truncated() {
+    let mut ctx = ExecutionContextSummary::new();
+    let condition = make_untrusted_pii_condition();
+    ctx.push_condition(ValueId::new(1), &condition);
+
+    let summary = ctx.as_summary();
+
     // Control context does not grant authority.
     assert!(summary.authority_join.is_empty());
     // Origin count = number of control dependencies.
@@ -139,13 +165,20 @@ fn as_summary_reflects_context_labels() {
 }
 
 #[test]
-fn as_summary_fresh_context_is_clean() {
+fn as_summary_fresh_context_has_clean_labels() {
     let ctx = ExecutionContextSummary::new();
     let summary = ctx.as_summary();
 
     assert_eq!(summary.integrity_join, IntegrityLabel::Verified);
     assert!(summary.confidentiality_join.is_empty());
     assert!(summary.authority_join.is_empty());
+}
+
+#[test]
+fn as_summary_fresh_context_has_zero_origin_count_and_is_not_truncated() {
+    let ctx = ExecutionContextSummary::new();
+    let summary = ctx.as_summary();
+
     assert_eq!(summary.origin_count, 0);
     assert!(!summary.truncated);
 }

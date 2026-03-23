@@ -96,6 +96,29 @@ impl ValueNode {
     }
 }
 
+/// IFC labels for a single runtime value.
+///
+/// Bundles the three label dimensions (integrity, confidentiality,
+/// authority) used in value insertion and summary propagation.
+///
+/// # Examples
+///
+/// ```
+/// use zamburak_core::{ValueLabels, IntegrityLabel, DataLabels, AuthoritySet};
+///
+/// let labels = ValueLabels {
+///     integrity: IntegrityLabel::Trusted,
+///     confidentiality: DataLabels::new(),
+///     authority: AuthoritySet::new(),
+/// };
+/// ```
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct ValueLabels {
+    pub integrity: IntegrityLabel,
+    pub confidentiality: DataLabels,
+    pub authority: AuthoritySet,
+}
+
 /// `ValueId`-keyed dependency DAG with budget enforcement.
 ///
 /// The graph is a directed acyclic graph by construction: values are
@@ -106,23 +129,22 @@ impl ValueNode {
 ///
 /// ```
 /// use zamburak_core::{
-///     DependencyGraph, GraphBudgets, ValueId, IntegrityLabel,
-///     DataLabels, AuthoritySet,
+///     DependencyGraph, GraphBudgets, ValueId, ValueLabels,
+///     IntegrityLabel, DataLabels, AuthoritySet,
 /// };
 ///
 /// let mut graph = DependencyGraph::new(GraphBudgets::default());
 /// let parent_id = ValueId::new(1);
 /// let child_id = ValueId::new(2);
 ///
-/// graph.insert_value(
-///     parent_id, IntegrityLabel::Trusted,
-///     DataLabels::new(), AuthoritySet::new(),
-/// ).expect("insert failed");
+/// let labels = ValueLabels {
+///     integrity: IntegrityLabel::Trusted,
+///     confidentiality: DataLabels::new(),
+///     authority: AuthoritySet::new(),
+/// };
 ///
-/// graph.insert_value(
-///     child_id, IntegrityLabel::Trusted,
-///     DataLabels::new(), AuthoritySet::new(),
-/// ).expect("insert failed");
+/// graph.insert_value(parent_id, labels.clone()).expect("insert failed");
+/// graph.insert_value(child_id, labels).expect("insert failed");
 ///
 /// graph.add_dependency(child_id, parent_id).expect("edge failed");
 /// assert_eq!(graph.node_count(), 2);
@@ -148,17 +170,7 @@ impl DependencyGraph {
     ///
     /// Returns `Err(IfcError::ValueBudgetExhausted)` and marks the graph
     /// as truncated when the value count would exceed `max_values`.
-    #[expect(
-        clippy::too_many_arguments,
-        reason = "IFC value insertion requires all four label dimensions; a builder is unwarranted for an internal API"
-    )]
-    pub fn insert_value(
-        &mut self,
-        id: ValueId,
-        integrity: IntegrityLabel,
-        confidentiality: DataLabels,
-        authority: AuthoritySet,
-    ) -> Result<(), IfcError> {
+    pub fn insert_value(&mut self, id: ValueId, labels: ValueLabels) -> Result<(), IfcError> {
         let current = u64::try_from(self.nodes.len()).unwrap_or(u64::MAX);
         if current >= self.budgets.max_values {
             self.truncated = true;
@@ -172,9 +184,9 @@ impl DependencyGraph {
             id,
             ValueNode {
                 id,
-                integrity,
-                confidentiality,
-                authority,
+                integrity: labels.integrity,
+                confidentiality: labels.confidentiality,
+                authority: labels.authority,
                 parents: Vec::new(),
             },
         );

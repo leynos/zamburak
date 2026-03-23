@@ -7,6 +7,7 @@ use zamburak_core::propagation::{PropagationMode, propagate_labels};
 use zamburak_core::summary::{DependencySummary, compute_summary};
 use zamburak_core::{
     AuthoritySet, DataLabel, DataLabels, DependencyGraph, GraphBudgets, IntegrityLabel, ValueId,
+    ValueLabels,
 };
 
 // ---------------------------------------------------------------------------
@@ -59,9 +60,11 @@ fn given_untrusted_pii_value(world: &mut IfcWorld) {
     graph
         .insert_value(
             ValueId::new(1),
-            IntegrityLabel::Untrusted,
-            DataLabels::from_iter([DataLabel::Pii]),
-            AuthoritySet::new(),
+            ValueLabels {
+                integrity: IntegrityLabel::Untrusted,
+                confidentiality: DataLabels::from_iter([DataLabel::Pii]),
+                authority: AuthoritySet::new(),
+            },
         )
         .expect("insert value 1");
 }
@@ -72,9 +75,11 @@ fn given_verified_value_depending_on_untrusted(world: &mut IfcWorld) {
     graph
         .insert_value(
             ValueId::new(2),
-            IntegrityLabel::Verified,
-            DataLabels::new(),
-            AuthoritySet::new(),
+            ValueLabels {
+                integrity: IntegrityLabel::Verified,
+                confidentiality: DataLabels::new(),
+                authority: AuthoritySet::new(),
+            },
         )
         .expect("insert value 2");
     graph
@@ -88,9 +93,11 @@ fn given_trusted_clean_value(world: &mut IfcWorld) {
     graph
         .insert_value(
             ValueId::new(3),
-            IntegrityLabel::Trusted,
-            DataLabels::new(),
-            AuthoritySet::new(),
+            ValueLabels {
+                integrity: IntegrityLabel::Trusted,
+                confidentiality: DataLabels::new(),
+                authority: AuthoritySet::new(),
+            },
         )
         .expect("insert value 3");
 }

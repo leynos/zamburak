@@ -5,7 +5,7 @@ use proptest::prelude::*;
 
 use super::{DependencySummary, compute_summary};
 use crate::AuthorityCapability;
-use crate::dependency_graph::{DependencyGraph, GraphBudgets};
+use crate::dependency_graph::{DependencyGraph, GraphBudgets, ValueLabels};
 use crate::trust::{AuthoritySet, DataLabel, DataLabels, IntegrityLabel};
 use crate::value_id::ValueId;
 
@@ -159,9 +159,11 @@ proptest! {
         graph
             .insert_value(
                 ValueId::new(1),
-                integrity,
-                confidentiality,
-                authority,
+                ValueLabels {
+                    integrity,
+                    confidentiality,
+                    authority,
+                },
             )
             .map_err(|e| TestCaseError::Fail(format!("{e}").into()))?;
 
@@ -190,17 +192,21 @@ proptest! {
         graph
             .insert_value(
                 ValueId::new(1),
-                integrity,
-                DataLabels::new(),
-                AuthoritySet::new(),
+                ValueLabels {
+                    integrity,
+                    confidentiality: DataLabels::new(),
+                    authority: AuthoritySet::new(),
+                },
             )
             .map_err(|e| TestCaseError::Fail(format!("{e}").into()))?;
         graph
             .insert_value(
                 ValueId::new(2),
-                IntegrityLabel::Verified,
-                DataLabels::new(),
-                AuthoritySet::new(),
+                ValueLabels {
+                    integrity: IntegrityLabel::Verified,
+                    confidentiality: DataLabels::new(),
+                    authority: AuthoritySet::new(),
+                },
             )
             .map_err(|e| TestCaseError::Fail(format!("{e}").into()))?;
         graph
@@ -224,17 +230,21 @@ proptest! {
         graph
             .insert_value(
                 ValueId::new(1),
-                c_integrity,
-                DataLabels::new(),
-                AuthoritySet::new(),
+                ValueLabels {
+                    integrity: c_integrity,
+                    confidentiality: DataLabels::new(),
+                    authority: AuthoritySet::new(),
+                },
             )
             .map_err(|e| TestCaseError::Fail(format!("{e}").into()))?;
         graph
             .insert_value(
                 ValueId::new(2),
-                IntegrityLabel::Verified,
-                DataLabels::new(),
-                AuthoritySet::new(),
+                ValueLabels {
+                    integrity: IntegrityLabel::Verified,
+                    confidentiality: DataLabels::new(),
+                    authority: AuthoritySet::new(),
+                },
             )
             .map_err(|e| TestCaseError::Fail(format!("{e}").into()))?;
         graph
@@ -243,9 +253,11 @@ proptest! {
         graph
             .insert_value(
                 ValueId::new(3),
-                IntegrityLabel::Verified,
-                DataLabels::new(),
-                AuthoritySet::new(),
+                ValueLabels {
+                    integrity: IntegrityLabel::Verified,
+                    confidentiality: DataLabels::new(),
+                    authority: AuthoritySet::new(),
+                },
             )
             .map_err(|e| TestCaseError::Fail(format!("{e}").into()))?;
         graph

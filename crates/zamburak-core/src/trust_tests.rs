@@ -1,5 +1,7 @@
 //! Unit tests for integrity, confidentiality, and authority label types.
 
+use rstest::rstest;
+
 use crate::AuthorityCapability;
 
 use super::{AuthoritySet, DataLabel, DataLabels, IntegrityLabel};
@@ -8,44 +10,58 @@ use super::{AuthoritySet, DataLabel, DataLabels, IntegrityLabel};
 // IntegrityLabel join
 // ---------------------------------------------------------------------------
 
-#[test]
-fn integrity_join_untrusted_dominates() {
-    assert_eq!(
-        IntegrityLabel::Verified.join(IntegrityLabel::Untrusted),
-        IntegrityLabel::Untrusted,
-    );
-    assert_eq!(
-        IntegrityLabel::Trusted.join(IntegrityLabel::Untrusted),
-        IntegrityLabel::Untrusted,
-    );
-    assert_eq!(
-        IntegrityLabel::Untrusted.join(IntegrityLabel::Untrusted),
-        IntegrityLabel::Untrusted,
-    );
-}
-
-#[test]
-fn integrity_join_trusted_and_verified() {
-    assert_eq!(
-        IntegrityLabel::Verified.join(IntegrityLabel::Trusted),
-        IntegrityLabel::Trusted,
-    );
-    assert_eq!(
-        IntegrityLabel::Trusted.join(IntegrityLabel::Verified),
-        IntegrityLabel::Trusted,
-    );
-}
-
-#[test]
-fn integrity_join_same_returns_self() {
-    assert_eq!(
-        IntegrityLabel::Verified.join(IntegrityLabel::Verified),
-        IntegrityLabel::Verified,
-    );
-    assert_eq!(
-        IntegrityLabel::Trusted.join(IntegrityLabel::Trusted),
-        IntegrityLabel::Trusted,
-    );
+#[rstest]
+#[case(
+    IntegrityLabel::Verified,
+    IntegrityLabel::Verified,
+    IntegrityLabel::Verified
+)]
+#[case(
+    IntegrityLabel::Trusted,
+    IntegrityLabel::Trusted,
+    IntegrityLabel::Trusted
+)]
+#[case(
+    IntegrityLabel::Untrusted,
+    IntegrityLabel::Untrusted,
+    IntegrityLabel::Untrusted
+)]
+#[case(
+    IntegrityLabel::Verified,
+    IntegrityLabel::Trusted,
+    IntegrityLabel::Trusted
+)]
+#[case(
+    IntegrityLabel::Trusted,
+    IntegrityLabel::Verified,
+    IntegrityLabel::Trusted
+)]
+#[case(
+    IntegrityLabel::Verified,
+    IntegrityLabel::Untrusted,
+    IntegrityLabel::Untrusted
+)]
+#[case(
+    IntegrityLabel::Trusted,
+    IntegrityLabel::Untrusted,
+    IntegrityLabel::Untrusted
+)]
+#[case(
+    IntegrityLabel::Untrusted,
+    IntegrityLabel::Verified,
+    IntegrityLabel::Untrusted
+)]
+#[case(
+    IntegrityLabel::Untrusted,
+    IntegrityLabel::Trusted,
+    IntegrityLabel::Untrusted
+)]
+fn integrity_join_cases(
+    #[case] a: IntegrityLabel,
+    #[case] b: IntegrityLabel,
+    #[case] expected: IntegrityLabel,
+) {
+    assert_eq!(a.join(b), expected);
 }
 
 #[test]

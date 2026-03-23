@@ -4,7 +4,7 @@ use crate::ifc_errors::IfcError;
 use crate::trust::{AuthoritySet, DataLabel, DataLabels, IntegrityLabel};
 use crate::value_id::ValueId;
 
-use super::{DependencyGraph, GraphBudgets};
+use super::{DependencyGraph, GraphBudgets, ValueLabels};
 
 fn small_budgets() -> GraphBudgets {
     GraphBudgets {
@@ -19,9 +19,11 @@ fn insert_trusted(graph: &mut DependencyGraph, id: u64) {
     graph
         .insert_value(
             ValueId::new(id),
-            IntegrityLabel::Trusted,
-            DataLabels::new(),
-            AuthoritySet::new(),
+            ValueLabels {
+                integrity: IntegrityLabel::Trusted,
+                confidentiality: DataLabels::new(),
+                authority: AuthoritySet::new(),
+            },
         )
         .expect("insert should succeed in test");
 }
@@ -39,20 +41,22 @@ fn insert_value_happy_path() {
 #[test]
 fn insert_value_preserves_labels() {
     let mut graph = DependencyGraph::new(GraphBudgets::default());
-    let labels = DataLabels::from_iter([DataLabel::Pii, DataLabel::AuthSecret]);
+    let confidentiality = DataLabels::from_iter([DataLabel::Pii, DataLabel::AuthSecret]);
 
     graph
         .insert_value(
             ValueId::new(1),
-            IntegrityLabel::Untrusted,
-            labels.clone(),
-            AuthoritySet::new(),
+            ValueLabels {
+                integrity: IntegrityLabel::Untrusted,
+                confidentiality: confidentiality.clone(),
+                authority: AuthoritySet::new(),
+            },
         )
         .expect("insert should succeed");
 
     let node = graph.get_node(&ValueId::new(1)).expect("node should exist");
     assert_eq!(node.integrity(), IntegrityLabel::Untrusted);
-    assert_eq!(node.confidentiality(), &labels);
+    assert_eq!(node.confidentiality(), &confidentiality);
 }
 
 #[test]
@@ -66,9 +70,11 @@ fn insert_value_budget_exhaustion() {
 
     let result = graph.insert_value(
         ValueId::new(4),
-        IntegrityLabel::Trusted,
-        DataLabels::new(),
-        AuthoritySet::new(),
+        ValueLabels {
+            integrity: IntegrityLabel::Trusted,
+            confidentiality: DataLabels::new(),
+            authority: AuthoritySet::new(),
+        },
     );
 
     assert!(matches!(

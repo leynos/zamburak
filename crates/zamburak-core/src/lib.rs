@@ -18,7 +18,7 @@ pub use authority::{
     ScopeResource, TokenTimestamp, revalidate_tokens_on_restore,
     validate_tokens_at_policy_boundary,
 };
-pub use dependency_graph::{DependencyGraph, GraphBudgets, ValueNode};
+pub use dependency_graph::{DependencyGraph, GraphBudgets, ValueLabels, ValueNode};
 pub use ifc_errors::IfcError;
 pub use summary::DependencySummary;
 pub use trust::{AuthoritySet, DataLabel, DataLabels, IntegrityLabel};
