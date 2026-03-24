@@ -209,6 +209,107 @@ fn add_dependency_parent_budget_exhaustion(small_budgets: GraphBudgets) {
 }
 
 #[rstest]
+fn add_dependency_duplicate_edge_rejected(default_budgets: GraphBudgets) {
+    let mut graph = DependencyGraph::new(default_budgets);
+    insert_trusted(&mut graph, 1);
+    insert_trusted(&mut graph, 2);
+
+    graph
+        .add_dependency(ValueId::new(2), ValueId::new(1))
+        .expect("first edge should succeed");
+
+    let result = graph.add_dependency(ValueId::new(2), ValueId::new(1));
+    assert!(matches!(
+        result,
+        Err(IfcError::DuplicateEdge {
+            child: 2,
+            parent: 1,
+        })
+    ));
+
+    // Parent list should still have exactly one entry.
+    let node = graph
+        .get_node(&ValueId::new(2))
+        .expect("child should exist");
+    assert_eq!(node.parents().len(), 1);
+}
+
+#[rstest]
+fn add_dependency_two_node_back_edge_rejected(default_budgets: GraphBudgets) {
+    let mut graph = DependencyGraph::new(default_budgets);
+    insert_trusted(&mut graph, 1);
+    insert_trusted(&mut graph, 2);
+
+    graph
+        .add_dependency(ValueId::new(2), ValueId::new(1))
+        .expect("forward edge should succeed");
+
+    // Adding 1→2 would create a cycle: 1→2→1.
+    let result = graph.add_dependency(ValueId::new(1), ValueId::new(2));
+    assert!(matches!(
+        result,
+        Err(IfcError::CycleDetected { from: 1, to: 2 })
+    ));
+}
+
+#[rstest]
+fn add_dependency_three_node_cycle_rejected(default_budgets: GraphBudgets) {
+    let mut graph = DependencyGraph::new(default_budgets);
+    insert_trusted(&mut graph, 1);
+    insert_trusted(&mut graph, 2);
+    insert_trusted(&mut graph, 3);
+
+    graph
+        .add_dependency(ValueId::new(2), ValueId::new(1))
+        .expect("edge 2→1");
+    graph
+        .add_dependency(ValueId::new(3), ValueId::new(2))
+        .expect("edge 3→2");
+
+    // Adding 1→3 would create a cycle: 1→3→2→1.
+    let result = graph.add_dependency(ValueId::new(1), ValueId::new(3));
+    assert!(matches!(
+        result,
+        Err(IfcError::CycleDetected { from: 1, to: 3 })
+    ));
+}
+
+#[rstest]
+fn add_dependency_reachability_budget_exhaustion() {
+    // Use a closure-step budget of 2, allowing edge 2→1 (1 BFS step)
+    // and edge 3→2 (2 BFS steps: visit 2, visit 1). Then adding
+    // edge 5→3 requires walking 3→2→1 (3 BFS steps), exceeding the
+    // budget of 2. Since no cycle actually exists, this is a pure
+    // budget-exhaustion conservative rejection.
+    let budgets = GraphBudgets {
+        max_values: 100,
+        max_parents_per_value: 64,
+        max_closure_steps: 2,
+        max_witness_depth: 32,
+    };
+    let mut graph = DependencyGraph::new(budgets);
+
+    // Build a chain: 1 ← 2 ← 3 and an unconnected node 5.
+    for i in [1, 2, 3, 5] {
+        insert_trusted(&mut graph, i);
+    }
+    graph
+        .add_dependency(ValueId::new(2), ValueId::new(1))
+        .expect("edge 2→1");
+    graph
+        .add_dependency(ValueId::new(3), ValueId::new(2))
+        .expect("edge 3→2");
+
+    assert!(!graph.is_truncated());
+
+    // Adding 5→3 would walk 3→2→1 (3 steps > budget 2). The graph
+    // should be marked truncated and the edge conservatively rejected.
+    let result = graph.add_dependency(ValueId::new(5), ValueId::new(3));
+    assert!(matches!(result, Err(IfcError::CycleDetected { .. })));
+    assert!(graph.is_truncated());
+}
+
+#[rstest]
 fn node_count_tracks_insertions(default_budgets: GraphBudgets) {
     let mut graph = DependencyGraph::new(default_budgets);
     assert_eq!(graph.node_count(), 0);

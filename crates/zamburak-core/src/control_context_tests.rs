@@ -150,15 +150,16 @@ fn as_summary_reflects_integrity_and_confidentiality() {
 }
 
 #[test]
-fn as_summary_has_empty_authority_correct_origin_and_is_not_truncated() {
+fn as_summary_has_full_authority_correct_origin_and_is_not_truncated() {
     let mut ctx = ExecutionContextSummary::new();
     let condition = make_untrusted_pii_condition();
     ctx.push_condition(ValueId::new(1), &condition);
 
     let summary = ctx.as_summary();
 
-    // Control context does not grant authority.
-    assert!(summary.authority_join.is_empty());
+    // Control context uses full (universe) authority — the identity for
+    // intersection — so it does not erase operand capabilities.
+    assert!(summary.authority_join.is_full());
     // Origin count = number of control dependencies.
     assert_eq!(summary.origin_count, 1);
     assert!(!summary.truncated);
@@ -171,7 +172,7 @@ fn as_summary_fresh_context_has_clean_labels() {
 
     assert_eq!(summary.integrity_join, IntegrityLabel::Verified);
     assert!(summary.confidentiality_join.is_empty());
-    assert!(summary.authority_join.is_empty());
+    assert!(summary.authority_join.is_full());
 }
 
 #[test]

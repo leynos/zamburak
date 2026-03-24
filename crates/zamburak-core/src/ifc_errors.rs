@@ -55,7 +55,8 @@ pub enum IfcError {
     #[error("duplicate value ID: {0} already exists in the graph")]
     DuplicateValueId(u64),
 
-    /// Adding the requested edge would create a self-loop.
+    /// Adding the requested edge would create a cycle (self-loop or
+    /// transitive back-edge).
     #[error(
         "cycle detected: adding edge from {from} to {to} \
          would create a cycle"
@@ -65,6 +66,15 @@ pub enum IfcError {
         from: u64,
         /// Target (parent) value identifier.
         to: u64,
+    },
+
+    /// The requested parent edge already exists for this child.
+    #[error("duplicate edge: parent {parent} already exists for child {child}")]
+    DuplicateEdge {
+        /// Child value identifier.
+        child: u64,
+        /// Parent value identifier that is already present.
+        parent: u64,
     },
 }
 

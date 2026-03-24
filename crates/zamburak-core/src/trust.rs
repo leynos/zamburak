@@ -172,6 +172,12 @@ impl FromIterator<DataLabel> for DataLabels {
 /// intersection. A derived value can only exercise capabilities that all
 /// its sources possess.
 ///
+/// The special "full" set (`AuthoritySet::full()`) represents the
+/// universe of all possible capabilities and acts as the identity
+/// element for intersection-based `join`. Since `AuthorityCapability`
+/// wraps an open string type, the universe cannot be enumerated; instead
+/// a flag marks the set as containing every capability.
+///
 /// # Examples
 ///
 /// ```
@@ -188,10 +194,18 @@ impl FromIterator<DataLabel> for DataLabels {
 ///
 /// assert!(joined.contains(&cap_a));
 /// assert!(!joined.contains(&cap_b));
+///
+/// // Full set is the identity for join (intersection).
+/// let full = AuthoritySet::full();
+/// assert_eq!(set_a.join(&full), set_a);
+/// assert_eq!(full.join(&set_a), set_a);
 /// ```
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct AuthoritySet {
     capabilities: BTreeSet<AuthorityCapability>,
+    /// When `true`, the set represents the universe of all capabilities
+    /// and acts as the identity element for intersection-based `join`.
+    is_full: bool,
 }
 
 impl AuthoritySet {
@@ -201,31 +215,65 @@ impl AuthoritySet {
         Self::default()
     }
 
+    /// Return an `AuthoritySet` representing the universe of all
+    /// capabilities — the identity element for the intersection-based
+    /// `join` operation.
+    ///
+    /// `full().join(x) == x` and `x.join(full()) == x` for any `x`.
+    #[must_use]
+    pub fn full() -> Self {
+        Self {
+            capabilities: BTreeSet::new(),
+            is_full: true,
+        }
+    }
+
+    /// Return `true` if this set represents the full universe of
+    /// capabilities.
+    #[must_use]
+    pub const fn is_full(&self) -> bool {
+        self.is_full
+    }
+
     /// Compute the IFC join (intersection) of two authority sets.
     ///
     /// Authority narrows on dependency: a value derived from multiple
     /// sources can only exercise capabilities common to all sources.
+    ///
+    /// The full (universe) set is the identity element: joining with
+    /// `full()` returns the other operand unchanged.
     #[must_use]
     pub fn join(&self, other: &Self) -> Self {
+        if self.is_full {
+            return other.clone();
+        }
+        if other.is_full {
+            return self.clone();
+        }
         Self {
             capabilities: self
                 .capabilities
                 .intersection(&other.capabilities)
                 .cloned()
                 .collect(),
+            is_full: false,
         }
     }
 
     /// Check whether the set includes a specific capability.
+    ///
+    /// A full (universe) set contains every capability.
     #[must_use]
     pub fn contains(&self, cap: &AuthorityCapability) -> bool {
-        self.capabilities.contains(cap)
+        self.is_full || self.capabilities.contains(cap)
     }
 
     /// Return `true` if no authority capabilities are present.
+    ///
+    /// A full (universe) set is never empty.
     #[must_use]
     pub fn is_empty(&self) -> bool {
-        self.capabilities.is_empty()
+        !self.is_full && self.capabilities.is_empty()
     }
 
     /// Add a capability to this authority set.
@@ -233,7 +281,11 @@ impl AuthoritySet {
         self.capabilities.insert(cap);
     }
 
-    /// Iterate over the capabilities in this set.
+    /// Iterate over the explicitly stored capabilities in this set.
+    ///
+    /// Note: for a full (universe) set this iterator yields no items,
+    /// even though `contains` returns `true` for every capability.
+    /// Use `is_full()` to detect universe sets.
     pub fn iter(&self) -> impl Iterator<Item = &AuthorityCapability> {
         self.capabilities.iter()
     }
@@ -243,6 +295,7 @@ impl FromIterator<AuthorityCapability> for AuthoritySet {
     fn from_iter<I: IntoIterator<Item = AuthorityCapability>>(iter: I) -> Self {
         Self {
             capabilities: iter.into_iter().collect(),
+            is_full: false,
         }
     }
 }

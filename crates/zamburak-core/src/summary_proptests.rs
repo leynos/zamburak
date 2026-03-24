@@ -120,11 +120,9 @@ proptest! {
     fn budget_overflow_yields_unknown_top(
         integrity in arb_integrity_label(),
     ) {
-        let budgets = GraphBudgets {
-            max_closure_steps: 0,
-            ..GraphBudgets::default()
-        };
-        let mut graph = DependencyGraph::new(budgets);
+        // Build graph with default budgets (cycle detection needs
+        // adequate max_closure_steps for edge insertion).
+        let mut graph = DependencyGraph::new(GraphBudgets::default());
 
         graph
             .insert_value(
@@ -150,7 +148,13 @@ proptest! {
             .add_dependency(ValueId::new(2), ValueId::new(1))
             .map_err(|e| TestCaseError::Fail(format!("{e}").into()))?;
 
-        let summary = compute_summary(&graph, &ValueId::new(2), &budgets)
+        // Compute summary with a zero closure-step budget to trigger
+        // unknown_top.
+        let tight_budgets = GraphBudgets {
+            max_closure_steps: 0,
+            ..GraphBudgets::default()
+        };
+        let summary = compute_summary(&graph, &ValueId::new(2), &tight_budgets)
             .map_err(|e| TestCaseError::Fail(format!("{e}").into()))?;
 
         prop_assert_eq!(summary, DependencySummary::unknown_top());

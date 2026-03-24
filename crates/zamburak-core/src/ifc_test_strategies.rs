@@ -47,15 +47,21 @@ pub fn cap_from_index(i: usize) -> Option<AuthorityCapability> {
     AuthorityCapability::try_from(*name).ok()
 }
 
-/// Generate an arbitrary `AuthoritySet`.
+/// Generate an arbitrary `AuthoritySet`, including the full (universe)
+/// set with low probability.
 pub fn arb_authority_set() -> impl Strategy<Value = AuthoritySet> {
-    proptest::collection::btree_set(0..CAP_NAMES.len(), 0..=CAP_NAMES.len()).prop_map(|indices| {
-        let mut set = AuthoritySet::new();
-        for cap in indices.into_iter().filter_map(cap_from_index) {
-            set.insert(cap);
-        }
-        set
-    })
+    prop_oneof![
+        9 => proptest::collection::btree_set(
+            0..CAP_NAMES.len(), 0..=CAP_NAMES.len(),
+        ).prop_map(|indices| {
+            let mut set = AuthoritySet::new();
+            for cap in indices.into_iter().filter_map(cap_from_index) {
+                set.insert(cap);
+            }
+            set
+        }),
+        1 => Just(AuthoritySet::full()),
+    ]
 }
 
 /// Generate an arbitrary `DependencySummary`.

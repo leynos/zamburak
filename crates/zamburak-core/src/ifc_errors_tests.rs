@@ -20,6 +20,10 @@ use super::IfcError;
     IfcError::ClosureStepBudgetExhausted { steps: 10_000, limit: 10_000 },
     &["10000"]
 )]
+#[case(
+    IfcError::DuplicateEdge { child: 3, parent: 1 },
+    &["duplicate", "3", "1"]
+)]
 fn error_display_contains_expected_strings(
     #[case] err: IfcError,
     #[case] expected_fragments: &[&str],

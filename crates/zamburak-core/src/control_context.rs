@@ -126,7 +126,9 @@ impl ExecutionContextSummary {
     /// The resulting summary has:
     /// - integrity from the PC label,
     /// - confidentiality from the PC label,
-    /// - empty authority (control context does not grant capabilities),
+    /// - full (universe) authority — the identity element for
+    ///   intersection-based joins, so that the control context does not
+    ///   erase operand capabilities,
     /// - origin count from the number of control dependencies,
     /// - truncated flag propagated from any truncated condition summaries.
     #[must_use]
@@ -135,7 +137,7 @@ impl ExecutionContextSummary {
         DependencySummary {
             integrity_join: self.pc_integrity,
             confidentiality_join: self.pc_confidentiality.clone(),
-            authority_join: AuthoritySet::new(),
+            authority_join: AuthoritySet::full(),
             origin_count,
             truncated: self.truncated,
         }

@@ -6,7 +6,7 @@
 //! budget marks the graph as truncated, triggering fail-closed
 //! conservative summaries downstream.
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet, VecDeque};
 
 use crate::ifc_errors::IfcError;
 use crate::trust::{AuthoritySet, DataLabels, IntegrityLabel};
@@ -137,9 +137,9 @@ pub struct ValueLabels {
 
 /// `ValueId`-keyed dependency DAG with budget enforcement.
 ///
-/// The graph is a directed acyclic graph by construction: values are
-/// created in temporal order, and dependencies can only point from newer
-/// values to pre-existing values. Self-loops are explicitly rejected.
+/// The graph is a directed acyclic graph enforced at insertion time:
+/// self-loops, duplicate edges, and transitive back-edges (cycles) are
+/// all rejected by `add_dependency`.
 ///
 /// # Examples
 ///
@@ -217,16 +217,18 @@ impl DependencyGraph {
 
     /// Add a direct dependency edge from `child` to `parent`.
     ///
-    /// Both value IDs must already exist in the graph. Self-loops
-    /// (`child == parent`) are rejected with `IfcError::CycleDetected`.
-    /// Duplicate parents are silently ignored (no budget consumed).
-    /// Exceeding the per-value parent budget returns
-    /// `IfcError::ParentBudgetExhausted`.
+    /// Both value IDs must already exist in the graph. The following
+    /// conditions are rejected:
     ///
-    /// The caller is responsible for maintaining the DAG invariant
-    /// (no general cycles). Values are intended to be inserted in
-    /// temporal order, with dependencies pointing from newer to
-    /// pre-existing values.
+    /// - **Self-loops** (`child == parent`) → `IfcError::CycleDetected`.
+    /// - **Duplicate edges** (parent already in child's parent list) →
+    ///   `IfcError::DuplicateEdge`.
+    /// - **Back-edges** (child is reachable from parent via existing
+    ///   edges) → `IfcError::CycleDetected`. The reachability check is
+    ///   bounded by `max_closure_steps`; if the budget is exhausted the
+    ///   edge is conservatively rejected and the graph is marked
+    ///   truncated.
+    /// - **Parent budget overflow** → `IfcError::ParentBudgetExhausted`.
     pub fn add_dependency(&mut self, child: ValueId, parent: ValueId) -> Result<(), IfcError> {
         if child == parent {
             return Err(IfcError::CycleDetected {
@@ -239,15 +241,28 @@ impl DependencyGraph {
             return Err(IfcError::UnknownValueId(*parent.inner()));
         }
 
+        if !self.nodes.contains_key(&child) {
+            return Err(IfcError::UnknownValueId(*child.inner()));
+        }
+
+        // Reject duplicate parent edges.
+        if let Some(child_node) = self.nodes.get(&child)
+            && child_node.parents.contains(&parent)
+        {
+            return Err(IfcError::DuplicateEdge {
+                child: *child.inner(),
+                parent: *parent.inner(),
+            });
+        }
+
+        // Cycle detection: BFS from parent upward to check if child is
+        // reachable. If it is, adding child→parent would create a cycle.
+        self.check_reachable(child, parent)?;
+
         let child_node = self
             .nodes
             .get_mut(&child)
             .ok_or(IfcError::UnknownValueId(*child.inner()))?;
-
-        // Silently skip duplicate parent edges to avoid wasting budget.
-        if child_node.parents.contains(&parent) {
-            return Ok(());
-        }
 
         let current = u64::try_from(child_node.parents.len()).unwrap_or(u64::MAX);
         if current >= self.budgets.max_parents_per_value {
@@ -260,6 +275,47 @@ impl DependencyGraph {
         }
 
         child_node.parents.push(parent);
+        Ok(())
+    }
+
+    /// BFS reachability check: is `target` reachable from `start` via
+    /// existing parent edges?
+    ///
+    /// If the closure-step budget is exhausted during traversal, the
+    /// graph is conservatively marked truncated and a `CycleDetected`
+    /// error is returned (fail-closed).
+    fn check_reachable(&mut self, target: ValueId, start: ValueId) -> Result<(), IfcError> {
+        let mut visited = HashSet::new();
+        let mut queue = VecDeque::new();
+        queue.push_back(start);
+        let mut steps: u64 = 0;
+
+        while let Some(current) = queue.pop_front() {
+            if !visited.insert(current) {
+                continue;
+            }
+
+            if current == target {
+                return Err(IfcError::CycleDetected {
+                    from: *target.inner(),
+                    to: *start.inner(),
+                });
+            }
+
+            steps = steps.saturating_add(1);
+            if steps > self.budgets.max_closure_steps {
+                self.truncated = true;
+                return Err(IfcError::CycleDetected {
+                    from: *target.inner(),
+                    to: *start.inner(),
+                });
+            }
+
+            if let Some(node) = self.nodes.get(&current) {
+                enqueue_parents_bfs(node, &mut queue);
+            }
+        }
+
         Ok(())
     }
 
@@ -291,6 +347,14 @@ impl DependencyGraph {
     #[must_use]
     pub const fn budgets(&self) -> &GraphBudgets {
         &self.budgets
+    }
+}
+
+/// Push all parent IDs of a node into a BFS queue for reachability
+/// checking.
+fn enqueue_parents_bfs(node: &ValueNode, queue: &mut VecDeque<ValueId>) {
+    for &parent_id in &node.parents {
+        queue.push_back(parent_id);
     }
 }
 

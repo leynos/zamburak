@@ -332,11 +332,9 @@ fn compute_summary_diamond_deduplicates() {
 
 #[test]
 fn compute_summary_budget_overflow_yields_unknown_top() {
-    let budgets = GraphBudgets {
-        max_closure_steps: 0,
-        ..GraphBudgets::default()
-    };
-    let mut graph = DependencyGraph::new(budgets);
+    // Build the graph with default budgets (cycle detection needs
+    // adequate max_closure_steps for edge insertion).
+    let mut graph = default_graph();
 
     graph
         .insert_value(
@@ -362,7 +360,13 @@ fn compute_summary_budget_overflow_yields_unknown_top() {
         .add_dependency(ValueId::new(2), ValueId::new(1))
         .expect("B->A");
 
-    let summary = compute_summary(&graph, &ValueId::new(2), &budgets)
+    // Compute summary with a zero closure-step budget to trigger
+    // unknown_top.
+    let tight_budgets = GraphBudgets {
+        max_closure_steps: 0,
+        ..GraphBudgets::default()
+    };
+    let summary = compute_summary(&graph, &ValueId::new(2), &tight_budgets)
         .expect("summary should succeed with unknown_top");
 
     assert_eq!(summary, DependencySummary::unknown_top());

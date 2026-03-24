@@ -41,12 +41,14 @@ fn given_default_graph(world: &mut IfcWorld) {
 
 #[given("a dependency graph with max_closure_steps 0")]
 fn given_zero_budget_graph(world: &mut IfcWorld) {
-    let budgets = GraphBudgets {
+    // Build the graph with default budgets so edges can be inserted
+    // (cycle detection needs adequate closure steps). The tight budget
+    // is stored separately and used only during compute_summary.
+    world.graph = Some(DependencyGraph::new(GraphBudgets::default()));
+    world.budgets = Some(GraphBudgets {
         max_closure_steps: 0,
         ..GraphBudgets::default()
-    };
-    world.graph = Some(DependencyGraph::new(budgets));
-    world.budgets = Some(budgets);
+    });
 }
 
 #[given("a fresh execution context")]

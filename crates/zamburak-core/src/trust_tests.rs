@@ -177,6 +177,31 @@ fn authority_set_join_with_empty_yields_empty() {
 }
 
 #[test]
+fn authority_set_full_is_identity_for_join() {
+    let non_empty = AuthoritySet::from_iter([cap("A"), cap("B")]);
+    let full = AuthoritySet::full();
+
+    assert_eq!(non_empty.join(&full), non_empty);
+    assert_eq!(full.join(&non_empty), non_empty);
+}
+
+#[test]
+fn authority_set_full_contains_any_capability() {
+    let full = AuthoritySet::full();
+    assert!(full.is_full());
+    assert!(!full.is_empty());
+    assert!(full.contains(&cap("Anything")));
+}
+
+#[test]
+fn authority_set_full_join_full_is_full() {
+    let a = AuthoritySet::full();
+    let b = AuthoritySet::full();
+    let joined = a.join(&b);
+    assert!(joined.is_full());
+}
+
+#[test]
 fn authority_set_insert_and_contains() {
     let mut set = AuthoritySet::new();
     let capability = cap("TestCap");
