@@ -377,5 +377,8 @@ fn compute_summary_missing_id_returns_error() {
     let graph = default_graph();
     let result = compute_summary(&graph, &ValueId::new(99), graph.budgets());
 
-    assert!(matches!(result, Err(crate::IfcError::UnknownValueId(99)),));
+    assert!(matches!(
+        result,
+        Err(crate::IfcError::UnknownValueId(id)) if id == ValueId::new(99)
+    ));
 }

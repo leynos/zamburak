@@ -134,9 +134,7 @@ pub fn compute_summary(
     id: &ValueId,
     budgets: &GraphBudgets,
 ) -> Result<DependencySummary, IfcError> {
-    let root_node = graph
-        .get_node(id)
-        .ok_or(IfcError::UnknownValueId(*id.inner()))?;
+    let root_node = graph.get_node(id).ok_or(IfcError::UnknownValueId(*id))?;
 
     if graph.is_truncated() {
         return Ok(DependencySummary::unknown_top());

@@ -285,8 +285,9 @@ diagnostics.
 
 `ifc_errors.rs` defines `IfcError`, a `thiserror`-derived enum with variants:
 `ValueBudgetExhausted`, `ParentBudgetExhausted`, `ClosureStepBudgetExhausted`,
-`UnknownValueId`, `CycleDetected`. All variants use primitive fields (`u64`) to
-stay under the `result_large_err` threshold.
+`UnknownValueId`, `DuplicateValueId`, `CycleDetected`, `DuplicateEdge`.
+Value-identifier fields use the `ValueId` newtype; count and limit fields use
+primitive `u64` to stay under the `result_large_err` threshold.
 
 Update `crates/zamburak-core/src/lib.rs` to declare the three new modules and
 add public re-exports.
@@ -312,7 +313,8 @@ Create `dependency_graph.rs` defining:
   `truncated: bool`. Operations:
   - `new(budgets)` — construct an empty graph,
   - `insert_value(id, labels: ValueLabels)` — checks `max_values`,
-    rejects duplicate IDs, sets `truncated` on overflow, returns
+    returns `Err(IfcError::DuplicateValueId)` if the ID already exists,
+    sets `truncated` on overflow and returns
     `Err(IfcError::ValueBudgetExhausted)`,
   - `add_dependency(child, parent)` — checks both IDs exist, rejects
     self-loops, checks `max_parents_per_value`, returns appropriate error,
@@ -343,7 +345,8 @@ Create `summary.rs` defining:
 - `compute_summary(graph, id, budgets)` — bounded breadth-first
   search (BFS) walk through parent edges. Returns `Ok(summary)` on success,
   `Ok(unknown_top())` when the graph is truncated or on closure-step budget
-  overflow, `Err(IfcError::UnknownValueId)` for missing root node.
+  overflow, `Err(IfcError::UnknownValueId)` if the root `id` is not present
+  in the graph.
 
 Unit tests cover: `from_node` base case, join correctness (integrity meets,
 confidentiality unions, authority intersects), truncation propagation,
@@ -565,7 +568,8 @@ Evidence to capture during implementation:
 In `crates/zamburak-core/src/value_id.rs`:
 
 ```rust
-pub type ValueId = value_id_newtype::ValueId; // wraps u64
+#[repr(transparent)]
+pub struct ValueId(u64); // transparent newtype wrapping u64
 ```
 
 In `crates/zamburak-core/src/trust.rs`:
@@ -582,10 +586,12 @@ In `crates/zamburak-core/src/ifc_errors.rs`:
 ```rust
 pub enum IfcError {
     ValueBudgetExhausted { current: u64, limit: u64 },
-    ParentBudgetExhausted { value_id: u64, current: u64, limit: u64 },
+    ParentBudgetExhausted { value_id: ValueId, current: u64, limit: u64 },
     ClosureStepBudgetExhausted { steps: u64, limit: u64 },
-    UnknownValueId(u64),
-    CycleDetected { from: u64, to: u64 },
+    UnknownValueId(ValueId),
+    DuplicateValueId(ValueId),
+    CycleDetected { from: ValueId, to: ValueId },
+    DuplicateEdge { child: ValueId, parent: ValueId },
 }
 ```
 

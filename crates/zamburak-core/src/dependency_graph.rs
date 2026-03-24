@@ -135,11 +135,13 @@ pub struct ValueLabels {
     pub authority: AuthoritySet,
 }
 
-/// `ValueId`-keyed dependency DAG with budget enforcement.
+/// `ValueId`-keyed dependency graph with budget enforcement.
 ///
-/// The graph is a directed acyclic graph enforced at insertion time:
-/// self-loops, duplicate edges, and transitive back-edges (cycles) are
-/// all rejected by `add_dependency`.
+/// The graph records directed dependencies between values and rejects
+/// self-loops, duplicate edges, and transitive back-edges (cycles) via
+/// `add_dependency`. Cycle detection is bounded by the closure-step
+/// budget; if the budget is exhausted during reachability checks, the
+/// edge is conservatively rejected to maintain fail-closed behaviour.
 ///
 /// # Examples
 ///
@@ -190,7 +192,7 @@ impl DependencyGraph {
     /// truncated when the value count would exceed `max_values`.
     pub fn insert_value(&mut self, id: ValueId, labels: ValueLabels) -> Result<(), IfcError> {
         if self.nodes.contains_key(&id) {
-            return Err(IfcError::DuplicateValueId(*id.inner()));
+            return Err(IfcError::DuplicateValueId(id));
         }
 
         let current = u64::try_from(self.nodes.len()).unwrap_or(u64::MAX);
@@ -232,27 +234,24 @@ impl DependencyGraph {
     pub fn add_dependency(&mut self, child: ValueId, parent: ValueId) -> Result<(), IfcError> {
         if child == parent {
             return Err(IfcError::CycleDetected {
-                from: *child.inner(),
-                to: *parent.inner(),
+                from: child,
+                to: parent,
             });
         }
 
         if !self.nodes.contains_key(&parent) {
-            return Err(IfcError::UnknownValueId(*parent.inner()));
+            return Err(IfcError::UnknownValueId(parent));
         }
 
         if !self.nodes.contains_key(&child) {
-            return Err(IfcError::UnknownValueId(*child.inner()));
+            return Err(IfcError::UnknownValueId(child));
         }
 
         // Reject duplicate parent edges.
         if let Some(child_node) = self.nodes.get(&child)
             && child_node.parents.contains(&parent)
         {
-            return Err(IfcError::DuplicateEdge {
-                child: *child.inner(),
-                parent: *parent.inner(),
-            });
+            return Err(IfcError::DuplicateEdge { child, parent });
         }
 
         // Cycle detection: BFS from parent upward to check if child is
@@ -262,13 +261,13 @@ impl DependencyGraph {
         let child_node = self
             .nodes
             .get_mut(&child)
-            .ok_or(IfcError::UnknownValueId(*child.inner()))?;
+            .ok_or(IfcError::UnknownValueId(child))?;
 
         let current = u64::try_from(child_node.parents.len()).unwrap_or(u64::MAX);
         if current >= self.budgets.max_parents_per_value {
             self.truncated = true;
             return Err(IfcError::ParentBudgetExhausted {
-                value_id: *child.inner(),
+                value_id: child,
                 current,
                 limit: self.budgets.max_parents_per_value,
             });
@@ -297,8 +296,8 @@ impl DependencyGraph {
 
             if current == target {
                 return Err(IfcError::CycleDetected {
-                    from: *target.inner(),
-                    to: *start.inner(),
+                    from: target,
+                    to: start,
                 });
             }
 
@@ -306,8 +305,8 @@ impl DependencyGraph {
             if steps > self.budgets.max_closure_steps {
                 self.truncated = true;
                 return Err(IfcError::CycleDetected {
-                    from: *target.inner(),
-                    to: *start.inner(),
+                    from: target,
+                    to: start,
                 });
             }
 

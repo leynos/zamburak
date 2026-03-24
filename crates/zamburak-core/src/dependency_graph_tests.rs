@@ -81,7 +81,10 @@ fn insert_value_duplicate_id_rejected(default_budgets: GraphBudgets) {
         },
     );
 
-    assert!(matches!(result, Err(IfcError::DuplicateValueId(1))));
+    assert!(matches!(
+        result,
+        Err(IfcError::DuplicateValueId(id)) if id == ValueId::new(1)
+    ));
     assert_eq!(graph.node_count(), 1);
     // Original node should be unchanged.
     let node = graph.get_node(&ValueId::new(1)).expect("node should exist");
@@ -141,8 +144,9 @@ fn add_dependency_self_loop_rejected(small_budgets: GraphBudgets) {
     let result = graph.add_dependency(ValueId::new(1), ValueId::new(1));
     assert!(matches!(
         result,
-        Err(IfcError::CycleDetected { from: 1, to: 1 })
-    ),);
+        Err(IfcError::CycleDetected { from, to })
+        if from == ValueId::new(1) && to == ValueId::new(1)
+    ));
 }
 
 #[rstest]
@@ -151,7 +155,10 @@ fn add_dependency_unknown_child(small_budgets: GraphBudgets) {
     insert_trusted(&mut graph, 1);
 
     let result = graph.add_dependency(ValueId::new(99), ValueId::new(1));
-    assert!(matches!(result, Err(IfcError::UnknownValueId(99))));
+    assert!(matches!(
+        result,
+        Err(IfcError::UnknownValueId(id)) if id == ValueId::new(99)
+    ));
 }
 
 #[rstest]
@@ -160,7 +167,10 @@ fn add_dependency_unknown_parent(small_budgets: GraphBudgets) {
     insert_trusted(&mut graph, 1);
 
     let result = graph.add_dependency(ValueId::new(1), ValueId::new(99));
-    assert!(matches!(result, Err(IfcError::UnknownValueId(99))));
+    assert!(matches!(
+        result,
+        Err(IfcError::UnknownValueId(id)) if id == ValueId::new(99)
+    ));
 }
 
 #[rstest]
@@ -201,10 +211,10 @@ fn add_dependency_parent_budget_exhaustion(small_budgets: GraphBudgets) {
     assert!(matches!(
         result,
         Err(IfcError::ParentBudgetExhausted {
-            value_id: 4,
+            value_id,
             current: 2,
             limit: 2,
-        })
+        }) if value_id == ValueId::new(4)
     ));
 }
 
@@ -221,10 +231,8 @@ fn add_dependency_duplicate_edge_rejected(default_budgets: GraphBudgets) {
     let result = graph.add_dependency(ValueId::new(2), ValueId::new(1));
     assert!(matches!(
         result,
-        Err(IfcError::DuplicateEdge {
-            child: 2,
-            parent: 1,
-        })
+        Err(IfcError::DuplicateEdge { child, parent })
+        if child == ValueId::new(2) && parent == ValueId::new(1)
     ));
 
     // Parent list should still have exactly one entry.
@@ -234,44 +242,45 @@ fn add_dependency_duplicate_edge_rejected(default_budgets: GraphBudgets) {
     assert_eq!(node.parents().len(), 1);
 }
 
-#[rstest]
-fn add_dependency_two_node_back_edge_rejected(default_budgets: GraphBudgets) {
-    let mut graph = DependencyGraph::new(default_budgets);
-    insert_trusted(&mut graph, 1);
-    insert_trusted(&mut graph, 2);
-
-    graph
-        .add_dependency(ValueId::new(2), ValueId::new(1))
-        .expect("forward edge should succeed");
-
-    // Adding 1→2 would create a cycle: 1→2→1.
-    let result = graph.add_dependency(ValueId::new(1), ValueId::new(2));
-    assert!(matches!(
-        result,
-        Err(IfcError::CycleDetected { from: 1, to: 2 })
-    ));
+struct CycleTestCase {
+    nodes: Vec<u64>,
+    forward_edges: Vec<(u64, u64)>,
+    closing_edge: (u64, u64),
+    expected: IfcError,
 }
 
 #[rstest]
-fn add_dependency_three_node_cycle_rejected(default_budgets: GraphBudgets) {
+#[case(CycleTestCase {
+    nodes: vec![1u64, 2],
+    forward_edges: vec![(2u64, 1u64)],
+    closing_edge: (1u64, 2u64),
+    expected: IfcError::CycleDetected {
+        from: ValueId::new(1),
+        to: ValueId::new(2),
+    },
+})]
+#[case(CycleTestCase {
+    nodes: vec![1u64, 2, 3],
+    forward_edges: vec![(2u64, 1u64), (3u64, 2u64)],
+    closing_edge: (1u64, 3u64),
+    expected: IfcError::CycleDetected {
+        from: ValueId::new(1),
+        to: ValueId::new(3),
+    },
+})]
+fn add_dependency_cycle_rejected(default_budgets: GraphBudgets, #[case] tc: CycleTestCase) {
     let mut graph = DependencyGraph::new(default_budgets);
-    insert_trusted(&mut graph, 1);
-    insert_trusted(&mut graph, 2);
-    insert_trusted(&mut graph, 3);
-
-    graph
-        .add_dependency(ValueId::new(2), ValueId::new(1))
-        .expect("edge 2→1");
-    graph
-        .add_dependency(ValueId::new(3), ValueId::new(2))
-        .expect("edge 3→2");
-
-    // Adding 1→3 would create a cycle: 1→3→2→1.
-    let result = graph.add_dependency(ValueId::new(1), ValueId::new(3));
-    assert!(matches!(
-        result,
-        Err(IfcError::CycleDetected { from: 1, to: 3 })
-    ));
+    for id in tc.nodes {
+        insert_trusted(&mut graph, id);
+    }
+    for (child, parent) in &tc.forward_edges {
+        graph
+            .add_dependency(ValueId::new(*child), ValueId::new(*parent))
+            .expect("forward edge should succeed");
+    }
+    let (child, parent) = tc.closing_edge;
+    let result = graph.add_dependency(ValueId::new(child), ValueId::new(parent));
+    assert_eq!(result, Err(tc.expected));
 }
 
 #[rstest]

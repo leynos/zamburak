@@ -42,9 +42,20 @@ pub fn arb_data_labels() -> impl Strategy<Value = DataLabels> {
 pub const CAP_NAMES: &[&str] = &["A", "B", "C", "D", "E"];
 
 /// Convert an index into a capability name.
-pub fn cap_from_index(i: usize) -> Option<AuthorityCapability> {
-    let name = CAP_NAMES.get(i)?;
-    AuthorityCapability::try_from(*name).ok()
+///
+/// # Panics
+///
+/// Panics if the index is out of bounds for `CAP_NAMES` or if the
+/// capability name fails to parse. This fail-fast behaviour ensures
+/// test infrastructure drift is caught immediately rather than
+/// silently weakening the generator.
+pub fn cap_from_index(i: usize) -> AuthorityCapability {
+    let name = CAP_NAMES
+        .get(i)
+        .unwrap_or_else(|| panic!("cap_from_index: index {i} out of bounds for CAP_NAMES"));
+    AuthorityCapability::try_from(*name).unwrap_or_else(|_| {
+        panic!("cap_from_index: failed to parse CAP_NAMES[{i}] = '{name}' as AuthorityCapability")
+    })
 }
 
 /// Generate an arbitrary `AuthoritySet`, including the full (universe)
@@ -55,8 +66,8 @@ pub fn arb_authority_set() -> impl Strategy<Value = AuthoritySet> {
             0..CAP_NAMES.len(), 0..=CAP_NAMES.len(),
         ).prop_map(|indices| {
             let mut set = AuthoritySet::new();
-            for cap in indices.into_iter().filter_map(cap_from_index) {
-                set.insert(cap);
+            for i in indices {
+                set.insert(cap_from_index(i));
             }
             set
         }),

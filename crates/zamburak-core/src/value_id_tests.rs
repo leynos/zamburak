@@ -36,14 +36,14 @@ fn value_id_inner_access() {
     assert_eq!(id.inner(), &999);
 }
 
+fn assert_clone<T: Clone + PartialEq>(value: T) -> T {
+    value.clone()
+}
+
 #[test]
 fn value_id_clone_and_copy() {
     let id = ValueId::new(7);
-    #[expect(
-        clippy::clone_on_copy,
-        reason = "Explicitly verifying Clone behaviour for ValueId"
-    )]
-    let cloned = id.clone();
+    let cloned = assert_clone(id);
     let copied = id;
 
     assert_eq!(id, cloned);

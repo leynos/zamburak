@@ -5,6 +5,8 @@
 
 use thiserror::Error;
 
+use crate::value_id::ValueId;
+
 /// Errors arising from IFC dependency graph operations.
 ///
 /// Budget-enforcement errors indicate that the graph has reached a
@@ -23,12 +25,13 @@ pub enum IfcError {
 
     /// The maximum number of parents for a single value has been reached.
     #[error(
-        "parent budget exhausted for value {value_id}: \
-         {current} parents, limit is {limit}"
+        "parent budget exhausted for value {}: \
+         {current} parents, limit is {limit}",
+        value_id.inner()
     )]
     ParentBudgetExhausted {
         /// Value whose parent budget is exhausted.
-        value_id: u64,
+        value_id: ValueId,
         /// Current number of parents for this value.
         current: u64,
         /// Maximum parents allowed by the budget.
@@ -48,33 +51,39 @@ pub enum IfcError {
     },
 
     /// A referenced value identifier is not present in the graph.
-    #[error("unknown value ID: {0}")]
-    UnknownValueId(u64),
+    #[error("unknown value ID: {}", _0.inner())]
+    UnknownValueId(ValueId),
 
     /// Attempted to insert a value with an identifier that already exists.
-    #[error("duplicate value ID: {0} already exists in the graph")]
-    DuplicateValueId(u64),
+    #[error("duplicate value ID: {} already exists in the graph", _0.inner())]
+    DuplicateValueId(ValueId),
 
     /// Adding the requested edge would create a cycle (self-loop or
     /// transitive back-edge).
     #[error(
-        "cycle detected: adding edge from {from} to {to} \
-         would create a cycle"
+        "cycle detected: adding edge from {} to {} \
+         would create a cycle",
+        from.inner(),
+        to.inner()
     )]
     CycleDetected {
         /// Source (child) value identifier.
-        from: u64,
+        from: ValueId,
         /// Target (parent) value identifier.
-        to: u64,
+        to: ValueId,
     },
 
     /// The requested parent edge already exists for this child.
-    #[error("duplicate edge: parent {parent} already exists for child {child}")]
+    #[error(
+        "duplicate edge: parent {} already exists for child {}",
+        parent.inner(),
+        child.inner()
+    )]
     DuplicateEdge {
         /// Child value identifier.
-        child: u64,
+        child: ValueId,
         /// Parent value identifier that is already present.
-        parent: u64,
+        parent: ValueId,
     },
 }
 
