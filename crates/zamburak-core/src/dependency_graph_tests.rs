@@ -60,6 +60,27 @@ fn insert_value_preserves_labels() {
 }
 
 #[test]
+fn insert_value_duplicate_id_rejected() {
+    let mut graph = DependencyGraph::new(GraphBudgets::default());
+    insert_trusted(&mut graph, 1);
+
+    let result = graph.insert_value(
+        ValueId::new(1),
+        ValueLabels {
+            integrity: IntegrityLabel::Untrusted,
+            confidentiality: DataLabels::from_iter([DataLabel::Pii]),
+            authority: AuthoritySet::new(),
+        },
+    );
+
+    assert!(matches!(result, Err(IfcError::DuplicateValueId(1))));
+    assert_eq!(graph.node_count(), 1);
+    // Original node should be unchanged.
+    let node = graph.get_node(&ValueId::new(1)).expect("node should exist");
+    assert_eq!(node.integrity(), IntegrityLabel::Trusted);
+}
+
+#[test]
 fn insert_value_budget_exhaustion() {
     let mut graph = DependencyGraph::new(small_budgets());
     insert_trusted(&mut graph, 1);

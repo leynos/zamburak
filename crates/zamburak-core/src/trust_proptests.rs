@@ -4,55 +4,8 @@
 use proptest::prelude::*;
 use rstest::rstest;
 
-use super::{AuthoritySet, DataLabel, DataLabels, IntegrityLabel};
-use crate::AuthorityCapability;
-
-// ---------------------------------------------------------------------------
-// Arbitrary implementations
-// ---------------------------------------------------------------------------
-
-fn arb_integrity_label() -> impl Strategy<Value = IntegrityLabel> {
-    prop_oneof![
-        Just(IntegrityLabel::Untrusted),
-        Just(IntegrityLabel::Trusted),
-        Just(IntegrityLabel::Verified),
-    ]
-}
-
-fn arb_data_label() -> impl Strategy<Value = DataLabel> {
-    prop_oneof![
-        Just(DataLabel::Pii),
-        Just(DataLabel::AuthSecret),
-        Just(DataLabel::PrivateEmailBody),
-        Just(DataLabel::PaymentInstrument),
-        Just(DataLabel::InternalPolicyNote),
-    ]
-}
-
-fn arb_data_labels() -> impl Strategy<Value = DataLabels> {
-    proptest::collection::btree_set(arb_data_label(), 0..=5).prop_map(|set| {
-        let labels: Vec<DataLabel> = set.into_iter().collect();
-        DataLabels::from_iter(labels)
-    })
-}
-
-/// Small alphabet for authority capability names.
-const CAP_NAMES: &[&str] = &["A", "B", "C", "D", "E", "F", "G", "H"];
-
-fn cap_from_index(i: usize) -> Option<AuthorityCapability> {
-    let name = CAP_NAMES.get(i)?;
-    AuthorityCapability::try_from(*name).ok()
-}
-
-fn arb_authority_set() -> impl Strategy<Value = AuthoritySet> {
-    proptest::collection::btree_set(0..CAP_NAMES.len(), 0..=CAP_NAMES.len()).prop_map(|indices| {
-        let mut set = AuthoritySet::new();
-        for cap in indices.into_iter().filter_map(cap_from_index) {
-            set.insert(cap);
-        }
-        set
-    })
-}
+use super::IntegrityLabel;
+use crate::ifc_test_strategies::{arb_authority_set, arb_data_labels, arb_integrity_label};
 
 // ---------------------------------------------------------------------------
 // IntegrityLabel lattice laws (proptest)

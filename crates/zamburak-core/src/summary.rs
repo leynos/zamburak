@@ -107,15 +107,19 @@ impl DependencySummary {
 ///
 /// ```
 /// use zamburak_core::{
-///     DependencyGraph, GraphBudgets, ValueId, IntegrityLabel,
-///     DataLabels, AuthoritySet, DependencySummary,
+///     DependencyGraph, GraphBudgets, ValueId, ValueLabels,
+///     IntegrityLabel, DataLabels, AuthoritySet, DependencySummary,
 ///     summary::compute_summary,
 /// };
 ///
 /// let mut graph = DependencyGraph::new(GraphBudgets::default());
 /// graph.insert_value(
-///     ValueId::new(1), IntegrityLabel::Trusted,
-///     DataLabels::new(), AuthoritySet::new(),
+///     ValueId::new(1),
+///     ValueLabels {
+///         integrity: IntegrityLabel::Trusted,
+///         confidentiality: DataLabels::new(),
+///         authority: AuthoritySet::new(),
+///     },
 /// ).expect("insert failed");
 ///
 /// let summary = compute_summary(

@@ -168,9 +168,15 @@ impl DependencyGraph {
 
     /// Insert a new value node into the graph.
     ///
-    /// Returns `Err(IfcError::ValueBudgetExhausted)` and marks the graph
-    /// as truncated when the value count would exceed `max_values`.
+    /// Returns `Err(IfcError::DuplicateValueId)` if a node with the given
+    /// `id` already exists in the graph. Returns
+    /// `Err(IfcError::ValueBudgetExhausted)` and marks the graph as
+    /// truncated when the value count would exceed `max_values`.
     pub fn insert_value(&mut self, id: ValueId, labels: ValueLabels) -> Result<(), IfcError> {
+        if self.nodes.contains_key(&id) {
+            return Err(IfcError::DuplicateValueId(*id.inner()));
+        }
+
         let current = u64::try_from(self.nodes.len()).unwrap_or(u64::MAX);
         if current >= self.budgets.max_values {
             self.truncated = true;

@@ -10,8 +10,8 @@ Status: DRAFT
 ## Purpose / big picture
 
 Implement roadmap Task 0.6.2: add information-flow control (IFC) foundation
-types and a `ValueId`-keyed dependency DAG to `crates/zamburak-core`. After
-this change, a consumer of the Zamburak library can:
+types and a `ValueId`-keyed directed acyclic graph (DAG) of dependencies to
+`crates/zamburak-core`. After this change, a consumer of the Zamburak library can:
 
 - create opaque `ValueId` identifiers for runtime values,
 - build a bounded dependency DAG with budget-enforced edge insertion,
@@ -346,7 +346,7 @@ Create `summary.rs` defining:
     origin_count = saturating_add, truncated = or,
   - `unknown_top()` — conservative fail-closed summary: `Untrusted`,
     `DataLabels::all()`, empty `AuthoritySet`, `u32::MAX`, `true`.
-- `compute_summary(graph, id, budgets)` — bounded BFS walk through parent edges.
+- `compute_summary(graph, id, budgets)` — bounded breadth-first search (BFS) walk through parent edges.
   Returns `Ok(summary)` on success, `Ok(unknown_top())` on closure-step budget
   overflow, `Err(IfcError::UnknownValueId)` for missing root node.
 

@@ -51,6 +51,10 @@ pub enum IfcError {
     #[error("unknown value ID: {0}")]
     UnknownValueId(u64),
 
+    /// Attempted to insert a value with an identifier that already exists.
+    #[error("duplicate value ID: {0} already exists in the graph")]
+    DuplicateValueId(u64),
+
     /// Adding the requested edge would create a self-loop.
     #[error(
         "cycle detected: adding edge from {from} to {to} \

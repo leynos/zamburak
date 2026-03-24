@@ -68,24 +68,16 @@ pub fn propagate_labels(
     operands: &[DependencySummary],
     context: &ExecutionContextSummary,
 ) -> Option<DependencySummary> {
-    let data_summary = operands
-        .iter()
-        .skip(1)
-        .fold(operands.first().cloned(), |acc, op| {
-            Some(match acc {
-                Some(a) => a.join(op),
-                None => op.clone(),
-            })
-        });
+    let data_summary = operands.iter().cloned().reduce(|acc, op| acc.join(&op));
 
     match mode {
         PropagationMode::Normal => data_summary,
         PropagationMode::Strict => {
             let ctx_summary = context.as_summary();
-            match data_summary {
-                Some(ds) => Some(ds.join(&ctx_summary)),
-                None => Some(ctx_summary),
-            }
+            Some(match data_summary {
+                Some(ds) => ds.join(&ctx_summary),
+                None => ctx_summary,
+            })
         }
     }
 }

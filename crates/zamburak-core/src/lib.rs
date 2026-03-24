@@ -23,3 +23,6 @@ pub use ifc_errors::IfcError;
 pub use summary::DependencySummary;
 pub use trust::{AuthoritySet, DataLabel, DataLabels, IntegrityLabel};
 pub use value_id::ValueId;
+
+#[cfg(test)]
+pub mod ifc_test_strategies;

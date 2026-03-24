@@ -32,6 +32,17 @@ fn unknown_value_id_display() {
 }
 
 #[test]
+fn duplicate_value_id_display() {
+    let err = IfcError::DuplicateValueId(42);
+    let msg = format!("{err}");
+    assert!(msg.contains("42"), "message should contain ID: {msg}");
+    assert!(
+        msg.contains("duplicate"),
+        "message should mention duplicate: {msg}"
+    );
+}
+
+#[test]
 fn cycle_detected_display() {
     let err = IfcError::CycleDetected { from: 1, to: 1 };
     let msg = format!("{err}");
