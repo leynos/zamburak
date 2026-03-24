@@ -4,7 +4,7 @@ use proptest::prelude::*;
 
 use super::{PropagationMode, propagate_labels};
 use crate::control_context::ExecutionContextSummary;
-use crate::ifc_test_strategies::{arb_authority_set, arb_data_labels, arb_integrity_label};
+use crate::ifc_test_strategies::{arb_data_labels, arb_integrity_label, arb_summary};
 use crate::summary::DependencySummary;
 use crate::trust::AuthoritySet;
 use crate::value_id::ValueId;
@@ -12,25 +12,6 @@ use crate::value_id::ValueId;
 // ---------------------------------------------------------------------------
 // Arbitrary strategies
 // ---------------------------------------------------------------------------
-
-fn arb_summary() -> impl Strategy<Value = DependencySummary> {
-    (
-        arb_integrity_label(),
-        arb_data_labels(),
-        arb_authority_set(),
-        0..100u32,
-        any::<bool>(),
-    )
-        .prop_map(
-            |(integrity, confidentiality, authority, count, trunc)| DependencySummary {
-                integrity_join: integrity,
-                confidentiality_join: confidentiality,
-                authority_join: authority,
-                origin_count: count,
-                truncated: trunc,
-            },
-        )
-}
 
 fn arb_context() -> impl Strategy<Value = ExecutionContextSummary> {
     (arb_integrity_label(), arb_data_labels()).prop_map(|(integrity, confidentiality)| {

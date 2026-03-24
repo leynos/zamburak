@@ -65,7 +65,8 @@ impl EffectCounters {
 ///
 /// Tracks the program-counter (PC) integrity and confidentiality
 /// labels from control-flow conditions, the set of control
-/// dependencies (condition `ValueId`s), and effect counters.
+/// dependencies (condition `ValueId`s), effect counters, and a
+/// truncation flag inherited from condition summaries.
 ///
 /// # Examples
 ///
@@ -86,12 +87,14 @@ pub struct ExecutionContextSummary {
     control_dependencies: Vec<ValueId>,
     /// Effect invocation counters.
     effect_counters: EffectCounters,
+    /// Whether any condition summary was truncated.
+    truncated: bool,
 }
 
 impl ExecutionContextSummary {
     /// Create a fresh execution context with verified integrity,
-    /// no confidentiality labels, no control dependencies, and zero
-    /// effect counters.
+    /// no confidentiality labels, no control dependencies, zero
+    /// effect counters, and not truncated.
     #[must_use]
     pub fn new() -> Self {
         Self {
@@ -99,20 +102,22 @@ impl ExecutionContextSummary {
             pc_confidentiality: DataLabels::new(),
             control_dependencies: Vec::new(),
             effect_counters: EffectCounters::new(),
+            truncated: false,
         }
     }
 
     /// Push a condition's dependency summary into this context.
     ///
     /// Joins the condition's integrity and confidentiality labels into
-    /// the PC labels and records the condition's value ID as a control
-    /// dependency.
+    /// the PC labels, records the condition's value ID as a control
+    /// dependency, and propagates any truncation flag.
     pub fn push_condition(&mut self, condition_id: ValueId, condition_summary: &DependencySummary) {
         self.pc_integrity = self.pc_integrity.join(condition_summary.integrity_join);
         self.pc_confidentiality = self
             .pc_confidentiality
             .join(&condition_summary.confidentiality_join);
         self.control_dependencies.push(condition_id);
+        self.truncated = self.truncated || condition_summary.truncated;
     }
 
     /// Convert this context into a `DependencySummary` for strict-mode
@@ -123,7 +128,7 @@ impl ExecutionContextSummary {
     /// - confidentiality from the PC label,
     /// - empty authority (control context does not grant capabilities),
     /// - origin count from the number of control dependencies,
-    /// - not truncated.
+    /// - truncated flag propagated from any truncated condition summaries.
     #[must_use]
     pub fn as_summary(&self) -> DependencySummary {
         let origin_count = u32::try_from(self.control_dependencies.len()).unwrap_or(u32::MAX);
@@ -132,7 +137,7 @@ impl ExecutionContextSummary {
             confidentiality_join: self.pc_confidentiality.clone(),
             authority_join: AuthoritySet::new(),
             origin_count,
-            truncated: false,
+            truncated: self.truncated,
         }
     }
 

@@ -57,3 +57,24 @@ pub fn arb_authority_set() -> impl Strategy<Value = AuthoritySet> {
         set
     })
 }
+
+/// Generate an arbitrary `DependencySummary`.
+pub fn arb_summary() -> impl Strategy<Value = crate::summary::DependencySummary> {
+    use crate::summary::DependencySummary;
+    (
+        arb_integrity_label(),
+        arb_data_labels(),
+        arb_authority_set(),
+        0..100u32,
+        any::<bool>(),
+    )
+        .prop_map(
+            |(integrity, confidentiality, authority, count, trunc)| DependencySummary {
+                integrity_join: integrity,
+                confidentiality_join: confidentiality,
+                authority_join: authority,
+                origin_count: count,
+                truncated: trunc,
+            },
+        )
+}

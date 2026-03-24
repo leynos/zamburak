@@ -153,13 +153,13 @@ pub fn compute_summary(
     let mut steps: u64 = 0;
 
     while let Some(parent_id) = queue.pop_front() {
+        if !visited.insert(parent_id) {
+            continue;
+        }
+
         steps = steps.saturating_add(1);
         if steps > budgets.max_closure_steps {
             return Ok(DependencySummary::unknown_top());
-        }
-
-        if !visited.insert(parent_id) {
-            continue;
         }
 
         if let Some(parent_node) = graph.get_node(&parent_id) {

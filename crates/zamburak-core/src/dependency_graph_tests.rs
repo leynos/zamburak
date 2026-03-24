@@ -1,11 +1,14 @@
 //! Unit tests for the `ValueId`-keyed dependency graph.
 
+use rstest::*;
+
 use crate::ifc_errors::IfcError;
 use crate::trust::{AuthoritySet, DataLabel, DataLabels, IntegrityLabel};
 use crate::value_id::ValueId;
 
 use super::{DependencyGraph, GraphBudgets, ValueLabels};
 
+#[fixture]
 fn small_budgets() -> GraphBudgets {
     GraphBudgets {
         max_values: 3,
@@ -13,6 +16,11 @@ fn small_budgets() -> GraphBudgets {
         max_closure_steps: 10,
         max_witness_depth: 4,
     }
+}
+
+#[fixture]
+fn default_budgets() -> GraphBudgets {
+    GraphBudgets::default()
 }
 
 fn insert_trusted(graph: &mut DependencyGraph, id: u64) {
@@ -28,9 +36,9 @@ fn insert_trusted(graph: &mut DependencyGraph, id: u64) {
         .expect("insert should succeed in test");
 }
 
-#[test]
-fn insert_value_happy_path() {
-    let mut graph = DependencyGraph::new(small_budgets());
+#[rstest]
+fn insert_value_happy_path(small_budgets: GraphBudgets) {
+    let mut graph = DependencyGraph::new(small_budgets);
     insert_trusted(&mut graph, 1);
 
     assert_eq!(graph.node_count(), 1);
@@ -38,9 +46,9 @@ fn insert_value_happy_path() {
     assert!(!graph.contains(&ValueId::new(99)));
 }
 
-#[test]
-fn insert_value_preserves_labels() {
-    let mut graph = DependencyGraph::new(GraphBudgets::default());
+#[rstest]
+fn insert_value_preserves_labels(default_budgets: GraphBudgets) {
+    let mut graph = DependencyGraph::new(default_budgets);
     let confidentiality = DataLabels::from_iter([DataLabel::Pii, DataLabel::AuthSecret]);
 
     graph
@@ -59,9 +67,9 @@ fn insert_value_preserves_labels() {
     assert_eq!(node.confidentiality(), &confidentiality);
 }
 
-#[test]
-fn insert_value_duplicate_id_rejected() {
-    let mut graph = DependencyGraph::new(GraphBudgets::default());
+#[rstest]
+fn insert_value_duplicate_id_rejected(default_budgets: GraphBudgets) {
+    let mut graph = DependencyGraph::new(default_budgets);
     insert_trusted(&mut graph, 1);
 
     let result = graph.insert_value(
@@ -80,9 +88,9 @@ fn insert_value_duplicate_id_rejected() {
     assert_eq!(node.integrity(), IntegrityLabel::Trusted);
 }
 
-#[test]
-fn insert_value_budget_exhaustion() {
-    let mut graph = DependencyGraph::new(small_budgets());
+#[rstest]
+fn insert_value_budget_exhaustion(small_budgets: GraphBudgets) {
+    let mut graph = DependencyGraph::new(small_budgets);
     insert_trusted(&mut graph, 1);
     insert_trusted(&mut graph, 2);
     insert_trusted(&mut graph, 3);
@@ -109,9 +117,9 @@ fn insert_value_budget_exhaustion() {
     assert_eq!(graph.node_count(), 3);
 }
 
-#[test]
-fn add_dependency_happy_path() {
-    let mut graph = DependencyGraph::new(small_budgets());
+#[rstest]
+fn add_dependency_happy_path(small_budgets: GraphBudgets) {
+    let mut graph = DependencyGraph::new(small_budgets);
     insert_trusted(&mut graph, 1);
     insert_trusted(&mut graph, 2);
 
@@ -125,9 +133,9 @@ fn add_dependency_happy_path() {
     assert_eq!(child.parents(), &[ValueId::new(1)]);
 }
 
-#[test]
-fn add_dependency_self_loop_rejected() {
-    let mut graph = DependencyGraph::new(small_budgets());
+#[rstest]
+fn add_dependency_self_loop_rejected(small_budgets: GraphBudgets) {
+    let mut graph = DependencyGraph::new(small_budgets);
     insert_trusted(&mut graph, 1);
 
     let result = graph.add_dependency(ValueId::new(1), ValueId::new(1));
@@ -137,27 +145,27 @@ fn add_dependency_self_loop_rejected() {
     ),);
 }
 
-#[test]
-fn add_dependency_unknown_child() {
-    let mut graph = DependencyGraph::new(small_budgets());
+#[rstest]
+fn add_dependency_unknown_child(small_budgets: GraphBudgets) {
+    let mut graph = DependencyGraph::new(small_budgets);
     insert_trusted(&mut graph, 1);
 
     let result = graph.add_dependency(ValueId::new(99), ValueId::new(1));
     assert!(matches!(result, Err(IfcError::UnknownValueId(99))));
 }
 
-#[test]
-fn add_dependency_unknown_parent() {
-    let mut graph = DependencyGraph::new(small_budgets());
+#[rstest]
+fn add_dependency_unknown_parent(small_budgets: GraphBudgets) {
+    let mut graph = DependencyGraph::new(small_budgets);
     insert_trusted(&mut graph, 1);
 
     let result = graph.add_dependency(ValueId::new(1), ValueId::new(99));
     assert!(matches!(result, Err(IfcError::UnknownValueId(99))));
 }
 
-#[test]
-fn add_dependency_parent_budget_exhaustion() {
-    let mut graph = DependencyGraph::new(small_budgets());
+#[rstest]
+fn add_dependency_parent_budget_exhaustion(small_budgets: GraphBudgets) {
+    let mut graph = DependencyGraph::new(small_budgets);
     insert_trusted(&mut graph, 1);
     insert_trusted(&mut graph, 2);
     insert_trusted(&mut graph, 3);
@@ -175,7 +183,7 @@ fn add_dependency_parent_budget_exhaustion() {
     let mut bigger = DependencyGraph::new(GraphBudgets {
         max_values: 10,
         max_parents_per_value: 2,
-        ..small_budgets()
+        ..small_budgets
     });
     insert_trusted(&mut bigger, 1);
     insert_trusted(&mut bigger, 2);
@@ -200,9 +208,9 @@ fn add_dependency_parent_budget_exhaustion() {
     ));
 }
 
-#[test]
-fn node_count_tracks_insertions() {
-    let mut graph = DependencyGraph::new(GraphBudgets::default());
+#[rstest]
+fn node_count_tracks_insertions(default_budgets: GraphBudgets) {
+    let mut graph = DependencyGraph::new(default_budgets);
     assert_eq!(graph.node_count(), 0);
 
     insert_trusted(&mut graph, 1);
@@ -212,15 +220,15 @@ fn node_count_tracks_insertions() {
     assert_eq!(graph.node_count(), 2);
 }
 
-#[test]
-fn get_node_returns_none_for_missing_id() {
-    let graph = DependencyGraph::new(GraphBudgets::default());
+#[rstest]
+fn get_node_returns_none_for_missing_id(default_budgets: GraphBudgets) {
+    let graph = DependencyGraph::new(default_budgets);
     assert!(graph.get_node(&ValueId::new(1)).is_none());
 }
 
-#[test]
-fn multiple_parents_recorded_in_order() {
-    let mut graph = DependencyGraph::new(GraphBudgets::default());
+#[rstest]
+fn multiple_parents_recorded_in_order(default_budgets: GraphBudgets) {
+    let mut graph = DependencyGraph::new(default_budgets);
     insert_trusted(&mut graph, 10);
     insert_trusted(&mut graph, 20);
     insert_trusted(&mut graph, 30);

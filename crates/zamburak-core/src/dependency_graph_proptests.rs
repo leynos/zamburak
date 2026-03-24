@@ -100,12 +100,14 @@ proptest! {
             let _ = graph.add_dependency(ValueId::new(child_id), ValueId::new(i));
         }
 
-        if let Some(node) = graph.get_node(&ValueId::new(child_id)) {
-            let parent_count = u64::try_from(node.parents().len()).unwrap_or(u64::MAX);
-            prop_assert!(
-                parent_count <= max_parents,
-                "parent count {parent_count} exceeded budget {max_parents}",
-            );
-        }
+        let node = graph
+            .get_node(&ValueId::new(child_id))
+            .expect(&format!("child node {child_id} should exist"));
+        let parent_count = u64::try_from(node.parents().len())
+            .expect(&format!("parent count for child {child_id} should fit in u64"));
+        prop_assert!(
+            parent_count <= max_parents,
+            "parent count {parent_count} exceeded budget {max_parents}",
+        );
     }
 }

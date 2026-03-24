@@ -5,32 +5,11 @@ use proptest::prelude::*;
 
 use super::{DependencySummary, compute_summary};
 use crate::dependency_graph::{DependencyGraph, GraphBudgets, ValueLabels};
-use crate::ifc_test_strategies::{arb_authority_set, arb_data_labels, arb_integrity_label};
+use crate::ifc_test_strategies::{
+    arb_authority_set, arb_data_labels, arb_integrity_label, arb_summary,
+};
 use crate::trust::{AuthoritySet, DataLabels, IntegrityLabel};
 use crate::value_id::ValueId;
-
-// ---------------------------------------------------------------------------
-// Arbitrary strategies
-// ---------------------------------------------------------------------------
-
-fn arb_summary() -> impl Strategy<Value = DependencySummary> {
-    (
-        arb_integrity_label(),
-        arb_data_labels(),
-        arb_authority_set(),
-        0..100u32,
-        any::<bool>(),
-    )
-        .prop_map(
-            |(integrity, confidentiality, authority, count, trunc)| DependencySummary {
-                integrity_join: integrity,
-                confidentiality_join: confidentiality,
-                authority_join: authority,
-                origin_count: count,
-                truncated: trunc,
-            },
-        )
-}
 
 // ---------------------------------------------------------------------------
 // DependencySummary join algebraic laws

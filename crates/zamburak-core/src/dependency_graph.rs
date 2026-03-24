@@ -114,8 +114,24 @@ impl ValueNode {
 /// ```
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct ValueLabels {
+    /// Integrity level of the value.
+    ///
+    /// Tracks the trustworthiness of the value's source, where
+    /// `Verified` is strongest, `Trusted` is moderate, and
+    /// `Untrusted` is weakest.
     pub integrity: IntegrityLabel,
+
+    /// Confidentiality classification set.
+    ///
+    /// Tracks which confidentiality labels (e.g., PII, auth secrets)
+    /// are associated with the value. Labels accumulate through
+    /// dependency joins.
     pub confidentiality: DataLabels,
+
+    /// Authority capability set.
+    ///
+    /// Tracks which capabilities the value possesses. Capabilities
+    /// narrow (intersect) through dependency joins.
     pub authority: AuthoritySet,
 }
 

@@ -57,16 +57,20 @@ const ALL_LABELS: [IntegrityLabel; 3] = [
 ];
 
 #[rstest]
-#[case(IntegrityLabel::Untrusted, IntegrityLabel::Untrusted)]
-#[case(IntegrityLabel::Untrusted, IntegrityLabel::Trusted)]
-#[case(IntegrityLabel::Untrusted, IntegrityLabel::Verified)]
-#[case(IntegrityLabel::Trusted, IntegrityLabel::Untrusted)]
-#[case(IntegrityLabel::Trusted, IntegrityLabel::Trusted)]
-#[case(IntegrityLabel::Trusted, IntegrityLabel::Verified)]
-#[case(IntegrityLabel::Verified, IntegrityLabel::Untrusted)]
-#[case(IntegrityLabel::Verified, IntegrityLabel::Trusted)]
-#[case(IntegrityLabel::Verified, IntegrityLabel::Verified)]
-fn exhaustive_join_commutativity(#[case] a: IntegrityLabel, #[case] b: IntegrityLabel) {
+fn exhaustive_join_commutativity(
+    #[values(
+        IntegrityLabel::Untrusted,
+        IntegrityLabel::Trusted,
+        IntegrityLabel::Verified
+    )]
+    a: IntegrityLabel,
+    #[values(
+        IntegrityLabel::Untrusted,
+        IntegrityLabel::Trusted,
+        IntegrityLabel::Verified
+    )]
+    b: IntegrityLabel,
+) {
     assert_eq!(a.join(b), b.join(a));
 }
 
