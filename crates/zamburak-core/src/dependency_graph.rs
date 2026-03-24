@@ -224,6 +224,7 @@ impl DependencyGraph {
 
         let current = u64::try_from(child_node.parents.len()).unwrap_or(u64::MAX);
         if current >= self.budgets.max_parents_per_value {
+            self.truncated = true;
             return Err(IfcError::ParentBudgetExhausted {
                 value_id: *child.inner(),
                 current,

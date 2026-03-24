@@ -138,11 +138,11 @@ pub fn compute_summary(
         .get_node(id)
         .ok_or(IfcError::UnknownValueId(*id.inner()))?;
 
-    let mut summary = DependencySummary::from_node(root_node);
-
     if graph.is_truncated() {
-        summary.truncated = true;
+        return Ok(DependencySummary::unknown_top());
     }
+
+    let mut summary = DependencySummary::from_node(root_node);
 
     let mut visited = HashSet::new();
     visited.insert(*id);
