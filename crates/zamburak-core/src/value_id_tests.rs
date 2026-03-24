@@ -26,7 +26,7 @@ fn value_id_display() {
     let id = ValueId::new(42);
     let displayed = format!("{id}");
 
-    // newt-hype derives Display forwarding to the inner type.
+    // Display forwards to the inner u64.
     assert_eq!(displayed, "42");
 }
 

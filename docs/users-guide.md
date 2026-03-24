@@ -164,7 +164,8 @@ records integrity, confidentiality, and authority labels plus a list of parent
 
 - `max_values`: maximum number of value nodes,
 - `max_parents_per_value`: maximum parent edges per node,
-- `max_closure_steps`: maximum breadth-first search (BFS) steps during transitive summary computation.
+- `max_closure_steps`: maximum breadth-first search (BFS) steps
+  during transitive summary computation.
 
 Budget overflow is fail-closed: the graph marks itself as truncated and
 `compute_summary` returns `DependencySummary::unknown_top()` (conservative
@@ -172,10 +173,11 @@ worst-case labels).
 
 ### Transitive dependency summary
 
-`compute_summary(&graph, &id, &budgets)` performs a bounded breadth-first search (BFS) walk through
-parent edges, joining all reachable node labels into a `DependencySummary`. The
-summary captures integrity (greatest lower bound), confidentiality (union),
-authority (intersection), origin count, and a truncation flag.
+`compute_summary(&graph, &id, &budgets)` performs a bounded breadth-first
+search (BFS) walk through parent edges, joining all reachable node labels into
+a `DependencySummary`. The summary captures integrity (greatest lower bound),
+confidentiality (union), authority (intersection), origin count, and a
+truncation flag.
 
 ### Propagation modes
 

@@ -219,8 +219,14 @@ impl DependencyGraph {
     ///
     /// Both value IDs must already exist in the graph. Self-loops
     /// (`child == parent`) are rejected with `IfcError::CycleDetected`.
+    /// Duplicate parents are silently ignored (no budget consumed).
     /// Exceeding the per-value parent budget returns
     /// `IfcError::ParentBudgetExhausted`.
+    ///
+    /// The caller is responsible for maintaining the DAG invariant
+    /// (no general cycles). Values are intended to be inserted in
+    /// temporal order, with dependencies pointing from newer to
+    /// pre-existing values.
     pub fn add_dependency(&mut self, child: ValueId, parent: ValueId) -> Result<(), IfcError> {
         if child == parent {
             return Err(IfcError::CycleDetected {
@@ -237,6 +243,11 @@ impl DependencyGraph {
             .nodes
             .get_mut(&child)
             .ok_or(IfcError::UnknownValueId(*child.inner()))?;
+
+        // Silently skip duplicate parent edges to avoid wasting budget.
+        if child_node.parents.contains(&parent) {
+            return Ok(());
+        }
 
         let current = u64::try_from(child_node.parents.len()).unwrap_or(u64::MAX);
         if current >= self.budgets.max_parents_per_value {

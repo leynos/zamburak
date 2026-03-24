@@ -102,9 +102,9 @@ proptest! {
 
         let node = graph
             .get_node(&ValueId::new(child_id))
-            .expect(&format!("child node {child_id} should exist"));
+            .unwrap_or_else(|| panic!("child node {child_id} should exist"));
         let parent_count = u64::try_from(node.parents().len())
-            .expect(&format!("parent count for child {child_id} should fit in u64"));
+            .unwrap_or_else(|_| panic!("parent count for child {child_id} should fit in u64"));
         prop_assert!(
             parent_count <= max_parents,
             "parent count {parent_count} exceeded budget {max_parents}",

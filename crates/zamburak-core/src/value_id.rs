@@ -4,18 +4,7 @@
 //! in `full-monty`. Values are host-only identifiers: they are not
 //! guest-writable and carry no policy meaning on their own.
 
-#[expect(
-    clippy::expl_impl_clone_on_copy,
-    reason = "newt-hype macro expansion emits explicit Clone for Copy wrappers"
-)]
-mod value_id_newtype {
-    //! Newtype wrapper for `ValueId` generated via `newt-hype`.
-
-    use newt_hype::{base_newtype, newtype};
-
-    base_newtype!(ValueIdBase);
-    newtype!(ValueId, ValueIdBase, u64);
-}
+use std::fmt;
 
 /// Opaque identifier for a runtime value in the IFC dependency graph.
 ///
@@ -30,7 +19,29 @@ mod value_id_newtype {
 /// let id = ValueId::new(42);
 /// assert_eq!(id.inner(), &42);
 /// ```
-pub type ValueId = value_id_newtype::ValueId;
+#[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+#[repr(transparent)]
+pub struct ValueId(u64);
+
+impl ValueId {
+    /// Create a new `ValueId` from a raw `u64`.
+    #[must_use]
+    pub fn new(id: u64) -> Self {
+        Self(id)
+    }
+
+    /// Return a reference to the inner `u64`.
+    #[must_use]
+    pub fn inner(&self) -> &u64 {
+        &self.0
+    }
+}
+
+impl fmt::Display for ValueId {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
 
 #[cfg(test)]
 #[path = "value_id_tests.rs"]

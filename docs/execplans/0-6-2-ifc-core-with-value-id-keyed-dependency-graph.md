@@ -11,7 +11,8 @@ Status: DRAFT
 
 Implement roadmap Task 0.6.2: add information-flow control (IFC) foundation
 types and a `ValueId`-keyed directed acyclic graph (DAG) of dependencies to
-`crates/zamburak-core`. After this change, a consumer of the Zamburak library can:
+`crates/zamburak-core`. After this change, a consumer of the Zamburak library
+can:
 
 - create opaque `ValueId` identifiers for runtime values,
 - build a bounded dependency DAG with budget-enforced edge insertion,
@@ -30,12 +31,12 @@ tests plus the new IFC unit, property, and behavioural tests. Running
 
 ## Constraints
 
-- All IFC files live in `crates/zamburak-core/src/` per `docs/repository-layout.md`
-  Table 2. No separate `zamburak-ifc` crate.
+- All IFC files live in `crates/zamburak-core/src/` per
+  `docs/repository-layout.md` Table 2. No separate `zamburak-ifc` crate.
 - No direct coupling to Monty internal value types (`MontyValue`, `MontyObject`,
   etc.). The IFC substrate must be testable without the interpreter.
 - No changes to `third_party/full-monty/`. The submodule is consumed as-is.
-- No new production dependencies beyond `newt-hype` and `thiserror` (already in
+- No new production dependencies beyond `thiserror` (already in
   `zamburak-core`). `proptest` is added as a dev-dependency only.
 - Module-level `//!` comments on all modules, `///` Rustdoc on all public items.
   `missing_docs = "deny"` enforced.
@@ -61,25 +62,17 @@ tests plus the new IFC unit, property, and behavioural tests. Running
 
 ## Risks
 
-- Risk: `newt-hype` may not derive `Hash` for generated newtypes, which
-  `ValueId` needs for `HashMap` keying.
-  Severity: medium. Likelihood: medium.
-  Mitigation: verify `Hash` derivation early in Stage A. If absent, implement
-  `ValueId` as a manual tuple struct with explicit `Hash` derive.
-
 - Risk: the strict Clippy lint configuration (`cognitive_complexity = "deny"`,
   `indexing_slicing = "deny"`, `shadow_* = "deny"`) may conflict with the BFS
-  walk in `compute_summary`.
-  Severity: medium. Likelihood: medium.
-  Mitigation: use `.get()` for `HashMap` access, iterator chains, and extract
-  helper functions to keep complexity under the threshold.
+  walk in `compute_summary`. Severity: medium. Likelihood: medium. Mitigation:
+  use `.get()` for `HashMap` access, iterator chains, and extract helper
+  functions to keep complexity under the threshold.
 
 - Risk: `proptest` may conflict with workspace lint rules (e.g. `expect_used`
-  in generated test code).
-  Severity: low. Likelihood: low.
-  Mitigation: `proptest` macro-generated code runs in test context where
-  `expect_used` is not enforced for `#[cfg(test)]` modules (confirmed by prior
-  project experience). If issues arise, scope lint exceptions tightly.
+  in generated test code). Severity: low. Likelihood: low. Mitigation:
+  `proptest` macro-generated code runs in test context where `expect_used` is
+  not enforced for `#[cfg(test)]` modules (confirmed by prior project
+  experience). If issues arise, scope lint exceptions tightly.
 
 ## Progress
 
@@ -96,10 +89,11 @@ tests plus the new IFC unit, property, and behavioural tests. Running
 
 ## Surprises & discoveries
 
-- `newt-hype`'s `base_newtype!` macro already derives `Display` for wrapper
-  types. An explicit `impl fmt::Display for ValueId` caused `E0119:
-  conflicting implementations`. Fix: removed the manual impl and updated tests
-  to expect `"42"` instead of `"ValueId(42)"`.
+- Initially `ValueId` used `newt-hype`'s `base_newtype!` macro, which
+  derives `Display` for wrapper types and emits explicit `Clone` impls
+  requiring Clippy suppression. Replaced with a plain `#[repr(transparent)]`
+  newtype struct with manual `Display` impl, removing the Clippy suppression
+  and the `newt-hype` dependency for `ValueId`.
 - `cargo fmt` reformats single-line function bodies into multi-line form.
   One-liner accessor methods (e.g. `pub fn id(&self) -> ValueId { self.id }`)
   must be written in multi-line form to pass `make check-fmt`.
@@ -129,14 +123,14 @@ tests plus the new IFC unit, property, and behavioural tests. Running
 - Decision: `IntegrityLabel::Verified` is a simple variant without a
   `VerificationKind` parameter. Rationale: extending `Verified` with
   verification kinds is Task 1.1.1 scope per the roadmap. A simple variant
-  establishes the lattice semantics without premature complexity.
-  Date/Author: 2026-03-22 / DevBoxer.
+  establishes the lattice semantics without premature complexity. Date/Author:
+  2026-03-22 / DevBoxer.
 
 - Decision: `GraphBudgets` is defined in `zamburak-core` with the same field
-  semantics as `PolicyBudgets` in `zamburak-policy`, but without a dependency on
-  the policy crate. Rationale: the IFC substrate must not depend on the policy
-  layer. The caller (Task 0.6.3 observer wiring) constructs `GraphBudgets` from
-  `PolicyBudgets`. Date/Author: 2026-03-22 / DevBoxer.
+  semantics as `PolicyBudgets` in `zamburak-policy`, but without a dependency
+  on the policy crate. Rationale: the IFC substrate must not depend on the
+  policy layer. The caller (Task 0.6.3 observer wiring) constructs
+  `GraphBudgets` from `PolicyBudgets`. Date/Author: 2026-03-22 / DevBoxer.
 
 - Decision: budget overflow in `compute_summary` returns
   `Ok(DependencySummary::unknown_top())`, not `Err(...)`. Rationale: the design
@@ -151,8 +145,8 @@ tests plus the new IFC unit, property, and behavioural tests. Running
 
 - Decision: no cycle detection beyond self-loop rejection. Rationale: the DAG
   invariant is maintained structurally by the observer wiring (Task 0.6.3),
-  which only adds edges from newly-created values to pre-existing values, making
-  cycles structurally impossible. Self-loops are explicitly rejected.
+  which only adds edges from newly-created values to pre-existing values,
+  making cycles structurally impossible. Self-loops are explicitly rejected.
   Date/Author: 2026-03-22 / DevBoxer.
 
 - Decision: add `proptest` as a new dev-dependency. Rationale: `proptest` is the
@@ -161,10 +155,10 @@ tests plus the new IFC unit, property, and behavioural tests. Running
   requirements; (b) `kani` requires its own standalone toolchain installation
   and CI integration exceeding this task's scope; (c) the verification targets
   document requires "property tests" for IFC propagation, and `proptest`
-  provides randomised shrinkable input generation that rstest parameterized
+  provides randomized shrinkable input generation that rstest parameterized
   cases cannot. `kani` (bounded model checking) is recommended as dedicated
-  verification infrastructure in a later task.
-  Date/Author: 2026-03-22 / DevBoxer.
+  verification infrastructure in a later task. Date/Author: 2026-03-22 /
+  DevBoxer.
 
 ## Outcomes & retrospective
 
@@ -173,7 +167,7 @@ proptest in zamburak-core lib, 4 BDD integration tests). All gates pass:
 `make check-fmt`, `make lint`, `make test` (excluding pre-existing benchmark
 flake).
 
-Files created (15):
+Files created (20):
 
 - `crates/zamburak-core/src/value_id.rs` — `ValueId` newtype
 - `crates/zamburak-core/src/value_id_tests.rs` — 5 unit tests
@@ -202,7 +196,7 @@ Files created (15):
 - `crates/zamburak-core/tests/ifc_bdd.rs` — 4 BDD scenarios
 - `crates/zamburak-core/tests/features/ifc_propagation.feature` — feature file
 
-Files modified (4):
+Files modified (5):
 
 - `crates/zamburak-core/src/lib.rs` — module declarations and re-exports
 - `crates/zamburak-core/Cargo.toml` — `proptest`, `rstest-bdd`,
@@ -231,10 +225,9 @@ crates:
   decisions,
 - `crates/test-utils` — shared test utilities.
 
-The `full-monty` interpreter substrate is vendored at
-`third_party/full-monty/` as a Git submodule. Track A (observer substrate) and
-Track B (Zamburak governance) are defined in
-`docs/adr-001-monty-ifc-vm-hooks.md`.
+The `full-monty` interpreter substrate is vendored at `third_party/full-monty/`
+as a Git submodule. Track A (observer substrate) and Track B (Zamburak
+governance) are defined in `docs/adr-001-monty-ifc-vm-hooks.md`.
 
 Normative type definitions are in `docs/zamburak-design-document.md` lines
 807-831 (`TaggedValue`, `DependencySummary`, `ExecutionContextSummary`).
@@ -267,10 +260,11 @@ generation) and `thiserror` (error derivation). Dev-dependencies include
 
 Create three new modules in `crates/zamburak-core/src/`:
 
-`value_id.rs` defines a `ValueId` newtype wrapping `u64` via `newt-hype`,
-mirroring the backing type of `RuntimeValueId` in `full-monty`. The type must
-derive `Clone`, `Copy`, `Debug`, `Eq`, `PartialEq`, `Hash`, `Ord`,
-`PartialOrd` and implement `Display` for diagnostics.
+`value_id.rs` defines a `ValueId` newtype wrapping `u64` as a plain
+`#[repr(transparent)]` struct, mirroring the backing type of `RuntimeValueId`
+in `full-monty`. The type must derive `Clone`, `Copy`, `Debug`, `Eq`,
+`PartialEq`, `Hash`, `Ord`, `PartialOrd` and implement `Display` for
+diagnostics.
 
 `trust.rs` defines:
 
@@ -308,17 +302,17 @@ Gate: `make check-fmt && make lint && make test`.
 Create `dependency_graph.rs` defining:
 
 - `GraphBudgets` — budget configuration struct with fields `max_values`,
-  `max_parents_per_value`, `max_closure_steps`, `max_witness_depth` (all `u64`),
-  plus a `Default` impl matching the canonical policy defaults (100,000 / 64 /
-  10,000 / 32).
+  `max_parents_per_value`, `max_closure_steps`, `max_witness_depth` (all
+  `u64`), plus a `Default` impl matching the canonical policy defaults (100,000
+  / 64 / 10,000 / 32).
 - `ValueNode` — per-value metadata: `id: ValueId`,
   `integrity: IntegrityLabel`, `confidentiality: DataLabels`,
   `authority: AuthoritySet`, `parents: Vec<ValueId>`.
 - `DependencyGraph` — holds `HashMap<ValueId, ValueNode>`, `budgets`, and
   `truncated: bool`. Operations:
   - `new(budgets)` — construct an empty graph,
-  - `insert_value(id, integrity, confidentiality, authority)` — checks
-    `max_values`, sets `truncated` on overflow, returns
+  - `insert_value(id, labels: ValueLabels)` — checks `max_values`,
+    rejects duplicate IDs, sets `truncated` on overflow, returns
     `Err(IfcError::ValueBudgetExhausted)`,
   - `add_dependency(child, parent)` — checks both IDs exist, rejects
     self-loops, checks `max_parents_per_value`, returns appropriate error,
@@ -346,8 +340,9 @@ Create `summary.rs` defining:
     origin_count = saturating_add, truncated = or,
   - `unknown_top()` — conservative fail-closed summary: `Untrusted`,
     `DataLabels::all()`, empty `AuthoritySet`, `u32::MAX`, `true`.
-- `compute_summary(graph, id, budgets)` — bounded breadth-first search (BFS) walk through parent edges.
-  Returns `Ok(summary)` on success, `Ok(unknown_top())` on closure-step budget
+- `compute_summary(graph, id, budgets)` — bounded breadth-first
+  search (BFS) walk through parent edges. Returns `Ok(summary)` on success,
+  `Ok(unknown_top())` when the graph is truncated or on closure-step budget
   overflow, `Err(IfcError::UnknownValueId)` for missing root node.
 
 Unit tests cover: `from_node` base case, join correctness (integrity meets,
@@ -372,8 +367,7 @@ Create `control_context.rs` defining:
 - `EffectCounters` — `total_effects: u64`,
   `effects_by_tool: HashMap<String, u64>`.
 - `ExecutionContextSummary` — with fields `pc_integrity: IntegrityLabel`,
-  `pc_confidentiality: DataLabels`,
-  `control_dependencies: Vec<ValueId>`,
+  `pc_confidentiality: DataLabels`, `control_dependencies: Vec<ValueId>`,
   `effect_counters: EffectCounters`. Operations:
   - `new()` — `Verified` integrity, empty confidentiality, empty deps, zero
     counters,
@@ -401,36 +395,35 @@ variants), `DataLabels` (`BTreeSet` of arbitrary labels), `AuthoritySet`
 
 Create property test suites in colocated `*_proptests.rs` files:
 
-Lattice algebraic laws (`trust_proptests.rs`):
-`IntegrityLabel::join` commutativity, associativity, idempotency, monotonicity;
-`DataLabels::join` commutativity, associativity, monotonicity, idempotency;
-`AuthoritySet::join` commutativity, associativity, monotonicity.
+Lattice algebraic laws (`trust_proptests.rs`): `IntegrityLabel::join`
+commutativity, associativity, idempotency, monotonicity; `DataLabels::join`
+commutativity, associativity, monotonicity, idempotency; `AuthoritySet::join`
+commutativity, associativity, monotonicity.
 
-Summary algebraic laws (`summary_proptests.rs`):
-`DependencySummary::join` commutativity, associativity, truncation monotonicity,
-integrity monotonicity, confidentiality monotonicity, authority monotonicity.
+Summary algebraic laws (`summary_proptests.rs`): `DependencySummary::join`
+commutativity, associativity, truncation monotonicity, integrity monotonicity,
+confidentiality monotonicity, authority monotonicity.
 
-Dependency graph invariants (`dependency_graph_proptests.rs`):
-insertion-order independence, budget monotonicity (`is_truncated` never reverts
-to `false`), parent count invariant, node count invariant.
+Dependency graph invariants (`dependency_graph_proptests.rs`): insertion-order
+independence, budget monotonicity (`is_truncated` never reverts to `false`),
+parent count invariant, node count invariant.
 
-Propagation invariants (`propagation_proptests.rs`):
-strict mode at least as restrictive as normal; adding operands never increases
-integrity; adding operands never removes confidentiality labels.
+Propagation invariants (`propagation_proptests.rs`): strict mode at least as
+restrictive as normal; adding operands never increases integrity; adding
+operands never removes confidentiality labels.
 
-Transitive summary invariants (in `summary_proptests.rs`):
-transitivity (A depends on B depends on C implies C's labels appear in A's
-summary); budget overflow conservatism (`max_closure_steps = 0` yields
-`unknown_top`); single-node summary equals `from_node`.
+Transitive summary invariants (in `summary_proptests.rs`): transitivity (A
+depends on B depends on C implies C's labels appear in A's summary); budget
+overflow conservatism (`max_closure_steps = 0` yields `unknown_top`);
+single-node summary equals `from_node`.
 
-Exhaustive bounded tests (rstest parameterized, in `trust_tests.rs`):
-all 9 join pairs (3 x 3), all 27 associativity triples (3 x 3 x 3), all 27
+Exhaustive bounded tests (rstest parameterized, in `trust_tests.rs`): all 9
+join pairs (3 x 3), all 27 associativity triples (3 x 3 x 3), all 27
 monotonicity triples (3 x 3 x 3) for `IntegrityLabel`.
 
 BDD scenarios (rstest-bdd v0.5.0 if applicable, or rstest Given/When/Then
-structured tests):
-happy path dependency tracking, budget overflow conservative summary, strict
-versus normal mode control context handling.
+structured tests): happy path dependency tracking, budget overflow conservative
+summary, strict versus normal mode control context handling.
 
 Gate: `make check-fmt && make lint && make test`.
 
@@ -600,6 +593,7 @@ In `crates/zamburak-core/src/dependency_graph.rs`:
 
 ```rust
 pub struct GraphBudgets { pub max_values: u64, /* ... */ }
+pub struct ValueLabels { pub integrity: IntegrityLabel, /* ... */ }
 pub struct ValueNode { /* id, integrity, confidentiality, authority, parents */ }
 pub struct DependencyGraph { /* nodes, budgets, truncated */ }
 ```
@@ -619,8 +613,8 @@ pub enum PropagationMode { Normal, Strict }
 pub fn propagate_labels(
     mode: PropagationMode,
     operand_summaries: &[DependencySummary],
-    control_context: Option<&ExecutionContextSummary>,
-) -> DependencySummary;
+    control_context: &ExecutionContextSummary,
+) -> Option<DependencySummary>;
 ```
 
 In `crates/zamburak-core/src/control_context.rs`:
@@ -632,7 +626,6 @@ pub struct ExecutionContextSummary { /* pc_integrity, pc_confidentiality, ... */
 
 ### Dependencies consumed
 
-- `newt-hype = "0.2.0"` (workspace) — newtype generation for `ValueId`.
 - `thiserror = "2.0.11"` (workspace) — `IfcError` derivation.
 - `zamburak-core::authority::AuthorityCapability` — re-used in `AuthoritySet`.
 
@@ -644,6 +637,6 @@ pub struct ExecutionContextSummary { /* pc_integrity, pc_confidentiality, ... */
 ## Revision note
 
 - 2026-03-22: Initial plan drafted from roadmap Task 0.6.2 requirements,
-  ADR-001 section B1, design document sections on dependency representation
-  and strict-mode semantics, verification targets row for IFC propagation,
-  and repository layout Table 2.
+  ADR-001 section B1, design document sections on dependency representation and
+  strict-mode semantics, verification targets row for IFC propagation, and
+  repository layout Table 2.
