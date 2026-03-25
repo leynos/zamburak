@@ -137,40 +137,28 @@ fn add_dependency_happy_path(small_budgets: GraphBudgets) {
 }
 
 #[rstest]
-fn add_dependency_self_loop_rejected(small_budgets: GraphBudgets) {
+#[case(
+    (1u64, 1u64),
+    IfcError::CycleDetected { from: ValueId::new(1), to: ValueId::new(1) },
+)]
+#[case(
+    (99u64, 1u64),
+    IfcError::UnknownValueId(ValueId::new(99)),
+)]
+#[case(
+    (1u64, 99u64),
+    IfcError::UnknownValueId(ValueId::new(99)),
+)]
+fn add_dependency_invalid_edge_rejected(
+    small_budgets: GraphBudgets,
+    #[case] edge: (u64, u64),
+    #[case] expected: IfcError,
+) {
     let mut graph = DependencyGraph::new(small_budgets);
     insert_trusted(&mut graph, 1);
-
-    let result = graph.add_dependency(ValueId::new(1), ValueId::new(1));
-    assert!(matches!(
-        result,
-        Err(IfcError::CycleDetected { from, to })
-        if from == ValueId::new(1) && to == ValueId::new(1)
-    ));
-}
-
-#[rstest]
-fn add_dependency_unknown_child(small_budgets: GraphBudgets) {
-    let mut graph = DependencyGraph::new(small_budgets);
-    insert_trusted(&mut graph, 1);
-
-    let result = graph.add_dependency(ValueId::new(99), ValueId::new(1));
-    assert!(matches!(
-        result,
-        Err(IfcError::UnknownValueId(id)) if id == ValueId::new(99)
-    ));
-}
-
-#[rstest]
-fn add_dependency_unknown_parent(small_budgets: GraphBudgets) {
-    let mut graph = DependencyGraph::new(small_budgets);
-    insert_trusted(&mut graph, 1);
-
-    let result = graph.add_dependency(ValueId::new(1), ValueId::new(99));
-    assert!(matches!(
-        result,
-        Err(IfcError::UnknownValueId(id)) if id == ValueId::new(99)
-    ));
+    let (child, parent) = edge;
+    let result = graph.add_dependency(ValueId::new(child), ValueId::new(parent));
+    assert_eq!(result, Err(expected));
 }
 
 #[rstest]
