@@ -1,7 +1,7 @@
 //! IFC-specific error types for dependency graph operations.
 //!
-//! All error variants use primitive fields to stay under the
-//! `result_large_err` Clippy threshold.
+//! Identifier-bearing variants use `ValueId`, while count and limit
+//! fields remain primitive to keep the public error type compact.
 
 use thiserror::Error;
 

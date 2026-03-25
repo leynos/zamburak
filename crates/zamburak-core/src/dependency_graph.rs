@@ -254,15 +254,11 @@ impl DependencyGraph {
             return Err(IfcError::DuplicateEdge { child, parent });
         }
 
-        // Cycle detection: BFS from parent upward to check if child is
-        // reachable. If it is, adding child→parent would create a cycle.
-        self.check_reachable(child, parent)?;
-
+        // Check parent capacity before expensive cycle detection.
         let child_node = self
             .nodes
-            .get_mut(&child)
+            .get(&child)
             .ok_or(IfcError::UnknownValueId(child))?;
-
         let current = u64::try_from(child_node.parents.len()).unwrap_or(u64::MAX);
         if current >= self.budgets.max_parents_per_value {
             self.truncated = true;
@@ -273,6 +269,16 @@ impl DependencyGraph {
             });
         }
 
+        // Cycle detection: BFS from parent upward to check if child is
+        // reachable. If it is, adding child→parent would create a cycle.
+        self.check_reachable(child, parent)?;
+
+        // Re-fetch as mutable to push the parent.
+        let child_node = self
+            .nodes
+            .get_mut(&child)
+            .ok_or(IfcError::UnknownValueId(child))?;
+
         child_node.parents.push(parent);
         Ok(())
     }
@@ -281,17 +287,23 @@ impl DependencyGraph {
     /// existing parent edges?
     ///
     /// If the closure-step budget is exhausted during traversal, the
-    /// graph is conservatively marked truncated and a `CycleDetected`
-    /// error is returned (fail-closed).
+    /// graph is conservatively marked truncated and a
+    /// `ClosureStepBudgetExhausted` error is returned (fail-closed).
     fn check_reachable(&mut self, target: ValueId, start: ValueId) -> Result<(), IfcError> {
-        let mut visited = HashSet::new();
+        let mut seen = HashSet::new();
         let mut queue = VecDeque::new();
+        seen.insert(start);
         queue.push_back(start);
         let mut steps: u64 = 0;
 
         while let Some(current) = queue.pop_front() {
-            if !visited.insert(current) {
-                continue;
+            steps = steps.saturating_add(1);
+            if steps > self.budgets.max_closure_steps {
+                self.truncated = true;
+                return Err(IfcError::ClosureStepBudgetExhausted {
+                    steps,
+                    limit: self.budgets.max_closure_steps,
+                });
             }
 
             if current == target {
@@ -301,17 +313,8 @@ impl DependencyGraph {
                 });
             }
 
-            steps = steps.saturating_add(1);
-            if steps > self.budgets.max_closure_steps {
-                self.truncated = true;
-                return Err(IfcError::CycleDetected {
-                    from: target,
-                    to: start,
-                });
-            }
-
             if let Some(node) = self.nodes.get(&current) {
-                enqueue_parents_bfs(node, &mut queue);
+                enqueue_parents_bfs(node, &mut seen, &mut queue);
             }
         }
 
@@ -350,10 +353,16 @@ impl DependencyGraph {
 }
 
 /// Push all parent IDs of a node into a BFS queue for reachability
-/// checking.
-fn enqueue_parents_bfs(node: &ValueNode, queue: &mut VecDeque<ValueId>) {
+/// checking, tracking seen nodes to avoid duplicates.
+fn enqueue_parents_bfs(
+    node: &ValueNode,
+    seen: &mut HashSet<ValueId>,
+    queue: &mut VecDeque<ValueId>,
+) {
     for &parent_id in &node.parents {
-        queue.push_back(parent_id);
+        if seen.insert(parent_id) {
+            queue.push_back(parent_id);
+        }
     }
 }
 

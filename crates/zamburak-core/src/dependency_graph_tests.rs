@@ -175,39 +175,26 @@ fn add_dependency_unknown_parent(small_budgets: GraphBudgets) {
 
 #[rstest]
 fn add_dependency_parent_budget_exhaustion(small_budgets: GraphBudgets) {
-    let mut graph = DependencyGraph::new(small_budgets);
-    insert_trusted(&mut graph, 1);
-    insert_trusted(&mut graph, 2);
-    insert_trusted(&mut graph, 3);
-
-    // max_parents_per_value is 2
-    graph
-        .add_dependency(ValueId::new(3), ValueId::new(1))
-        .expect("first edge should succeed");
-    graph
-        .add_dependency(ValueId::new(3), ValueId::new(2))
-        .expect("second edge should succeed");
-
-    // Insert a fourth node to use as third parent (need to expand budget
-    // for values but keep parent budget at 2).
-    let mut bigger = DependencyGraph::new(GraphBudgets {
+    // Expand value budget but keep parent budget at 2.
+    let budgets = GraphBudgets {
         max_values: 10,
         max_parents_per_value: 2,
         ..small_budgets
-    });
-    insert_trusted(&mut bigger, 1);
-    insert_trusted(&mut bigger, 2);
-    insert_trusted(&mut bigger, 3);
-    insert_trusted(&mut bigger, 4);
+    };
+    let mut graph = DependencyGraph::new(budgets);
+    insert_trusted(&mut graph, 1);
+    insert_trusted(&mut graph, 2);
+    insert_trusted(&mut graph, 3);
+    insert_trusted(&mut graph, 4);
 
-    bigger
+    graph
         .add_dependency(ValueId::new(4), ValueId::new(1))
         .expect("first edge ok");
-    bigger
+    graph
         .add_dependency(ValueId::new(4), ValueId::new(2))
         .expect("second edge ok");
 
-    let result = bigger.add_dependency(ValueId::new(4), ValueId::new(3));
+    let result = graph.add_dependency(ValueId::new(4), ValueId::new(3));
     assert!(matches!(
         result,
         Err(IfcError::ParentBudgetExhausted {
@@ -314,7 +301,10 @@ fn add_dependency_reachability_budget_exhaustion() {
     // Adding 5→3 would walk 3→2→1 (3 steps > budget 2). The graph
     // should be marked truncated and the edge conservatively rejected.
     let result = graph.add_dependency(ValueId::new(5), ValueId::new(3));
-    assert!(matches!(result, Err(IfcError::CycleDetected { .. })));
+    assert!(matches!(
+        result,
+        Err(IfcError::ClosureStepBudgetExhausted { .. })
+    ));
     assert!(graph.is_truncated());
 }
 

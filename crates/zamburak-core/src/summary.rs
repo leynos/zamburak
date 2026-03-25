@@ -96,9 +96,13 @@ impl DependencySummary {
 /// Compute the bounded transitive dependency summary for a value.
 ///
 /// Performs a BFS walk through the dependency graph starting from `id`,
-/// joining the labels of all reachable ancestors. The walk is bounded
-/// by `budgets.max_closure_steps`: exceeding this budget returns
-/// `Ok(DependencySummary::unknown_top())` (not an error).
+/// joining the labels of all reachable ancestors. The computation
+/// returns a conservative `Ok(DependencySummary::unknown_top())` summary
+/// (fail-closed, not an error) in two cases:
+///
+/// - The underlying `graph.is_truncated()` is `true` (checked
+///   immediately before traversal), indicating a prior budget overflow.
+/// - The BFS walk exceeds `budgets.max_closure_steps` during traversal.
 ///
 /// Returns `Err(IfcError::UnknownValueId)` only if the root `id` does
 /// not exist in the graph.

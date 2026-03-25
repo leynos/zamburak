@@ -143,10 +143,16 @@ tests plus the new IFC unit, property, and behavioural tests. Running
   their authority sets. A derived value can only exercise capabilities that all
   its dependencies possess. Date/Author: 2026-03-22 / DevBoxer.
 
-- Decision: no cycle detection beyond self-loop rejection. Rationale: the DAG
-  invariant is maintained structurally by the observer wiring (Task 0.6.3),
-  which only adds edges from newly-created values to pre-existing values,
-  making cycles structurally impossible. Self-loops are explicitly rejected.
+- Decision: transitive cycle (back-edge) detection is implemented and
+  enforced at insertion time. Rationale: the runtime enforces the DAG
+  invariant by rejecting self-loops, duplicate edges, and transitive
+  back-edges via bounded BFS reachability checks in `add_dependency`.
+  Implementation is in `crates/zamburak-core/src/dependency_graph.rs`
+  (`check_reachable` method) with cycle-detection errors defined in
+  `crates/zamburak-core/src/ifc_errors.rs` (`CycleDetected`,
+  `ClosureStepBudgetExhausted`). Tests exercising this behavior are in
+  `crates/zamburak-core/src/dependency_graph_tests.rs`
+  (`add_dependency_cycle_rejected`, `add_dependency_reachability_budget_exhaustion`).
   Date/Author: 2026-03-22 / DevBoxer.
 
 - Decision: add `proptest` as a new dev-dependency. Rationale: `proptest` is the
