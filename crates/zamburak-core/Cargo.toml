@@ -8,4 +8,7 @@ newt-hype.workspace = true
 thiserror.workspace = true
 
 [dev-dependencies]
+proptest = "1"
 rstest = "0.26.1"
+rstest-bdd = "0.5.0"
+rstest-bdd-macros = { version = "0.5.0", features = ["compile-time-validation"] }

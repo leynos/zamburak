@@ -243,7 +243,7 @@ completion criteria so the work can be sequenced and assessed without ambiguity.
   - Out of scope: full IFC propagation semantics.
   - Completion criteria: governed execution path uses `full-monty` adapter with
     deterministic external-call mediation hooks.
-- [ ] Task 0.6.2: Add IFC core crate with `ValueId`-keyed dependency graph.
+- [x] Task 0.6.2: Add IFC core crate with `ValueId`-keyed dependency graph.
   - Requirement signposts:
     - `docs/adr-001-monty-ifc-vm-hooks.md` section "B1. IFC substrate",
     - `docs/zamburak-design-document.md` sections
@@ -815,8 +815,8 @@ when the task is complete.
 | 0.5.3 | `third_party/full-monty/`, `tests/compatibility/`                                                                                         | Snapshot extension seam round-trips opaque embedder state safely.      |
 | 0.5.4 | `tests/compatibility/`, `tests/benchmarks/`, `docs/verification-targets.md`                                                               | Track A compatibility and overhead invariants are enforced in gates.   |
 | 0.6.1 | `crates/zamburak-monty/src/`, `src/`, `tests/integration/`                                                                                | Governed execution path wraps `full-monty` through one adapter API.    |
-| 0.6.2 | `crates/zamburak-ifc/src/`, `tests/property/`, `tests/security/`                                                                          | IFC dependency graph and propagation rules are implemented and tested. |
-| 0.6.3 | `crates/zamburak-monty/src/observer.rs`, `crates/zamburak-ifc/src/`, `tests/integration/`                                                 | Observer events drive complete IFC updates in normal and strict modes. |
+| 0.6.2 | `crates/zamburak-core/src/`, `tests/security/`                                                                                            | IFC dependency graph and propagation rules are implemented and tested. |
+| 0.6.3 | `crates/zamburak-monty/src/observer.rs`, `crates/zamburak-core/src/`, `tests/integration/`                                                | Observer events drive complete IFC updates in normal and strict modes. |
 | 0.6.4 | `crates/zamburak-monty/src/external_call.rs`, `crates/zamburak-policy/src/engine.rs`, `tests/security/`                                   | Every external call is policy-gated before effect execution.           |
 | 0.6.5 | `tests/compatibility/`, `tests/security/`, `tests/integration/`                                                                           | Compatibility, security, and snapshot-governance suites are active.    |
 | 0.7.1 | `docs/monty-fork-policy.md`, `docs/zamburak-engineering-standards.md`                                                                     | Track A patch-budget and naming constraints are enforced in review.    |

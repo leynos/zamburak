@@ -129,6 +129,72 @@ envelope for observer-aware entrypoints:
 These limits apply only to the generic Track A substrate and do not describe
 Track B policy-layer costs.
 
+## IFC core types and dependency graph
+
+The `zamburak-core` crate provides the information-flow control (IFC) substrate
+used by the governance engine. It is decoupled from interpreter internals and
+can be used independently for any system that needs label propagation over a
+directed acyclic graph (DAG) of dependencies.
+
+### Value identity
+
+`ValueId` is a stable, opaque identifier for runtime values. It wraps a `u64`
+and is the primary key for the dependency graph.
+
+### Labels
+
+Three label dimensions track security properties of runtime values:
+
+- **Integrity** (`IntegrityLabel`): three-level lattice
+  `Untrusted < Trusted < Verified`. Join (meet) returns the minimum—a derived
+  value's integrity cannot exceed its weakest input.
+- **Confidentiality** (`DataLabels`): additive set of classification tags
+  (`Pii`, `AuthSecret`, `PrivateEmailBody`, `PaymentInstrument`,
+  `InternalPolicyNote`). Join is set union—data flowing into a derived value
+  accumulates all source classifications.
+- **Authority** (`AuthoritySet`): narrowing set of `AuthorityCapability`
+  values. Join is set intersection—a derived value can only exercise
+  capabilities that all its sources possess.
+
+### Dependency graph
+
+`DependencyGraph` stores `ValueNode` entries keyed by `ValueId`. Each node
+records integrity, confidentiality, and authority labels plus a list of parent
+`ValueId` edges (direct dependencies). The graph enforces budgets:
+
+- `max_values`: maximum number of value nodes,
+- `max_parents_per_value`: maximum parent edges per node,
+- `max_closure_steps`: maximum breadth-first search (BFS) steps
+  during transitive summary computation.
+
+Budget overflow is fail-closed: the graph marks itself as truncated and
+`compute_summary` returns `DependencySummary::unknown_top()` (conservative
+worst-case labels).
+
+### Transitive dependency summary
+
+`compute_summary(&graph, &id, &budgets)` performs a bounded breadth-first
+search (BFS) walk through parent edges, joining all reachable node labels into
+a `DependencySummary`. The summary captures integrity (greatest lower bound),
+confidentiality (union), authority (intersection), origin count, and a
+truncation flag.
+
+### Propagation modes
+
+- `Normal`: join operand summaries only (direct data dependencies).
+- `Strict`: join operand summaries plus the active control-context summary.
+
+Strict mode ensures that policy evaluation accounts for implicit information
+flows through control dependence (e.g. branching on untrusted data before
+making an effectful call).
+
+### Control context
+
+`ExecutionContextSummary` tracks the program-counter integrity and
+confidentiality labels accumulated from control-flow conditions. In strict
+mode, `as_summary()` converts this into a `DependencySummary` that is joined
+into every effectful call's dependency summary.
+
 ## Governed execution with `zamburak-monty`
 
 The `zamburak-monty` crate provides a governed execution path around the

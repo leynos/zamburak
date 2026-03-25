@@ -798,6 +798,39 @@ Zamburak uses two provenance tiers:
 Budgets constrain graph growth and traversal. Budget exhaustion yields
 unknown-top summary and conservative decisions.
 
+Implementation decision (2026-03-22): IFC core types and the `ValueId`-keyed
+dependency DAG are implemented in `crates/zamburak-core/src/` per the normative
+repository layout (Table 2), not in a separate `zamburak-ifc` crate. Key design
+choices:
+
+- `ValueId` wraps `u64` as a plain `#[repr(transparent)]` newtype,
+  mirroring `RuntimeValueId` backing type. This keeps identity representation
+  consistent across Track A and Track B boundaries.
+- `IntegrityLabel::Verified` is a simple variant without a
+  `VerificationKind` parameter. Extension to parameterized verification is Task
+  1.1.1 scope.
+- `GraphBudgets` is defined in `zamburak-core` and decoupled from
+  `PolicyBudgets` in `zamburak-policy`. The caller (Task 0.6.3) constructs
+  `GraphBudgets` from `PolicyBudgets`.
+- `DependencyGraph` uses `Vec<ValueId>` for parent edges instead of
+  `SmallVec`. The design document pseudocode uses `SmallVec` but `smallvec` is
+  not a `zamburak-core` production dependency. `SmallVec` can be adopted later
+  with profiling data.
+- Budget overflow in `compute_summary` returns
+  `Ok(DependencySummary::unknown_top())`, not an error. This follows the design
+  document: "budget overflow yields unknown-top summary and conservative
+  decisions."
+- `AuthoritySet::join` uses set intersection (authority narrows on
+  dependency). A derived value can only exercise capabilities that all its
+  sources possess.
+- No cycle detection beyond explicit self-loop rejection. The DAG invariant is
+  maintained structurally by the observer wiring (Task 0.6.3) which only adds
+  edges from new values to pre-existing values.
+- `proptest` is added as a dev-dependency for randomized property-based
+  testing of lattice algebraic laws, budget invariants, propagation ordering,
+  and transitive summary completeness. `kani` (bounded model checking) is
+  deferred to a later task as it requires standalone toolchain installation.
+
 ## Data structures and interfaces
 
 ### Core runtime structures
