@@ -386,7 +386,7 @@ Create `control_context.rs` defining:
   - `record_effect(tool_name)` — increments counters.
 
 Unit tests cover: normal mode ignores context, strict mode includes context,
-empty operands, single/multiple operand passthrough, new context is trusted,
+empty operands, single/multiple operand passthrough, new context is verified,
 push_condition degrades integrity, as_summary correctness, record_effect
 increments.
 
