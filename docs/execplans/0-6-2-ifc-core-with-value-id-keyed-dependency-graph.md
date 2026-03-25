@@ -5,7 +5,7 @@ This ExecPlan (execution plan) is a living document. The sections
 `Decision Log`, and `Outcomes & Retrospective` must be kept up to date as work
 proceeds.
 
-Status: DRAFT
+Status: COMPLETED
 
 ## Purpose / big picture
 
@@ -555,9 +555,15 @@ set -o pipefail; make test 2>&1 | tee /tmp/make-test-0-6-2.log
 
 ## Idempotence and recovery
 
-All steps are re-runnable. Creating files that already exist overwrites them.
-Adding dependencies that already exist is a no-op. Gate checks are idempotent.
-If a step fails, fix the issue and re-run the gate from the repository root.
+Gate checks (`make check-fmt`, `make lint`, `make test`) are idempotent and can
+be re-run from the repository root. File creation and editing operations during
+implementation can be repeated by overwriting existing files.
+
+Note that the runtime API itself enforces fail-fast semantics: attempting to
+insert a value with a duplicate `ValueId` returns `IfcError::DuplicateValueId`,
+and attempting to add a duplicate edge returns `IfcError::DuplicateEdge`. These
+are explicit errors, not no-ops. If a step fails, fix the issue and re-run the
+gate from the repository root.
 
 ## Artifacts and notes
 

@@ -38,7 +38,16 @@ pub enum IfcError {
         limit: u64,
     },
 
-    /// The closure-step budget has been exhausted during summary traversal.
+    /// The closure-step budget has been exhausted during ancestry traversal.
+    ///
+    /// This error can be returned from two call paths:
+    /// - `DependencyGraph::add_dependency` when the BFS reachability check
+    ///   (used for cycle detection) exceeds `max_closure_steps`.
+    /// - `summary::compute_summary` when the transitive dependency walk
+    ///   exceeds `max_closure_steps`.
+    ///
+    /// In both cases, `steps` is the number of BFS steps taken before
+    /// exhaustion, and `limit` is the budget's `max_closure_steps` value.
     #[error(
         "closure step budget exhausted: \
          {steps} steps taken, limit is {limit}"

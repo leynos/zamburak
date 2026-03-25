@@ -150,15 +150,11 @@ pub fn compute_summary(
     visited.insert(*id);
 
     let mut queue = VecDeque::new();
-    enqueue_parents(root_node, &mut queue);
+    enqueue_parents(root_node, &mut queue, &mut visited);
 
     let mut steps: u64 = 0;
 
     while let Some(parent_id) = queue.pop_front() {
-        if !visited.insert(parent_id) {
-            continue;
-        }
-
         steps = steps.saturating_add(1);
         if steps > budgets.max_closure_steps {
             return Ok(DependencySummary::unknown_top());
@@ -167,17 +163,26 @@ pub fn compute_summary(
         if let Some(parent_node) = graph.get_node(&parent_id) {
             let parent_summary = DependencySummary::from_node(parent_node);
             summary = summary.join(&parent_summary);
-            enqueue_parents(parent_node, &mut queue);
+            enqueue_parents(parent_node, &mut queue, &mut visited);
         }
     }
 
     Ok(summary)
 }
 
-/// Push all parent IDs of a node into the BFS queue.
-fn enqueue_parents(node: &ValueNode, queue: &mut VecDeque<ValueId>) {
+/// Push parent IDs of a node into the BFS queue, skipping already-visited nodes.
+///
+/// This deduplication at enqueue time prevents exponential queue growth in
+/// diamond-shaped dependency graphs.
+fn enqueue_parents(
+    node: &ValueNode,
+    queue: &mut VecDeque<ValueId>,
+    visited: &mut HashSet<ValueId>,
+) {
     for parent_id in node.parents() {
-        queue.push_back(*parent_id);
+        if visited.insert(*parent_id) {
+            queue.push_back(*parent_id);
+        }
     }
 }
 
