@@ -83,6 +83,14 @@ fn captured_context(world: &GovernedIfcWorld, function_name: &str) -> CallContex
         .unwrap_or_else(|| panic!("expected named context to be captured"))
 }
 
+fn parse_integrity_label(raw: &str) -> IntegrityLabel {
+    match raw.trim_matches('"') {
+        "Trusted" => IntegrityLabel::Trusted,
+        "Untrusted" => IntegrityLabel::Untrusted,
+        other => panic!("unsupported integrity label: {other}"),
+    }
+}
+
 #[given("a program whose constant effect call is control-dependent on an external result")]
 fn given_control_program(world: &mut GovernedIfcWorld) {
     concat!(
@@ -149,33 +157,25 @@ fn when_start_and_resume_first_call(world: &mut GovernedIfcWorld, value: String)
 #[then("the captured call context for {function_name} has aggregate integrity {integrity}")]
 fn then_aggregate_integrity(world: &GovernedIfcWorld, function_name: String, integrity: String) {
     let context = captured_context(world, function_name.trim_matches('"'));
-    let expected = match integrity.trim_matches('"') {
-        "Trusted" => IntegrityLabel::Trusted,
-        "Untrusted" => IntegrityLabel::Untrusted,
-        other => panic!("unsupported integrity label: {other}"),
-    };
-    assert_eq!(context.ifc.aggregate_summary.integrity_join, expected);
+    assert_eq!(
+        context.ifc.aggregate_summary.integrity_join,
+        parse_integrity_label(&integrity),
+    );
 }
 
 #[then("the captured call context for {function_name} has PC integrity {integrity}")]
 fn then_pc_integrity(world: &GovernedIfcWorld, function_name: String, integrity: String) {
     let context = captured_context(world, function_name.trim_matches('"'));
-    let expected = match integrity.trim_matches('"') {
-        "Trusted" => IntegrityLabel::Trusted,
-        "Untrusted" => IntegrityLabel::Untrusted,
-        other => panic!("unsupported integrity label: {other}"),
-    };
-    assert_eq!(context.ifc.control_context.pc_integrity(), expected);
+    assert_eq!(
+        context.ifc.control_context.pc_integrity(),
+        parse_integrity_label(&integrity),
+    );
 }
 
 #[then("the captured call context for {function_name} has first argument integrity {integrity}")]
 fn then_arg_integrity(world: &GovernedIfcWorld, function_name: String, integrity: String) {
     let context = captured_context(world, function_name.trim_matches('"'));
-    let expected = match integrity.trim_matches('"') {
-        "Trusted" => IntegrityLabel::Trusted,
-        "Untrusted" => IntegrityLabel::Untrusted,
-        other => panic!("unsupported integrity label: {other}"),
-    };
+    let expected = parse_integrity_label(&integrity);
     match context.ifc.arg_summaries.first() {
         Some(summary) => assert_eq!(summary.integrity_join, expected),
         None => panic!("expected at least one argument summary"),
