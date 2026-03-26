@@ -255,7 +255,7 @@ completion criteria so the work can be sequenced and assessed without ambiguity.
   - Out of scope: direct coupling to Monty internal value types.
   - Completion criteria: IFC core unit and property tests validate dependency
     propagation invariants independently of interpreter internals.
-- [ ] Task 0.6.3: Wire `full-monty` observer events into IFC updates.
+- [x] Task 0.6.3: Wire `full-monty` observer events into IFC updates.
   - Requirement signposts:
     - `docs/adr-001-monty-ifc-vm-hooks.md` section
       "Track B staged pull requests",

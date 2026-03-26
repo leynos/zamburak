@@ -15,7 +15,7 @@ use monty::{
 use thiserror::Error;
 
 use crate::external_call::{CallContext, ConfirmationContext, ExternalCallMediator};
-use crate::observer::{EventCounts, ZamburakObserver};
+use crate::observer::{EventCounts, GovernedIfcConfig, ZamburakObserver};
 
 mod flow;
 
@@ -37,6 +37,15 @@ pub enum GovernedRunError {
     #[error("observer mismatch for call_id {call_id} with kind {kind:?}")]
     ObserverMismatch {
         /// The yielded call identifier whose observer bookkeeping was missing.
+        call_id: u32,
+        /// The yielded external-call kind.
+        kind: ExternalCallKind,
+    },
+
+    /// Observer bookkeeping captured the yield but not its IFC snapshot.
+    #[error("missing IFC snapshot for call_id {call_id} with kind {kind:?}")]
+    MissingIfcSnapshot {
+        /// The yielded call identifier whose IFC snapshot was missing.
         call_id: u32,
         /// The yielded external-call kind.
         kind: ExternalCallKind,
@@ -123,6 +132,8 @@ pub struct GovernedRunner {
     monty_run: MontyRun,
     /// Shared mediator for external-call decisions.
     mediator: Arc<Mutex<dyn ExternalCallMediator>>,
+    /// Observer-driven IFC configuration for this governed execution.
+    ifc_config: GovernedIfcConfig,
 }
 
 impl GovernedRunner {
@@ -132,7 +143,15 @@ impl GovernedRunner {
         Self {
             monty_run,
             mediator,
+            ifc_config: GovernedIfcConfig::default(),
         }
+    }
+
+    /// Overrides the IFC configuration used by the internal observer bridge.
+    #[must_use]
+    pub fn with_ifc_config(mut self, ifc_config: GovernedIfcConfig) -> Self {
+        self.ifc_config = ifc_config;
+        self
     }
 
     /// Executes the program to completion with no resource limits, mediating
@@ -188,7 +207,7 @@ impl GovernedRunner {
         print: PrintWriter<'_>,
     ) -> Result<(GovernedRunProgress<T>, EventCounts), GovernedRunError> {
         let mediator = self.mediator;
-        let observer = ZamburakObserver::new();
+        let observer = ZamburakObserver::with_ifc_config(self.ifc_config);
         let observer_state = observer.shared_state();
         let handle = RuntimeObserverHandle::new(observer);
         let progress =

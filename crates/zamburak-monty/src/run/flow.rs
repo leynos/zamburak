@@ -194,16 +194,17 @@ fn build_function_call_context<T: ResourceTracker>(
     } else {
         ExternalCallKind::Function
     };
-    if !observer_state.consume_pending_call(call.call_id, kind) {
+    let Some(ifc) = observer_state.call_ifc_context(call.call_id, kind, &call.function_name) else {
         return Err(GovernedRunError::ObserverMismatch {
             call_id: call.call_id,
             kind,
         });
-    }
+    };
     Ok(CallContext {
         call_id: call.call_id,
         kind,
         function_name: call.function_name.clone(),
+        ifc,
     })
 }
 
@@ -211,16 +212,20 @@ fn build_os_call_context<T: ResourceTracker>(
     call: &monty::OsCall<T>,
     observer_state: &SharedObserverState,
 ) -> Result<CallContext, GovernedRunError> {
-    if !observer_state.consume_pending_call(call.call_id, ExternalCallKind::Os) {
+    let function_name = format!("{:?}", call.function);
+    let Some(ifc) =
+        observer_state.call_ifc_context(call.call_id, ExternalCallKind::Os, &function_name)
+    else {
         return Err(GovernedRunError::ObserverMismatch {
             call_id: call.call_id,
             kind: ExternalCallKind::Os,
         });
-    }
+    };
     Ok(CallContext {
         call_id: call.call_id,
         kind: ExternalCallKind::Os,
-        function_name: format!("{:?}", call.function),
+        function_name,
+        ifc,
     })
 }
 

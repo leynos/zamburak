@@ -5,7 +5,7 @@ This ExecPlan (execution plan) is a living document. The sections
 `Decision Log`, and `Outcomes & Retrospective` must be kept up to date as work
 proceeds.
 
-Status: DRAFT
+Status: COMPLETE
 
 ## Purpose / big picture
 
@@ -140,15 +140,15 @@ vendored interpreter.
 - [x] Reviewed the roadmap item, ADR, design document, verification targets,
   repository layout, users guide, and previous 0.6.1/0.6.2 ExecPlans.
 - [x] Drafted this ExecPlan.
-- [ ] Stage A: initialize `full-monty` and prototype the observer contract for
+- [x] Stage A: initialize `full-monty` and prototype the observer contract for
   control-context lifetime and external-call return provenance.
-- [ ] Stage B: introduce internal IFC runtime-state types in
+- [x] Stage B: introduce internal IFC runtime-state types in
   `zamburak-monty` and wire `ZamburakObserver` event handling into them.
-- [ ] Stage C: expose observer-derived IFC summaries on governed external-call
+- [x] Stage C: expose observer-derived IFC summaries on governed external-call
   contexts and resume paths.
-- [ ] Stage D: add unit, integration, and security-style behavioural tests,
+- [x] Stage D: add unit, integration, and security-style behavioural tests,
   including `rstest-bdd` v0.5.0 coverage.
-- [ ] Stage E: update the design document, users guide, and roadmap, then run
+- [x] Stage E: update the design document, users guide, and roadmap, then run
   final gates.
 
 ## Surprises & Discoveries
@@ -157,6 +157,13 @@ vendored interpreter.
   `third_party/full-monty/` directory, so exact Track A event ordering is not
   yet verified locally. Stage A is therefore a required prototype, not optional
   research.
+- Discovery: `ExternalCallReturned(Return)` is followed by `VM::resume(...)`
+  emitting `OpResult(output_id, OpInputIds::None)` without a matching
+  `ValueCreated` event. Returned-value provenance is therefore preserved by
+  Zamburak-owned observer state, not by a later Track A identity hook.
+- Discovery: `ControlCondition` has no explicit scope-exit signal in Track A.
+  The implementation uses a conservative lifetime model that accumulates
+  control-context influence for the remainder of the governed execution segment.
 
 ## Decision Log
 
@@ -173,10 +180,27 @@ vendored interpreter.
   able to consume the same governed context without another public API reshape.
   Date/Author: 2026-03-25 / Codex.
 
+- Decision: internal values are seeded as `Trusted`, while resumed external
+  returns are seeded as `Untrusted` before joining in call provenance.
+  Rationale: this gives Track B an explicit host-boundary trust downgrade
+  without adding policy semantics to Track A. Date/Author: 2026-03-26 / Codex.
+
 ## Outcomes & Retrospective
 
-No implementation has been performed yet. This section must be completed when
-the plan is executed.
+Implemented in `crates/zamburak-monty` with an internal `observer/ifc_state.rs`
+runtime-state module, additive public `CallIfcContext`/`GovernedIfcConfig`
+APIs, new observer and governed-run unit tests, new integration BDD coverage
+for strict versus normal mode and returned-value provenance, and a security
+regression proving strict-mode PC taint can deny a constant effect call.
+
+Prototype outcome:
+
+- Track A provides enough signal to build complete call-boundary IFC summaries
+  for the supported event classes.
+- Control-context lifetime must remain conservative until Track A exposes an
+  explicit scope-exit signal.
+- Returned external values require Zamburak-owned provenance carry-over between
+  `ExternalCallReturned` and the following `OpResult(None)`.
 
 ## Context and orientation
 

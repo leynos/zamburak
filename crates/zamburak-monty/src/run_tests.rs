@@ -4,20 +4,70 @@ use std::sync::{Arc, Mutex};
 
 use monty::{MontyObject, MontyRun, NoLimitTracker, PrintWriter};
 use rstest::rstest;
+use zamburak_core::propagation::PropagationMode;
+use zamburak_core::{AuthoritySet, DataLabels, IntegrityLabel, ValueLabels};
 
-use crate::external_call::{AllowAllMediator, DenyAllMediator, ExternalCallMediator};
+use crate::external_call::{AllowAllMediator, CallContext, DenyAllMediator, ExternalCallMediator};
+use crate::observer::{GovernedIfcConfig, IfcValueSeedConfig};
 use crate::run::{GovernedRunError, GovernedRunProgress, GovernedRunner};
 
+type SharedMediator = Arc<Mutex<dyn ExternalCallMediator>>;
+type RecordedContexts = Arc<Mutex<Vec<CallContext>>>;
+
 /// Helper: build a `GovernedRunner` from source code with the given mediator.
-fn governed_runner(code: &str, mediator: Arc<Mutex<dyn ExternalCallMediator>>) -> GovernedRunner {
+fn governed_runner(code: &str, mediator: SharedMediator) -> GovernedRunner {
     let monty_run =
         MontyRun::new(code.to_owned(), "test.py", vec![]).expect("parse should succeed");
     GovernedRunner::new(monty_run, mediator)
 }
 
 /// Helper: wrap a mediator in the shared handle type.
-fn shared_mediator(m: impl ExternalCallMediator + 'static) -> Arc<Mutex<dyn ExternalCallMediator>> {
+fn shared_mediator(m: impl ExternalCallMediator + 'static) -> SharedMediator {
     Arc::new(Mutex::new(m))
+}
+
+#[derive(Clone)]
+struct RecordingMediator {
+    contexts: Arc<Mutex<Vec<CallContext>>>,
+}
+
+impl ExternalCallMediator for RecordingMediator {
+    fn mediate(&mut self, context: &CallContext) -> crate::external_call::MediationDecision {
+        self.contexts
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner)
+            .push(context.clone());
+        crate::external_call::MediationDecision::Allow
+    }
+}
+
+fn strict_ifc_config() -> GovernedIfcConfig {
+    GovernedIfcConfig {
+        propagation_mode: PropagationMode::Strict,
+        value_seeds: IfcValueSeedConfig {
+            internal_values: ValueLabels {
+                integrity: IntegrityLabel::Trusted,
+                confidentiality: DataLabels::new(),
+                authority: AuthoritySet::full(),
+            },
+            resumed_external_returns: ValueLabels {
+                integrity: IntegrityLabel::Untrusted,
+                confidentiality: DataLabels::new(),
+                authority: AuthoritySet::full(),
+            },
+        },
+        ..GovernedIfcConfig::default()
+    }
+}
+
+fn recording_mediator() -> (SharedMediator, RecordedContexts) {
+    let contexts = Arc::new(Mutex::new(Vec::new()));
+    (
+        Arc::new(Mutex::new(RecordingMediator {
+            contexts: Arc::clone(&contexts),
+        })),
+        contexts,
+    )
 }
 
 #[rstest]
@@ -133,4 +183,91 @@ fn program_with_inputs_completes_correctly() {
         }
         other => panic!("expected Complete(42), got {other:?}"),
     }
+}
+
+#[rstest]
+fn strict_mode_control_context_taints_constant_effect_call() {
+    let (mediator, contexts) = recording_mediator();
+    let monty_run = MontyRun::new(
+        "condition = gate()\nif condition:\n    effect(\"constant\")\nelse:\n    effect(\"constant\")"
+            .to_owned(),
+        "test.py",
+        vec![],
+    )
+    .expect("parse should succeed");
+    let runner = GovernedRunner::new(monty_run, mediator).with_ifc_config(strict_ifc_config());
+
+    let first_progress = runner.run_no_limits(vec![]);
+    let first_suspended = match first_progress {
+        Ok(GovernedRunProgress::ExternalCallPending { suspended, .. }) => suspended,
+        other => panic!("expected first ExternalCallPending, got {other:?}"),
+    };
+
+    let second_progress =
+        first_suspended.resume(MontyObject::String("yes".to_owned()), PrintWriter::Stdout);
+    match second_progress {
+        Ok(GovernedRunProgress::ExternalCallPending { .. }) => {}
+        other => panic!("expected second ExternalCallPending, got {other:?}"),
+    }
+
+    let captured_contexts = contexts
+        .lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner);
+    let effect_context = captured_contexts
+        .iter()
+        .find(|context| context.function_name == "effect")
+        .expect("effect context should be captured");
+    assert_eq!(effect_context.ifc.propagation_mode, PropagationMode::Strict);
+    assert_eq!(
+        effect_context.ifc.aggregate_summary.integrity_join,
+        IntegrityLabel::Untrusted
+    );
+    assert_eq!(
+        effect_context.ifc.arg_summaries[0].integrity_join,
+        IntegrityLabel::Trusted
+    );
+    assert_eq!(
+        effect_context.ifc.control_context.pc_integrity(),
+        IntegrityLabel::Untrusted
+    );
+}
+
+#[rstest]
+fn resumed_external_return_provenance_flows_into_following_effect() {
+    let (mediator, contexts) = recording_mediator();
+    let monty_run = MontyRun::new(
+        "value = source(\"seed\")\nsink(value)".to_owned(),
+        "test.py",
+        vec![],
+    )
+    .expect("parse should succeed");
+    let runner = GovernedRunner::new(monty_run, mediator).with_ifc_config(strict_ifc_config());
+
+    let first_progress = runner.run_no_limits(vec![]);
+    let first_suspended = match first_progress {
+        Ok(GovernedRunProgress::ExternalCallPending { suspended, .. }) => suspended,
+        other => panic!("expected source call to suspend, got {other:?}"),
+    };
+
+    let second_progress = first_suspended.resume(
+        MontyObject::String("payload".to_owned()),
+        PrintWriter::Stdout,
+    );
+    match second_progress {
+        Ok(GovernedRunProgress::ExternalCallPending { .. }) => {}
+        other => panic!("expected sink call to suspend, got {other:?}"),
+    }
+
+    let captured_contexts = contexts
+        .lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner);
+    let sink_context = captured_contexts
+        .iter()
+        .find(|context| context.function_name == "sink")
+        .expect("sink context should be captured");
+    assert_eq!(
+        sink_context.ifc.arg_summaries[0].integrity_join,
+        IntegrityLabel::Untrusted
+    );
+    assert!(sink_context.ifc.arg_summaries[0].origin_count >= 2);
 }

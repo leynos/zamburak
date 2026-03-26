@@ -236,6 +236,18 @@ Built-in mediators:
   permissive mode),
 - `DenyAllMediator` — unconditionally denies every call (deny-path testing).
 
+Each `CallContext` now includes an `ifc` payload describing the observer-driven
+information-flow state at that boundary:
+
+- `propagation_mode` — `Normal` or `Strict`,
+- `aggregate_summary` — dependency summary for the whole call,
+- `control_context` — the active program-counter summary,
+- `arg_summaries` and `kwarg_summaries` — per-argument provenance.
+
+For tests or embedder-controlled execution, `GovernedRunner::with_ifc_config`
+can override the default IFC configuration before execution starts. This is
+useful when you need to force strict mode or customize value seed labels.
+
 ### `GovernedRunProgress` yield states
 
 After execution, the governed runner returns a `GovernedRunProgress` enum:
@@ -273,6 +285,31 @@ let runner = GovernedRunner::new(monty_run, mediator);
 match runner.run_no_limits(vec![]) {
     Ok(GovernedRunProgress::Complete(value)) => {
         assert_eq!(value, MontyObject::Int(3));
+    }
+    other => panic!("unexpected result: {other:?}"),
+}
+```
+
+### Inspecting IFC at an external-call boundary
+
+```rust
+use std::sync::{Arc, Mutex};
+use monty::{MontyRun, NoLimitTracker, PrintWriter};
+use zamburak_monty::{
+    AllowAllMediator, ExternalCallMediator, GovernedRunProgress,
+    GovernedRunner,
+};
+
+let monty_run = MontyRun::new("effect(\"x\")".to_owned(), "test.py", vec![])
+    .expect("parse failed");
+let mediator: Arc<Mutex<dyn ExternalCallMediator>> =
+    Arc::new(Mutex::new(AllowAllMediator));
+let runner = GovernedRunner::new(monty_run, mediator);
+
+match runner.run_no_limits(vec![]) {
+    Ok(GovernedRunProgress::ExternalCallPending { context, .. }) => {
+        assert_eq!(context.function_name, "effect");
+        assert!(!context.ifc.arg_summaries.is_empty());
     }
     other => panic!("unexpected result: {other:?}"),
 }

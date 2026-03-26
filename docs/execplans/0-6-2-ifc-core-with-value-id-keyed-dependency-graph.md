@@ -144,16 +144,17 @@ tests plus the new IFC unit, property, and behavioural tests. Running
   its dependencies possess. Date/Author: 2026-03-22 / DevBoxer.
 
 - Decision: transitive cycle (back-edge) detection is implemented and
-  enforced at insertion time. Rationale: the runtime enforces the DAG
-  invariant by rejecting self-loops, duplicate edges, and transitive
-  back-edges via bounded BFS reachability checks in `add_dependency`.
-  Implementation is in `crates/zamburak-core/src/dependency_graph.rs`
-  (`check_reachable` method) with cycle-detection errors defined in
+  enforced at insertion time. Rationale: the runtime enforces the DAG invariant
+  by rejecting self-loops, duplicate edges, and transitive back-edges via
+  bounded BFS reachability checks in `add_dependency`. Implementation is in
+  `crates/zamburak-core/src/dependency_graph.rs` (`check_reachable` method)
+  with cycle-detection errors defined in
   `crates/zamburak-core/src/ifc_errors.rs` (`CycleDetected`,
   `ClosureStepBudgetExhausted`). Tests exercising this behavior are in
   `crates/zamburak-core/src/dependency_graph_tests.rs`
-  (`add_dependency_cycle_rejected`, `add_dependency_reachability_budget_exhaustion`).
-  Date/Author: 2026-03-22 / DevBoxer.
+  (`add_dependency_cycle_rejected`,
+  `add_dependency_reachability_budget_exhaustion`). Date/Author: 2026-03-22 /
+  DevBoxer.
 
 - Decision: add `proptest` as a new dev-dependency. Rationale: `proptest` is the
   first property testing tool in the workspace. It is preferred over `kani`
@@ -351,8 +352,8 @@ Create `summary.rs` defining:
 - `compute_summary(graph, id, budgets)` — bounded breadth-first
   search (BFS) walk through parent edges. Returns `Ok(summary)` on success,
   `Ok(unknown_top())` when the graph is truncated or on closure-step budget
-  overflow, `Err(IfcError::UnknownValueId)` if the root `id` is not present
-  in the graph.
+  overflow, `Err(IfcError::UnknownValueId)` if the root `id` is not present in
+  the graph.
 
 Unit tests cover: `from_node` base case, join correctness (integrity meets,
 confidentiality unions, authority intersects), truncation propagation,
