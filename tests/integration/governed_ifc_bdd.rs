@@ -5,8 +5,8 @@ use std::sync::{Arc, Mutex};
 use monty::{MontyObject, MontyRun, NoLimitTracker, PrintWriter};
 use rstest::fixture;
 use rstest_bdd_macros::{given, scenario, then, when};
+use zamburak_core::IntegrityLabel;
 use zamburak_core::propagation::PropagationMode;
-use zamburak_core::{AuthoritySet, DataLabels, IntegrityLabel, ValueLabels};
 use zamburak_monty::{
     CallContext, ExternalCallMediator, GovernedIfcConfig, GovernedRunProgress, GovernedRunner,
     IfcValueSeedConfig, MediationDecision,
@@ -41,21 +41,6 @@ fn world() -> GovernedIfcWorld {
         ifc_config: GovernedIfcConfig::default(),
         contexts: Arc::new(Mutex::new(Vec::new())),
         ..GovernedIfcWorld::default()
-    }
-}
-
-fn boundary_seed_config() -> IfcValueSeedConfig {
-    IfcValueSeedConfig {
-        internal_values: ValueLabels {
-            integrity: IntegrityLabel::Trusted,
-            confidentiality: DataLabels::new(),
-            authority: AuthoritySet::full(),
-        },
-        resumed_external_returns: ValueLabels {
-            integrity: IntegrityLabel::Untrusted,
-            confidentiality: DataLabels::new(),
-            authority: AuthoritySet::full(),
-        },
     }
 }
 
@@ -110,18 +95,14 @@ fn given_return_flow_program(world: &mut GovernedIfcWorld) {
 
 #[given("strict IFC propagation is configured")]
 fn given_strict_ifc(world: &mut GovernedIfcWorld) {
-    world.ifc_config = GovernedIfcConfig {
-        propagation_mode: PropagationMode::Strict,
-        value_seeds: boundary_seed_config(),
-        ..GovernedIfcConfig::default()
-    };
+    world.ifc_config = GovernedIfcConfig::strict_with_boundary_seeds();
 }
 
 #[given("normal IFC propagation is configured")]
 fn given_normal_ifc(world: &mut GovernedIfcWorld) {
     world.ifc_config = GovernedIfcConfig {
         propagation_mode: PropagationMode::Normal,
-        value_seeds: boundary_seed_config(),
+        value_seeds: IfcValueSeedConfig::boundary_defaults(),
         ..GovernedIfcConfig::default()
     };
 }

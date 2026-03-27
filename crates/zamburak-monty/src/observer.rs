@@ -70,6 +70,18 @@ pub struct EventCounts {
     pub control_condition: usize,
 }
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub(crate) enum CallIfcLookupError {
+    ObserverMismatch {
+        call_id: u32,
+        kind: ExternalCallKind,
+    },
+    MissingIfcSnapshot {
+        call_id: u32,
+        kind: ExternalCallKind,
+    },
+}
+
 impl ZamburakObserver {
     /// Creates a new observer with empty state.
     #[must_use]
@@ -137,18 +149,20 @@ impl SharedObserverState {
         call_id: u32,
         kind: ExternalCallKind,
         function_name: &str,
-    ) -> Option<CallIfcContext> {
+    ) -> Result<CallIfcContext, CallIfcLookupError> {
         let mut state = lock_state(&self.inner);
-        let maybe_index = state
+        let Some(index) = state
             .pending_calls
             .iter()
-            .position(|call| call.call_id == call_id && call.kind == kind);
-        if let Some(index) = maybe_index {
-            state.pending_calls.remove(index);
-        }
+            .position(|call| call.call_id == call_id && call.kind == kind)
+        else {
+            return Err(CallIfcLookupError::ObserverMismatch { call_id, kind });
+        };
+        state.pending_calls.remove(index);
         state
             .ifc_state
             .call_ifc_context(call_id, kind, function_name)
+            .ok_or(CallIfcLookupError::MissingIfcSnapshot { call_id, kind })
     }
 
     fn pending_calls(&self) -> Vec<RecordedCallRequest> {

@@ -3,12 +3,11 @@
 //! This module translates generic `full-monty` runtime observer events into the
 //! dependency-graph and control-context state owned by `zamburak-monty`.
 
-use std::collections::{BTreeMap, VecDeque};
-
 use monty::{
-    ControlConditionEvent, ExternalCallKind, ExternalCallRequestedEvent, ExternalCallReturnKind,
-    ExternalCallReturnedEvent, OpInputIds, OpResultEvent, RuntimeValueId, ValueCreatedEvent,
+    ControlConditionEvent, ExternalCallKind, ExternalCallRequestedEvent, ExternalCallReturnedEvent,
+    OpInputIds, OpResultEvent, RuntimeValueId, ValueCreatedEvent,
 };
+use tracing::warn;
 use zamburak_core::control_context::ExecutionContextSummary;
 use zamburak_core::propagation::{PropagationMode, propagate_labels};
 use zamburak_core::summary::compute_summary;
@@ -19,6 +18,10 @@ use zamburak_core::{
 
 use crate::external_call::CallIfcContext;
 
+mod call_ifc_tracker;
+
+use call_ifc_tracker::{CallIfcTracker, RequestedCallIfcState, ReturnedCallIfcState};
+
 /// IFC seed labels for values created inside the governed runtime.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct IfcValueSeedConfig {
@@ -28,8 +31,24 @@ pub struct IfcValueSeedConfig {
     pub resumed_external_returns: ValueLabels,
 }
 
-impl Default for IfcValueSeedConfig {
-    fn default() -> Self {
+impl IfcValueSeedConfig {
+    /// Returns the canonical boundary seed labels used by governed IFC tests.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use zamburak_core::IntegrityLabel;
+    /// use zamburak_monty::IfcValueSeedConfig;
+    ///
+    /// let config = IfcValueSeedConfig::boundary_defaults();
+    /// assert_eq!(config.internal_values.integrity, IntegrityLabel::Trusted);
+    /// assert_eq!(
+    ///     config.resumed_external_returns.integrity,
+    ///     IntegrityLabel::Untrusted,
+    /// );
+    /// ```
+    #[must_use]
+    pub fn boundary_defaults() -> Self {
         Self {
             internal_values: ValueLabels {
                 integrity: IntegrityLabel::Trusted,
@@ -45,6 +64,12 @@ impl Default for IfcValueSeedConfig {
     }
 }
 
+impl Default for IfcValueSeedConfig {
+    fn default() -> Self {
+        Self::boundary_defaults()
+    }
+}
+
 /// Public configuration for observer-driven IFC updates.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct GovernedIfcConfig {
@@ -54,6 +79,29 @@ pub struct GovernedIfcConfig {
     pub propagation_mode: PropagationMode,
     /// Seed labels for newly observed values.
     pub value_seeds: IfcValueSeedConfig,
+}
+
+impl GovernedIfcConfig {
+    /// Returns the shared strict-mode configuration with canonical boundary
+    /// seed labels.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use zamburak_core::propagation::PropagationMode;
+    /// use zamburak_monty::GovernedIfcConfig;
+    ///
+    /// let config = GovernedIfcConfig::strict_with_boundary_seeds();
+    /// assert_eq!(config.propagation_mode, PropagationMode::Strict);
+    /// ```
+    #[must_use]
+    pub fn strict_with_boundary_seeds() -> Self {
+        Self {
+            propagation_mode: PropagationMode::Strict,
+            value_seeds: IfcValueSeedConfig::boundary_defaults(),
+            ..Self::default()
+        }
+    }
 }
 
 impl Default for GovernedIfcConfig {
@@ -66,28 +114,12 @@ impl Default for GovernedIfcConfig {
     }
 }
 
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub(crate) struct PendingCallIfcState {
-    kind: ExternalCallKind,
-    arg_value_ids: Vec<ValueId>,
-    kwarg_value_ids: Vec<(ValueId, ValueId)>,
-    ifc: CallIfcContext,
-}
-
-#[derive(Clone, Debug, Eq, PartialEq)]
-struct ReturnedCallIfcState {
-    arg_value_ids: Vec<ValueId>,
-    kwarg_value_ids: Vec<(ValueId, ValueId)>,
-    aggregate_summary: DependencySummary,
-}
-
 /// Observer-owned runtime IFC state updated from Track A events.
 pub(crate) struct IfcRuntimeState {
     graph: DependencyGraph,
     propagation_mode: PropagationMode,
     control_context: ExecutionContextSummary,
-    pending_calls: BTreeMap<u32, PendingCallIfcState>,
-    returned_calls: VecDeque<ReturnedCallIfcState>,
+    calls: CallIfcTracker,
     value_seeds: IfcValueSeedConfig,
     is_conservative: bool,
 }
@@ -99,8 +131,7 @@ impl IfcRuntimeState {
             graph: DependencyGraph::new(config.graph_budgets),
             propagation_mode: config.propagation_mode,
             control_context: ExecutionContextSummary::new(),
-            pending_calls: BTreeMap::new(),
-            returned_calls: VecDeque::new(),
+            calls: CallIfcTracker::new(),
             value_seeds: config.value_seeds,
             is_conservative: false,
         }
@@ -108,15 +139,20 @@ impl IfcRuntimeState {
 
     /// Record a value-creation event from the VM.
     pub(crate) fn apply_value_created(&mut self, event: ValueCreatedEvent) {
-        let value_id = runtime_to_value_id(event.value_id);
+        let Some(value_id) = self.runtime_to_value_id(event.value_id) else {
+            return;
+        };
         let labels = self.value_seeds.internal_values.clone();
         self.ensure_value(value_id, &labels);
     }
 
     /// Record an operation-result event from the VM.
     pub(crate) fn apply_op_result(&mut self, event: OpResultEvent) {
-        let output_id = runtime_to_value_id(event.output_id);
-        if let Some(returned_call) = self.take_returned_call_for_output(event.inputs) {
+        let returned_call = self.calls.take_returned_for_output(event.inputs);
+        let Some(output_id) = self.runtime_to_value_id(event.output_id) else {
+            return;
+        };
+        if let Some(returned_call) = returned_call {
             let output_labels = join_labels(
                 &self.value_seeds.resumed_external_returns,
                 &returned_call.aggregate_summary,
@@ -128,7 +164,7 @@ impl IfcRuntimeState {
 
         let internal_labels = self.value_seeds.internal_values.clone();
         self.ensure_value(output_id, &internal_labels);
-        for input_id in input_value_ids(event.inputs) {
+        for input_id in self.input_value_ids(event.inputs) {
             self.ensure_value(input_id, &internal_labels);
             if input_id != output_id {
                 self.add_dependency(output_id, input_id);
@@ -138,7 +174,9 @@ impl IfcRuntimeState {
 
     /// Record a control-condition event using the conservative lifetime model.
     pub(crate) fn apply_control_condition(&mut self, event: ControlConditionEvent) {
-        let condition_id = runtime_to_value_id(event.condition_id);
+        let Some(condition_id) = self.runtime_to_value_id(event.condition_id) else {
+            return;
+        };
         let labels = self.value_seeds.internal_values.clone();
         self.ensure_value(condition_id, &labels);
         let summary = self
@@ -149,34 +187,26 @@ impl IfcRuntimeState {
 
     /// Snapshot IFC state at an external-call request boundary.
     pub(crate) fn apply_external_call_requested(&mut self, event: ExternalCallRequestedEvent<'_>) {
-        let arg_value_ids: Vec<ValueId> = event
-            .arg_runtime_ids
-            .iter()
-            .copied()
-            .map(runtime_to_value_id)
-            .collect();
-        let kwarg_value_ids: Vec<(ValueId, ValueId)> = event
-            .kwarg_runtime_ids
-            .iter()
-            .copied()
-            .map(|(key_id, value_id)| (runtime_to_value_id(key_id), runtime_to_value_id(value_id)))
-            .collect();
+        let mut arg_value_ids = Vec::new();
+        let mut arg_summaries = Vec::new();
+        for runtime_value_id in event.arg_runtime_ids.iter().copied() {
+            let (value_id, summary) = self.runtime_operand_summary(runtime_value_id);
+            if let Some(value_id) = value_id {
+                arg_value_ids.push(value_id);
+            }
+            arg_summaries.push(summary);
+        }
 
-        let arg_summaries = arg_value_ids
-            .iter()
-            .copied()
-            .map(|value_id| self.summary_for_seeded(value_id))
-            .collect::<Vec<_>>();
-        let kwarg_summaries = kwarg_value_ids
-            .iter()
-            .copied()
-            .map(|(key_id, value_id)| {
-                (
-                    self.summary_for_seeded(key_id),
-                    self.summary_for_seeded(value_id),
-                )
-            })
-            .collect::<Vec<_>>();
+        let mut kwarg_value_ids = Vec::new();
+        let mut kwarg_summaries = Vec::new();
+        for (key_runtime_id, value_runtime_id) in event.kwarg_runtime_ids.iter().copied() {
+            let (key_id, key_summary) = self.runtime_operand_summary(key_runtime_id);
+            let (value_id, value_summary) = self.runtime_operand_summary(value_runtime_id);
+            if let (Some(key_id), Some(value_id)) = (key_id, value_id) {
+                kwarg_value_ids.push((key_id, value_id));
+            }
+            kwarg_summaries.push((key_summary, value_summary));
+        }
 
         let aggregate_operands = aggregate_operands(&arg_summaries, &kwarg_summaries);
         let aggregate_summary = propagate_labels(
@@ -186,36 +216,25 @@ impl IfcRuntimeState {
         )
         .unwrap_or_else(empty_summary);
 
-        self.pending_calls.insert(
-            event.call_id,
-            PendingCallIfcState {
-                kind: event.kind,
-                arg_value_ids,
-                kwarg_value_ids,
-                ifc: CallIfcContext {
-                    propagation_mode: self.propagation_mode,
-                    aggregate_summary,
-                    control_context: self.control_context.clone(),
-                    arg_summaries,
-                    kwarg_summaries,
-                },
+        self.calls.record_requested(RequestedCallIfcState {
+            call_id: event.call_id,
+            kind: event.kind,
+            arg_value_ids,
+            kwarg_value_ids,
+            ifc: CallIfcContext {
+                propagation_mode: self.propagation_mode,
+                aggregate_summary,
+                control_context: self.control_context.clone(),
+                arg_summaries,
+                kwarg_summaries,
             },
-        );
+        });
     }
 
     /// Reconcile a completed external-call yield.
     pub(crate) fn apply_external_call_returned(&mut self, event: ExternalCallReturnedEvent) {
-        let Some(pending_call) = self.pending_calls.remove(&event.call_id) else {
-            self.is_conservative = true;
-            return;
-        };
-
-        if matches!(event.kind, ExternalCallReturnKind::Return) {
-            self.returned_calls.push_back(ReturnedCallIfcState {
-                arg_value_ids: pending_call.arg_value_ids,
-                kwarg_value_ids: pending_call.kwarg_value_ids,
-                aggregate_summary: pending_call.ifc.aggregate_summary,
-            });
+        if self.calls.record_returned(event).is_none() {
+            self.enter_conservative_mode();
         }
     }
 
@@ -226,21 +245,10 @@ impl IfcRuntimeState {
         kind: ExternalCallKind,
         function_name: &str,
     ) -> Option<CallIfcContext> {
-        let pending_call = self.pending_calls.get(&call_id)?;
-        if pending_call.kind != kind {
-            self.is_conservative = true;
-            return None;
-        }
-
-        self.control_context.record_effect(function_name);
-        let mut call_ifc = pending_call.ifc.clone();
-        call_ifc.control_context.record_effect(function_name);
+        let mut call_ifc = self.calls.call_ifc_context(call_id, kind)?;
+        self.record_effect_for_call(function_name, &mut call_ifc);
         Some(call_ifc)
     }
-}
-
-fn runtime_to_value_id(value_id: RuntimeValueId) -> ValueId {
-    ValueId::new(u64::try_from(value_id.raw()).unwrap_or(u64::MAX))
 }
 
 fn empty_summary() -> DependencySummary {
@@ -278,15 +286,40 @@ fn join_labels(seed: &ValueLabels, summary: &DependencySummary) -> ValueLabels {
     }
 }
 
-fn input_value_ids(inputs: OpInputIds) -> Vec<ValueId> {
-    match inputs {
-        OpInputIds::None => Vec::new(),
-        OpInputIds::One(value_id) => vec![runtime_to_value_id(value_id)],
-        OpInputIds::Two(lhs, rhs) => vec![runtime_to_value_id(lhs), runtime_to_value_id(rhs)],
-    }
-}
-
 impl IfcRuntimeState {
+    fn input_value_ids(&mut self, inputs: OpInputIds) -> Vec<ValueId> {
+        match inputs {
+            OpInputIds::None => Vec::new(),
+            OpInputIds::One(value_id) => self.runtime_to_value_id(value_id).into_iter().collect(),
+            OpInputIds::Two(lhs, rhs) => [lhs, rhs]
+                .into_iter()
+                .filter_map(|value_id| self.runtime_to_value_id(value_id))
+                .collect(),
+        }
+    }
+
+    fn runtime_operand_summary(
+        &mut self,
+        runtime_value_id: RuntimeValueId,
+    ) -> (Option<ValueId>, DependencySummary) {
+        match self.runtime_to_value_id(runtime_value_id) {
+            Some(value_id) => (Some(value_id), self.summary_for_seeded(value_id)),
+            None => (None, DependencySummary::unknown_top()),
+        }
+    }
+
+    fn runtime_to_value_id(&mut self, value_id: RuntimeValueId) -> Option<ValueId> {
+        let Ok(raw_value_id) = u64::try_from(value_id.raw()) else {
+            warn!(
+                raw_value_id = ?value_id.raw(),
+                "runtime value ID exceeded u64; switching to conservative mode"
+            );
+            self.enter_conservative_mode();
+            return None;
+        };
+        Some(ValueId::new(raw_value_id))
+    }
+
     fn ensure_value(&mut self, value_id: ValueId, labels: &ValueLabels) {
         if self.graph.get_node(&value_id).is_some() {
             return;
@@ -326,16 +359,6 @@ impl IfcRuntimeState {
         }
     }
 
-    fn take_returned_call_for_output(
-        &mut self,
-        inputs: OpInputIds,
-    ) -> Option<ReturnedCallIfcState> {
-        if !matches!(inputs, OpInputIds::None) {
-            return None;
-        }
-        self.returned_calls.pop_front()
-    }
-
     fn add_call_dependencies(&mut self, output_id: ValueId, returned_call: &ReturnedCallIfcState) {
         for input_id in returned_call.arg_value_ids.iter().copied().chain(
             returned_call
@@ -351,8 +374,20 @@ impl IfcRuntimeState {
         }
     }
 
-    fn record_ifc_error(&mut self, error: IfcError) {
-        let _ = error;
+    fn enter_conservative_mode(&mut self) {
         self.is_conservative = true;
+    }
+
+    fn record_effect_for_call(&mut self, function_name: &str, call_ifc: &mut CallIfcContext) {
+        self.control_context.record_effect(function_name);
+        call_ifc.control_context.record_effect(function_name);
+    }
+
+    fn record_ifc_error(&mut self, error: IfcError) {
+        warn!(
+            ?error,
+            "IFC error encountered; switching to conservative mode"
+        );
+        self.enter_conservative_mode();
     }
 }

@@ -4,11 +4,11 @@ use std::sync::{Arc, Mutex};
 
 use monty::{MontyObject, MontyRun, NoLimitTracker, PrintWriter};
 use rstest::rstest;
+use zamburak_core::IntegrityLabel;
 use zamburak_core::propagation::PropagationMode;
-use zamburak_core::{AuthoritySet, DataLabels, IntegrityLabel, ValueLabels};
 
 use crate::external_call::{AllowAllMediator, CallContext, DenyAllMediator, ExternalCallMediator};
-use crate::observer::{GovernedIfcConfig, IfcValueSeedConfig};
+use crate::observer::GovernedIfcConfig;
 use crate::run::{GovernedRunError, GovernedRunProgress, GovernedRunner};
 
 type SharedMediator = Arc<Mutex<dyn ExternalCallMediator>>;
@@ -38,25 +38,6 @@ impl ExternalCallMediator for RecordingMediator {
             .unwrap_or_else(std::sync::PoisonError::into_inner)
             .push(context.clone());
         crate::external_call::MediationDecision::Allow
-    }
-}
-
-fn strict_ifc_config() -> GovernedIfcConfig {
-    GovernedIfcConfig {
-        propagation_mode: PropagationMode::Strict,
-        value_seeds: IfcValueSeedConfig {
-            internal_values: ValueLabels {
-                integrity: IntegrityLabel::Trusted,
-                confidentiality: DataLabels::new(),
-                authority: AuthoritySet::full(),
-            },
-            resumed_external_returns: ValueLabels {
-                integrity: IntegrityLabel::Untrusted,
-                confidentiality: DataLabels::new(),
-                authority: AuthoritySet::full(),
-            },
-        },
-        ..GovernedIfcConfig::default()
     }
 }
 
@@ -195,7 +176,8 @@ fn strict_mode_control_context_taints_constant_effect_call() {
         vec![],
     )
     .expect("parse should succeed");
-    let runner = GovernedRunner::new(monty_run, mediator).with_ifc_config(strict_ifc_config());
+    let runner = GovernedRunner::new(monty_run, mediator)
+        .with_ifc_config(GovernedIfcConfig::strict_with_boundary_seeds());
 
     let first_progress = runner.run_no_limits(vec![]);
     let first_suspended = match first_progress {
@@ -241,7 +223,8 @@ fn resumed_external_return_provenance_flows_into_following_effect() {
         vec![],
     )
     .expect("parse should succeed");
-    let runner = GovernedRunner::new(monty_run, mediator).with_ifc_config(strict_ifc_config());
+    let runner = GovernedRunner::new(monty_run, mediator)
+        .with_ifc_config(GovernedIfcConfig::strict_with_boundary_seeds());
 
     let first_progress = runner.run_no_limits(vec![]);
     let first_suspended = match first_progress {

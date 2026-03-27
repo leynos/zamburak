@@ -6,33 +6,13 @@ use monty::{
     RuntimeValueId, ValueCreatedEvent,
 };
 use rstest::rstest;
-use zamburak_core::propagation::PropagationMode;
-use zamburak_core::{AuthoritySet, DataLabels, IntegrityLabel, ValueLabels};
+use zamburak_core::IntegrityLabel;
 
-use crate::observer::{EventCounts, GovernedIfcConfig, IfcValueSeedConfig, ZamburakObserver};
+use crate::observer::{CallIfcLookupError, EventCounts, GovernedIfcConfig, ZamburakObserver};
 
 /// Helper: build a `ZamburakObserver`.
 fn allow_all_observer() -> ZamburakObserver {
     ZamburakObserver::new()
-}
-
-fn strict_ifc_config() -> GovernedIfcConfig {
-    GovernedIfcConfig {
-        propagation_mode: PropagationMode::Strict,
-        value_seeds: IfcValueSeedConfig {
-            internal_values: ValueLabels {
-                integrity: IntegrityLabel::Trusted,
-                confidentiality: DataLabels::new(),
-                authority: AuthoritySet::full(),
-            },
-            resumed_external_returns: ValueLabels {
-                integrity: IntegrityLabel::Untrusted,
-                confidentiality: DataLabels::new(),
-                authority: AuthoritySet::full(),
-            },
-        },
-        ..GovernedIfcConfig::default()
-    }
 }
 
 /// Helper: build a `ZamburakObserver` that has already recorded one pending
@@ -207,8 +187,57 @@ fn op_result_dependencies_flow_into_external_call_ifc_context() {
 }
 
 #[rstest]
+fn kwarg_dependencies_flow_into_external_call_ifc_context() {
+    let mut obs = allow_all_observer();
+    let arg_ids = vec![RuntimeValueId::new(3)];
+    let kwarg_ids = vec![
+        (RuntimeValueId::new(10), RuntimeValueId::new(3)),
+        (RuntimeValueId::new(11), RuntimeValueId::new(4)),
+    ];
+
+    obs.on_event(RuntimeObserverEvent::ValueCreated(ValueCreatedEvent {
+        value_id: RuntimeValueId::new(1),
+    }));
+    obs.on_event(RuntimeObserverEvent::ValueCreated(ValueCreatedEvent {
+        value_id: RuntimeValueId::new(2),
+    }));
+    obs.on_event(RuntimeObserverEvent::OpResult(OpResultEvent {
+        output_id: RuntimeValueId::new(3),
+        inputs: OpInputIds::Two(RuntimeValueId::new(1), RuntimeValueId::new(2)),
+    }));
+    obs.on_event(RuntimeObserverEvent::ValueCreated(ValueCreatedEvent {
+        value_id: RuntimeValueId::new(4),
+    }));
+    obs.on_event(RuntimeObserverEvent::ExternalCallRequested(
+        ExternalCallRequestedEvent {
+            call_id: 10,
+            kind: ExternalCallKind::Function,
+            arg_runtime_ids: &arg_ids,
+            kwarg_runtime_ids: &kwarg_ids,
+        },
+    ));
+
+    let ifc = obs
+        .shared_state()
+        .call_ifc_context(10, ExternalCallKind::Function, "effect")
+        .expect("IFC context with kwargs should exist");
+    assert_eq!(ifc.arg_summaries.len(), 1);
+    assert_eq!(ifc.kwarg_summaries.len(), 2);
+    assert_eq!(ifc.kwarg_summaries[0].0.origin_count, 1);
+    assert_eq!(ifc.kwarg_summaries[0].1.origin_count, 3);
+    assert_eq!(ifc.kwarg_summaries[1].0.origin_count, 1);
+    assert_eq!(ifc.kwarg_summaries[1].1.origin_count, 1);
+    assert_eq!(ifc.aggregate_summary.origin_count, 9);
+    assert_eq!(
+        ifc.aggregate_summary.integrity_join,
+        IntegrityLabel::Trusted
+    );
+}
+
+#[rstest]
 fn strict_mode_joins_control_context_into_aggregate_summary() {
-    let mut obs = ZamburakObserver::with_ifc_config(strict_ifc_config());
+    let mut obs =
+        ZamburakObserver::with_ifc_config(GovernedIfcConfig::strict_with_boundary_seeds());
     let empty_args: Vec<RuntimeValueId> = vec![];
     let effect_args = vec![RuntimeValueId::new(300)];
     let kwarg_ids: Vec<(RuntimeValueId, RuntimeValueId)> = vec![];
@@ -265,7 +294,8 @@ fn strict_mode_joins_control_context_into_aggregate_summary() {
 
 #[rstest]
 fn returned_call_provenance_flows_into_next_effect_argument() {
-    let mut obs = ZamburakObserver::with_ifc_config(strict_ifc_config());
+    let mut obs =
+        ZamburakObserver::with_ifc_config(GovernedIfcConfig::strict_with_boundary_seeds());
     let source_args = vec![RuntimeValueId::new(10)];
     let returned_args = vec![RuntimeValueId::new(20)];
     let kwarg_ids: Vec<(RuntimeValueId, RuntimeValueId)> = vec![];
@@ -309,4 +339,45 @@ fn returned_call_provenance_flows_into_next_effect_argument() {
         IntegrityLabel::Untrusted
     );
     assert_eq!(ifc.arg_summaries[0].origin_count, 2);
+}
+
+#[rstest]
+fn missing_pending_call_bookkeeping_is_reported_before_ifc_lookup() {
+    let mut obs = observer_with_one_pending_call(11, ExternalCallKind::Function);
+    let _ = obs.take_pending_calls();
+
+    let error = obs
+        .shared_state()
+        .call_ifc_context(11, ExternalCallKind::Function, "effect")
+        .expect_err("pending queue drift should surface as an error");
+    assert_eq!(
+        error,
+        CallIfcLookupError::ObserverMismatch {
+            call_id: 11,
+            kind: ExternalCallKind::Function,
+        }
+    );
+}
+
+#[rstest]
+fn missing_ifc_snapshot_is_reported_when_runtime_state_has_already_dropped_call() {
+    let mut obs = observer_with_one_pending_call(12, ExternalCallKind::Function);
+    obs.on_event(RuntimeObserverEvent::ExternalCallReturned(
+        ExternalCallReturnedEvent {
+            call_id: 12,
+            kind: ExternalCallReturnKind::Error,
+        },
+    ));
+
+    let error = obs
+        .shared_state()
+        .call_ifc_context(12, ExternalCallKind::Function, "effect")
+        .expect_err("missing IFC snapshot should surface as an error");
+    assert_eq!(
+        error,
+        CallIfcLookupError::MissingIfcSnapshot {
+            call_id: 12,
+            kind: ExternalCallKind::Function,
+        }
+    );
 }

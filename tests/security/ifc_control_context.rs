@@ -3,11 +3,10 @@
 use std::sync::{Arc, Mutex};
 
 use monty::{MontyObject, MontyRun, PrintWriter};
-use zamburak_core::propagation::PropagationMode;
-use zamburak_core::{AuthoritySet, DataLabels, IntegrityLabel, ValueLabels};
+use zamburak_core::IntegrityLabel;
 use zamburak_monty::{
     CallContext, ExternalCallMediator, GovernedIfcConfig, GovernedRunProgress, GovernedRunner,
-    IfcValueSeedConfig, MediationDecision,
+    MediationDecision,
 };
 
 struct StrictPcDenyMediator;
@@ -25,25 +24,6 @@ impl ExternalCallMediator for StrictPcDenyMediator {
     }
 }
 
-fn strict_ifc_config() -> GovernedIfcConfig {
-    GovernedIfcConfig {
-        propagation_mode: PropagationMode::Strict,
-        value_seeds: IfcValueSeedConfig {
-            internal_values: ValueLabels {
-                integrity: IntegrityLabel::Trusted,
-                confidentiality: DataLabels::new(),
-                authority: AuthoritySet::full(),
-            },
-            resumed_external_returns: ValueLabels {
-                integrity: IntegrityLabel::Untrusted,
-                confidentiality: DataLabels::new(),
-                authority: AuthoritySet::full(),
-            },
-        },
-        ..GovernedIfcConfig::default()
-    }
-}
-
 #[test]
 fn strict_mode_denies_constant_effect_under_untrusted_control_flow() {
     let monty_run = MontyRun::new(
@@ -54,7 +34,8 @@ fn strict_mode_denies_constant_effect_under_untrusted_control_flow() {
     )
     .expect("MontyRun should be created");
     let mediator: Arc<Mutex<dyn ExternalCallMediator>> = Arc::new(Mutex::new(StrictPcDenyMediator));
-    let runner = GovernedRunner::new(monty_run, mediator).with_ifc_config(strict_ifc_config());
+    let runner = GovernedRunner::new(monty_run, mediator)
+        .with_ifc_config(GovernedIfcConfig::strict_with_boundary_seeds());
 
     let first_progress = runner
         .run_no_limits(vec![])
@@ -77,5 +58,22 @@ fn strict_mode_denies_constant_effect_under_untrusted_control_flow() {
             assert!(reason.contains("untrusted"));
         }
         other => panic!("expected Denied, got {other:?}"),
+    }
+}
+
+#[test]
+fn strict_mode_allows_constant_effect_under_trusted_control_flow() {
+    let monty_run = MontyRun::new("effect(\"constant\")".to_owned(), "test.py", vec![])
+        .expect("MontyRun should be created");
+    let mediator: Arc<Mutex<dyn ExternalCallMediator>> = Arc::new(Mutex::new(StrictPcDenyMediator));
+    let runner = GovernedRunner::new(monty_run, mediator)
+        .with_ifc_config(GovernedIfcConfig::strict_with_boundary_seeds());
+
+    let result = runner
+        .run_no_limits(vec![])
+        .expect("governed execution should succeed");
+    match result {
+        GovernedRunProgress::ExternalCallPending { .. } => {}
+        other => panic!("expected ExternalCallPending, got {other:?}"),
     }
 }
