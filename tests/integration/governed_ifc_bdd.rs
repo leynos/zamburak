@@ -153,6 +153,33 @@ fn then_arg_integrity(world: &GovernedIfcWorld, function_name: String, integrity
     }
 }
 
+#[then(
+    "the captured call context for {function_name} has aggregate origin-count at least {min_count}"
+)]
+fn then_aggregate_origin_count(world: &GovernedIfcWorld, function_name: String, min_count: u32) {
+    let context = captured_context(world, function_name.trim_matches('"'));
+    assert!(
+        context.ifc.aggregate_summary.origin_count >= min_count,
+        "expected aggregate origin_count >= {min_count}, got {}",
+        context.ifc.aggregate_summary.origin_count,
+    );
+}
+
+#[then(
+    "the captured call context for {function_name} has first argument origin-count at least {min_count}"
+)]
+fn then_arg_origin_count(world: &GovernedIfcWorld, function_name: String, min_count: u32) {
+    let context = captured_context(world, function_name.trim_matches('"'));
+    match context.ifc.arg_summaries.first() {
+        Some(summary) => assert!(
+            summary.origin_count >= min_count,
+            "expected first-argument origin_count >= {min_count}, got {}",
+            summary.origin_count,
+        ),
+        None => panic!("expected at least one argument summary"),
+    }
+}
+
 #[scenario(
     path = "tests/integration/features/governed_ifc.feature",
     name = "Strict mode carries control context into a constant effect call"

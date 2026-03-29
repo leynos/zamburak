@@ -22,3 +22,5 @@ Feature: Governed IFC contexts
     When governed execution starts and the first external call returns string "payload"
     Then the captured call context for "sink" has aggregate integrity "Untrusted"
     And the captured call context for "sink" has first argument integrity "Untrusted"
+    And the captured call context for "sink" has aggregate origin-count at least 2
+    And the captured call context for "sink" has first argument origin-count at least 2
