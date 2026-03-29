@@ -19,8 +19,10 @@ use zamburak_core::{
 use crate::external_call::CallIfcContext;
 
 mod call_ifc_tracker;
+mod helpers;
 
 use call_ifc_tracker::{CallIfcTracker, RequestedCallIfcState, ReturnedCallIfcState};
+use helpers::{aggregate_operands, collect_arg_operands, collect_kwarg_operands, join_labels};
 
 /// IFC seed labels for values created inside the governed runtime.
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -186,9 +188,12 @@ impl IfcRuntimeState {
 
     /// Snapshot IFC state at an external-call request boundary.
     pub(crate) fn apply_external_call_requested(&mut self, event: ExternalCallRequestedEvent<'_>) {
-        let (arg_value_ids, arg_summaries) = self.collect_arg_operands(event.arg_runtime_ids);
+        let (arg_value_ids, arg_summaries) =
+            collect_arg_operands(event.arg_runtime_ids, |id| self.runtime_operand_summary(id));
         let (kwarg_value_ids, kwarg_summaries) =
-            self.collect_kwarg_operands(event.kwarg_runtime_ids);
+            collect_kwarg_operands(event.kwarg_runtime_ids, |id| {
+                self.runtime_operand_summary(id)
+            });
 
         let aggregate_operands = aggregate_operands(&arg_summaries, &kwarg_summaries);
         let aggregate_summary = propagate_labels(
@@ -196,7 +201,7 @@ impl IfcRuntimeState {
             &aggregate_operands,
             &self.control_context,
         )
-        .unwrap_or_else(empty_summary);
+        .unwrap_or_else(DependencySummary::unknown_top);
 
         self.calls.record_requested(RequestedCallIfcState {
             call_id: event.call_id,
@@ -215,8 +220,14 @@ impl IfcRuntimeState {
 
     /// Reconcile a completed external-call yield.
     pub(crate) fn apply_external_call_returned(&mut self, event: ExternalCallReturnedEvent) {
-        if self.calls.record_returned(event).is_none() {
-            self.enter_conservative_mode();
+        let return_kind = event.kind;
+        match self.calls.record_returned(event) {
+            Some(_) if matches!(return_kind, monty::ExternalCallReturnKind::Return) => {}
+            Some(_) => {
+                // Non-return completions do not resume a value into the VM, so they
+                // intentionally do not enqueue returned-call provenance.
+            }
+            None => self.enter_conservative_mode(),
         }
     }
 
@@ -232,44 +243,6 @@ impl IfcRuntimeState {
         Some(call_ifc)
     }
 }
-
-fn empty_summary() -> DependencySummary {
-    DependencySummary {
-        integrity_join: IntegrityLabel::Trusted,
-        confidentiality_join: DataLabels::new(),
-        authority_join: AuthoritySet::full(),
-        origin_count: 0,
-        truncated: false,
-    }
-}
-
-fn aggregate_operands(
-    arg_summaries: &[DependencySummary],
-    kwarg_summaries: &[(DependencySummary, DependencySummary)],
-) -> Vec<DependencySummary> {
-    arg_summaries
-        .iter()
-        .cloned()
-        .chain(
-            kwarg_summaries
-                .iter()
-                .flat_map(|(key_summary, value_summary)| {
-                    [key_summary.clone(), value_summary.clone()]
-                }),
-        )
-        .collect()
-}
-
-fn join_labels(seed: &ValueLabels, summary: &DependencySummary) -> ValueLabels {
-    ValueLabels {
-        integrity: seed.integrity.join(summary.integrity_join),
-        confidentiality: seed.confidentiality.join(&summary.confidentiality_join),
-        authority: seed.authority.join(&summary.authority_join),
-    }
-}
-
-type KwargOperandIds = Vec<(ValueId, ValueId)>;
-type KwargOperandSummaries = Vec<(DependencySummary, DependencySummary)>;
 
 impl IfcRuntimeState {
     fn input_value_ids(&mut self, inputs: OpInputIds) -> Vec<ValueId> {
@@ -289,39 +262,6 @@ impl IfcRuntimeState {
                 })
                 .collect(),
         }
-    }
-
-    fn collect_arg_operands(
-        &mut self,
-        runtime_ids: &[RuntimeValueId],
-    ) -> (Vec<ValueId>, Vec<DependencySummary>) {
-        let mut value_ids = Vec::new();
-        let mut summaries = Vec::new();
-        for runtime_value_id in runtime_ids.iter().copied() {
-            let (value_id, summary) = self.runtime_operand_summary(runtime_value_id);
-            if let Some(value_id) = value_id {
-                value_ids.push(value_id);
-            }
-            summaries.push(summary);
-        }
-        (value_ids, summaries)
-    }
-
-    fn collect_kwarg_operands(
-        &mut self,
-        runtime_ids: &[(RuntimeValueId, RuntimeValueId)],
-    ) -> (KwargOperandIds, KwargOperandSummaries) {
-        let mut value_ids = Vec::new();
-        let mut summaries = Vec::new();
-        for (key_runtime_id, value_runtime_id) in runtime_ids.iter().copied() {
-            let (key_id, key_summary) = self.runtime_operand_summary(key_runtime_id);
-            let (value_id, value_summary) = self.runtime_operand_summary(value_runtime_id);
-            if let (Some(key_id), Some(value_id)) = (key_id, value_id) {
-                value_ids.push((key_id, value_id));
-            }
-            summaries.push((key_summary, value_summary));
-        }
-        (value_ids, summaries)
     }
 
     fn runtime_operand_summary(
@@ -421,6 +361,9 @@ impl IfcRuntimeState {
         self.is_conservative = true;
     }
 
+    /// `record_effect_for_call` updates both `self.control_context` for the
+    /// live runtime state and `call_ifc.control_context` for the snapshot
+    /// returned to the mediator.
     fn record_effect_for_call(&mut self, function_name: &str, call_ifc: &mut CallIfcContext) {
         self.control_context.record_effect(function_name);
         call_ifc.control_context.record_effect(function_name);

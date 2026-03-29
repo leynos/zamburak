@@ -1,6 +1,7 @@
 //! Call-lifecycle tracking for observer-driven IFC snapshots.
 
 use std::collections::{BTreeMap, VecDeque};
+use std::mem;
 
 use monty::{ExternalCallKind, ExternalCallReturnKind, ExternalCallReturnedEvent, OpInputIds};
 use zamburak_core::{DependencySummary, ValueId};
@@ -31,6 +32,7 @@ pub(super) struct ReturnedCallIfcState {
 }
 
 /// Call-specific IFC snapshots and returned-call provenance.
+#[derive(Default)]
 pub(super) struct CallIfcTracker {
     pending_calls: BTreeMap<u32, PendingCallIfcState>,
     returned_calls: VecDeque<ReturnedCallIfcState>,
@@ -39,11 +41,7 @@ pub(super) struct CallIfcTracker {
 
 impl CallIfcTracker {
     pub(super) fn new() -> Self {
-        Self {
-            pending_calls: BTreeMap::new(),
-            returned_calls: VecDeque::new(),
-            candidate_output_id: None,
-        }
+        Self::default()
     }
 
     pub(super) fn record_requested(&mut self, requested: RequestedCallIfcState) {
@@ -62,11 +60,11 @@ impl CallIfcTracker {
         &mut self,
         event: ExternalCallReturnedEvent,
     ) -> Option<PendingCallIfcState> {
-        let pending_call = self.pending_calls.remove(&event.call_id)?;
+        let mut pending_call = self.pending_calls.remove(&event.call_id)?;
         if matches!(event.kind, ExternalCallReturnKind::Return) {
             self.returned_calls.push_back(ReturnedCallIfcState {
-                arg_value_ids: pending_call.arg_value_ids.clone(),
-                kwarg_value_ids: pending_call.kwarg_value_ids.clone(),
+                arg_value_ids: mem::take(&mut pending_call.arg_value_ids),
+                kwarg_value_ids: mem::take(&mut pending_call.kwarg_value_ids),
                 aggregate_summary: pending_call.ifc.aggregate_summary.clone(),
             });
         }

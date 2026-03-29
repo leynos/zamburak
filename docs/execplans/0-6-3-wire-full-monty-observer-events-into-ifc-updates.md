@@ -135,7 +135,7 @@ vendored interpreter.
 ## Progress
 
 - [x] Reviewed the roadmap item, ADR, design document, verification targets,
-  repository layout, users guide, and previous 0.6.1/0.6.2 ExecPlans.
+  repository layout, user's guide, and previous 0.6.1/0.6.2 ExecPlans.
 - [x] Drafted this ExecPlan.
 - [x] Stage A: initialize `full-monty` and prototype the observer contract for
   control-context lifetime and external-call return provenance.
@@ -145,7 +145,7 @@ vendored interpreter.
   contexts and resume paths.
 - [x] Stage D: add unit, integration, and security-style behavioural tests,
   including `rstest-bdd` v0.5.0 coverage.
-- [x] Stage E: update the design document, users guide, and roadmap, then run
+- [x] Stage E: update the design document, user's guide, and roadmap, then run
   final gates.
 
 ## Surprises & Discoveries
@@ -574,7 +574,7 @@ Minimum success evidence:
 - the security-style regression passes,
 - root `make check-fmt`, `make lint`, and `make test` pass,
 - Task 0.6.3 is marked `[x]` in the roadmap,
-- the users guide explains the new governed IFC surface.
+- the user's guide explains the new governed IFC surface.
 
 ## Approval gate
 
