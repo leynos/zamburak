@@ -112,6 +112,8 @@ fn when_start_and_resume_first_call(world: &mut GovernedIfcWorld, value: String)
     world.result = Some(resumed);
 }
 
+/// Wraps an `IntegrityLabel` so `FromStr` can parse test-input strings such as
+/// `"Trusted"`, `"Untrusted"`, and `"Verified"` into typed integrity values.
 struct IntegrityArg(IntegrityLabel);
 
 impl std::str::FromStr for IntegrityArg {
