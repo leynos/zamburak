@@ -5,9 +5,9 @@ use std::sync::{Arc, Mutex};
 use monty::{MontyObject, MontyRun, NoLimitTracker, PrintWriter};
 use rstest::fixture;
 use rstest_bdd_macros::{given, scenario, then, when};
+use test_utils::governed_run_test_helpers::RecordingMediator;
 use zamburak_core::IntegrityLabel;
 use zamburak_core::propagation::PropagationMode;
-use zamburak_monty::test_helpers::RecordingMediator;
 use zamburak_monty::{
     CallContext, GovernedIfcConfig, GovernedRunProgress, GovernedRunner, IfcValueSeedConfig,
 };
@@ -57,6 +57,7 @@ fn parse_integrity_label(raw: &str) -> IntegrityLabel {
     match raw.trim_matches('"') {
         "Trusted" => IntegrityLabel::Trusted,
         "Untrusted" => IntegrityLabel::Untrusted,
+        "Verified" => IntegrityLabel::Verified,
         other => panic!("unsupported integrity label: {other}"),
     }
 }

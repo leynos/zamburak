@@ -342,6 +342,62 @@ fn returned_call_provenance_flows_into_next_effect_argument() {
 }
 
 #[rstest]
+fn zero_input_internal_op_does_not_consume_returned_call_provenance() {
+    let mut obs =
+        ZamburakObserver::with_ifc_config(GovernedIfcConfig::strict_with_boundary_seeds());
+    let source_args = vec![RuntimeValueId::new(10)];
+    let returned_args = vec![RuntimeValueId::new(20)];
+    let kwarg_ids: Vec<(RuntimeValueId, RuntimeValueId)> = vec![];
+
+    obs.on_event(RuntimeObserverEvent::ValueCreated(ValueCreatedEvent {
+        value_id: RuntimeValueId::new(10),
+    }));
+    obs.on_event(RuntimeObserverEvent::ExternalCallRequested(
+        ExternalCallRequestedEvent {
+            call_id: 7,
+            kind: ExternalCallKind::Function,
+            arg_runtime_ids: &source_args,
+            kwarg_runtime_ids: &kwarg_ids,
+        },
+    ));
+    obs.on_event(RuntimeObserverEvent::ExternalCallReturned(
+        ExternalCallReturnedEvent {
+            call_id: 7,
+            kind: ExternalCallReturnKind::Return,
+        },
+    ));
+    obs.on_event(RuntimeObserverEvent::ValueCreated(ValueCreatedEvent {
+        value_id: RuntimeValueId::new(99),
+    }));
+    obs.on_event(RuntimeObserverEvent::OpResult(OpResultEvent {
+        output_id: RuntimeValueId::new(99),
+        inputs: OpInputIds::None,
+    }));
+    obs.on_event(RuntimeObserverEvent::OpResult(OpResultEvent {
+        output_id: RuntimeValueId::new(20),
+        inputs: OpInputIds::None,
+    }));
+    obs.on_event(RuntimeObserverEvent::ExternalCallRequested(
+        ExternalCallRequestedEvent {
+            call_id: 8,
+            kind: ExternalCallKind::Function,
+            arg_runtime_ids: &returned_args,
+            kwarg_runtime_ids: &kwarg_ids,
+        },
+    ));
+
+    let ifc = obs
+        .shared_state()
+        .call_ifc_context(8, ExternalCallKind::Function, "sink")
+        .expect("returned provenance should remain available");
+    assert_eq!(
+        ifc.arg_summaries[0].integrity_join,
+        IntegrityLabel::Untrusted
+    );
+    assert_eq!(ifc.arg_summaries[0].origin_count, 2);
+}
+
+#[rstest]
 fn missing_pending_call_bookkeeping_is_reported_before_ifc_lookup() {
     let mut obs = observer_with_one_pending_call(11, ExternalCallKind::Function);
     let _ = obs.take_pending_calls();

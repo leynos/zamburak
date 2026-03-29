@@ -148,10 +148,12 @@ impl IfcRuntimeState {
 
     /// Record an operation-result event from the VM.
     pub(crate) fn apply_op_result(&mut self, event: OpResultEvent) {
-        let returned_call = self.calls.take_returned_for_output(event.inputs);
         let Some(output_id) = self.runtime_to_value_id(event.output_id) else {
             return;
         };
+        let returned_call = self
+            .calls
+            .take_returned_for_output(event.inputs, self.graph.get_node(&output_id).is_some());
         if let Some(returned_call) = returned_call {
             let output_labels = join_labels(
                 &self.value_seeds.resumed_external_returns,
@@ -187,26 +189,9 @@ impl IfcRuntimeState {
 
     /// Snapshot IFC state at an external-call request boundary.
     pub(crate) fn apply_external_call_requested(&mut self, event: ExternalCallRequestedEvent<'_>) {
-        let mut arg_value_ids = Vec::new();
-        let mut arg_summaries = Vec::new();
-        for runtime_value_id in event.arg_runtime_ids.iter().copied() {
-            let (value_id, summary) = self.runtime_operand_summary(runtime_value_id);
-            if let Some(value_id) = value_id {
-                arg_value_ids.push(value_id);
-            }
-            arg_summaries.push(summary);
-        }
-
-        let mut kwarg_value_ids = Vec::new();
-        let mut kwarg_summaries = Vec::new();
-        for (key_runtime_id, value_runtime_id) in event.kwarg_runtime_ids.iter().copied() {
-            let (key_id, key_summary) = self.runtime_operand_summary(key_runtime_id);
-            let (value_id, value_summary) = self.runtime_operand_summary(value_runtime_id);
-            if let (Some(key_id), Some(value_id)) = (key_id, value_id) {
-                kwarg_value_ids.push((key_id, value_id));
-            }
-            kwarg_summaries.push((key_summary, value_summary));
-        }
+        let (arg_value_ids, arg_summaries) = self.collect_arg_operands(event.arg_runtime_ids);
+        let (kwarg_value_ids, kwarg_summaries) =
+            self.collect_kwarg_operands(event.kwarg_runtime_ids);
 
         let aggregate_operands = aggregate_operands(&arg_summaries, &kwarg_summaries);
         let aggregate_summary = propagate_labels(
@@ -286,6 +271,9 @@ fn join_labels(seed: &ValueLabels, summary: &DependencySummary) -> ValueLabels {
     }
 }
 
+type KwargOperandIds = Vec<(ValueId, ValueId)>;
+type KwargOperandSummaries = Vec<(DependencySummary, DependencySummary)>;
+
 impl IfcRuntimeState {
     fn input_value_ids(&mut self, inputs: OpInputIds) -> Vec<ValueId> {
         match inputs {
@@ -296,6 +284,39 @@ impl IfcRuntimeState {
                 .filter_map(|value_id| self.runtime_to_value_id(value_id))
                 .collect(),
         }
+    }
+
+    fn collect_arg_operands(
+        &mut self,
+        runtime_ids: &[RuntimeValueId],
+    ) -> (Vec<ValueId>, Vec<DependencySummary>) {
+        let mut value_ids = Vec::new();
+        let mut summaries = Vec::new();
+        for runtime_value_id in runtime_ids.iter().copied() {
+            let (value_id, summary) = self.runtime_operand_summary(runtime_value_id);
+            if let Some(value_id) = value_id {
+                value_ids.push(value_id);
+            }
+            summaries.push(summary);
+        }
+        (value_ids, summaries)
+    }
+
+    fn collect_kwarg_operands(
+        &mut self,
+        runtime_ids: &[(RuntimeValueId, RuntimeValueId)],
+    ) -> (KwargOperandIds, KwargOperandSummaries) {
+        let mut value_ids = Vec::new();
+        let mut summaries = Vec::new();
+        for (key_runtime_id, value_runtime_id) in runtime_ids.iter().copied() {
+            let (key_id, key_summary) = self.runtime_operand_summary(key_runtime_id);
+            let (value_id, value_summary) = self.runtime_operand_summary(value_runtime_id);
+            if let (Some(key_id), Some(value_id)) = (key_id, value_id) {
+                value_ids.push((key_id, value_id));
+            }
+            summaries.push((key_summary, value_summary));
+        }
+        (value_ids, summaries)
     }
 
     fn runtime_operand_summary(

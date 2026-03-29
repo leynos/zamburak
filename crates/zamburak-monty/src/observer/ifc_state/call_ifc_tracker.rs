@@ -74,8 +74,9 @@ impl CallIfcTracker {
     pub(super) fn take_returned_for_output(
         &mut self,
         inputs: OpInputIds,
+        output_was_observed: bool,
     ) -> Option<ReturnedCallIfcState> {
-        if !matches!(inputs, OpInputIds::None) {
+        if !matches!(inputs, OpInputIds::None) || output_was_observed {
             return None;
         }
         self.returned_calls.pop_front()

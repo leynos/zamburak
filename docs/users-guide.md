@@ -242,7 +242,8 @@ information-flow state at that boundary:
 - `propagation_mode` — `Normal` or `Strict`,
 - `aggregate_summary` — dependency summary for the whole call,
 - `control_context` — the active program-counter summary,
-- `arg_summaries` and `kwarg_summaries` — per-argument provenance.
+- `arg_summaries` — per-positional-argument provenance,
+- `kwarg_summaries` — per-keyword provenance as `(key, value)` pairs.
 
 For tests or embedder-controlled execution, `GovernedRunner::with_ifc_config`
 can override the default IFC configuration before execution starts. This is
