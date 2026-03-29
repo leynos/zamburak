@@ -246,7 +246,7 @@ information-flow state at that boundary:
 
 For tests or embedder-controlled execution, `GovernedRunner::with_ifc_config`
 can override the default IFC configuration before execution starts. This is
-useful when strict mode must be forced or value seed labels must be customised.
+useful when strict mode must be forced or value seed labels must be customized.
 `GovernedIfcConfig::strict_with_boundary_seeds` and
 `IfcValueSeedConfig::boundary_defaults` provide the shared strict/boundary
 defaults used by the governed IFC tests.

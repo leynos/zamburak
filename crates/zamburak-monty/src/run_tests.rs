@@ -7,12 +7,12 @@ use rstest::rstest;
 use zamburak_core::IntegrityLabel;
 use zamburak_core::propagation::PropagationMode;
 
-use crate::external_call::{AllowAllMediator, CallContext, DenyAllMediator, ExternalCallMediator};
+use crate::external_call::{AllowAllMediator, DenyAllMediator, ExternalCallMediator};
 use crate::observer::GovernedIfcConfig;
 use crate::run::{GovernedRunError, GovernedRunProgress, GovernedRunner};
+use crate::test_helpers::recording_mediator;
 
 type SharedMediator = Arc<Mutex<dyn ExternalCallMediator>>;
-type RecordedContexts = Arc<Mutex<Vec<CallContext>>>;
 
 /// Helper: build a `GovernedRunner` from source code with the given mediator.
 fn governed_runner(code: &str, mediator: SharedMediator) -> GovernedRunner {
@@ -24,31 +24,6 @@ fn governed_runner(code: &str, mediator: SharedMediator) -> GovernedRunner {
 /// Helper: wrap a mediator in the shared handle type.
 fn shared_mediator(m: impl ExternalCallMediator + 'static) -> SharedMediator {
     Arc::new(Mutex::new(m))
-}
-
-#[derive(Clone)]
-struct RecordingMediator {
-    contexts: Arc<Mutex<Vec<CallContext>>>,
-}
-
-impl ExternalCallMediator for RecordingMediator {
-    fn mediate(&mut self, context: &CallContext) -> crate::external_call::MediationDecision {
-        self.contexts
-            .lock()
-            .unwrap_or_else(std::sync::PoisonError::into_inner)
-            .push(context.clone());
-        crate::external_call::MediationDecision::Allow
-    }
-}
-
-fn recording_mediator() -> (SharedMediator, RecordedContexts) {
-    let contexts = Arc::new(Mutex::new(Vec::new()));
-    (
-        Arc::new(Mutex::new(RecordingMediator {
-            contexts: Arc::clone(&contexts),
-        })),
-        contexts,
-    )
 }
 
 #[rstest]

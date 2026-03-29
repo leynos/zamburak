@@ -7,25 +7,10 @@ use rstest::fixture;
 use rstest_bdd_macros::{given, scenario, then, when};
 use zamburak_core::IntegrityLabel;
 use zamburak_core::propagation::PropagationMode;
+use zamburak_monty::test_helpers::RecordingMediator;
 use zamburak_monty::{
-    CallContext, ExternalCallMediator, GovernedIfcConfig, GovernedRunProgress, GovernedRunner,
-    IfcValueSeedConfig, MediationDecision,
+    CallContext, GovernedIfcConfig, GovernedRunProgress, GovernedRunner, IfcValueSeedConfig,
 };
-
-#[derive(Clone)]
-struct RecordingMediator {
-    contexts: Arc<Mutex<Vec<CallContext>>>,
-}
-
-impl ExternalCallMediator for RecordingMediator {
-    fn mediate(&mut self, context: &CallContext) -> MediationDecision {
-        self.contexts
-            .lock()
-            .unwrap_or_else(std::sync::PoisonError::into_inner)
-            .push(context.clone());
-        MediationDecision::Allow
-    }
-}
 
 #[derive(Default)]
 struct GovernedIfcWorld {

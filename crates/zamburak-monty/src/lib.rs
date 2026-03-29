@@ -13,6 +13,9 @@ mod external_call;
 mod observer;
 mod run;
 
+#[doc(hidden)]
+pub mod test_helpers;
+
 pub use external_call::{
     AllowAllMediator, CallContext, CallIfcContext, ConfirmationContext, DenyAllMediator,
     ExternalCallMediator, MediationDecision,
