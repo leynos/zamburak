@@ -27,6 +27,7 @@ repository = ""
 [workspace.dependencies]
 newt-hype = "0.2.0"
 thiserror = "2.0.11"
+tracing = "0.1.41"
 
 # Dependencies inherited by the vendored monty crate via workspace = true.
 # These mirror the definitions in third_party/full-monty/Cargo.toml and must
