@@ -9,10 +9,9 @@ Status: COMPLETE
 
 ## Purpose / big picture
 
-Implement roadmap Task 0.6.3 from
-[docs/roadmap.md](/home/user/project/docs/roadmap.md): wire the Track A
-`full-monty` runtime observer event stream into the Track B information-flow
-control (IFC) state managed by `crates/zamburak-monty`.
+Implement roadmap Task 0.6.3 from [docs/roadmap.md](/docs/roadmap.md): wire the
+Track A `full-monty` runtime observer event stream into the Track B
+information-flow control (IFC) state managed by `crates/zamburak-monty`.
 
 After this change, a governed execution path must do more than count observer
 events. It must maintain a live `ValueId`-keyed dependency graph from runtime
@@ -31,24 +30,22 @@ library must be able to observe that:
   complete IFC state updates.
 
 This is Track B PR B3 in
-[docs/adr-001-monty-ifc-vm-hooks.md](/home/user/project/docs/adr-001-monty-ifc-vm-hooks.md).
- It builds directly on Task 0.6.2 (IFC core) and consumes Track A event and
+[docs/adr-001-monty-ifc-vm-hooks.md](/docs/adr-001-monty-ifc-vm-hooks.md). It
+builds directly on Task 0.6.2 (IFC core) and consumes Track A event and
 snapshot seams from Task 0.5.3 without adding Zamburak semantics to the
 vendored interpreter.
 
 ## Constraints
 
 - Implement to the requirement signposts in
-  [docs/adr-001-monty-ifc-vm-hooks.md](/home/user/project/docs/adr-001-monty-ifc-vm-hooks.md)
-   section "Track B staged pull requests",
-  [docs/zamburak-design-document.md](/home/user/project/docs/zamburak-design-document.md)
-   sections "Component responsibilities" and "Strict-mode effect semantics",
-  and
-  [docs/verification-targets.md](/home/user/project/docs/verification-targets.md)
-   rows "IFC propagation" and "Control context".
+  [docs/adr-001-monty-ifc-vm-hooks.md](/docs/adr-001-monty-ifc-vm-hooks.md)
+  section "Track B staged pull requests",
+  [docs/zamburak-design-document.md](/docs/zamburak-design-document.md)
+  sections "Component responsibilities" and "Strict-mode effect semantics", and
+  [docs/verification-targets.md](/docs/verification-targets.md) rows "IFC
+  propagation" and "Control context".
 - Dependency precondition: Tasks 0.6.2 and 0.5.3 must remain completed in
-  [docs/roadmap.md](/home/user/project/docs/roadmap.md) before implementation
-  starts.
+  [docs/roadmap.md](/docs/roadmap.md) before implementation starts.
 - In scope: event-to-IFC graph updates, external-call summary construction from
   observer state, strict-mode control dependency tracking, and additive
   Zamburak-owned APIs needed to expose those summaries to governed mediation.
@@ -59,9 +56,9 @@ vendored interpreter.
   `crates/zamburak-monty/` and `crates/zamburak-core/`. Do not encode policy,
   taint, or Zamburak naming into Track A APIs.
 - No single Rust source file may exceed 400 lines. If IFC wiring makes
-  [crates/zamburak-monty/src/observer.rs](/home/user/project/crates/zamburak-monty/src/observer.rs)
+  [crates/zamburak-monty/src/observer.rs](/crates/zamburak-monty/src/observer.rs)
    or
-  [crates/zamburak-monty/src/run/flow.rs](/home/user/project/crates/zamburak-monty/src/run/flow.rs)
+  [crates/zamburak-monty/src/run/flow.rs](/crates/zamburak-monty/src/run/flow.rs)
    too large, extract internal submodules rather than growing them in place.
 - Public APIs must keep module-level `//!` docs and `///` item docs. New public
   IFC-facing types must explain their role with examples where appropriate.
@@ -69,8 +66,8 @@ vendored interpreter.
   `rstest-bdd` v0.5.0 where the behaviour is naturally scenario-shaped. Cover
   happy paths, unhappy paths, and edge cases.
 - Record design decisions taken during this task in
-  [docs/zamburak-design-document.md](/home/user/project/docs/zamburak-design-document.md).
-- Update [docs/users-guide.md](/home/user/project/docs/users-guide.md) for any
+  [docs/zamburak-design-document.md](/docs/zamburak-design-document.md).
+- Update [docs/users-guide.md](/docs/users-guide.md) for any
   library-consumer-visible behaviour or API additions.
 - Mark roadmap Task 0.6.3 done only after all required gates are green.
 - Final required gates for the implementation turn are
@@ -206,29 +203,29 @@ Prototype outcome:
 
 The current relevant code and documentation are:
 
-- [crates/zamburak-core/src/dependency_graph.rs](/home/user/project/crates/zamburak-core/src/dependency_graph.rs)
+- [crates/zamburak-core/src/dependency_graph.rs](/crates/zamburak-core/src/dependency_graph.rs)
   defines `DependencyGraph`, `GraphBudgets`, `ValueNode`, and `ValueLabels`.
-- [crates/zamburak-core/src/summary.rs](/home/user/project/crates/zamburak-core/src/summary.rs)
+- [crates/zamburak-core/src/summary.rs](/crates/zamburak-core/src/summary.rs)
   computes bounded transitive `DependencySummary` values.
-- [crates/zamburak-core/src/control_context.rs](/home/user/project/crates/zamburak-core/src/control_context.rs)
+- [crates/zamburak-core/src/control_context.rs](/crates/zamburak-core/src/control_context.rs)
   defines `ExecutionContextSummary` and `EffectCounters`.
-- [crates/zamburak-core/src/propagation.rs](/home/user/project/crates/zamburak-core/src/propagation.rs)
+- [crates/zamburak-core/src/propagation.rs](/crates/zamburak-core/src/propagation.rs)
   defines `PropagationMode` and `propagate_labels(...)`.
-- [crates/zamburak-monty/src/observer.rs](/home/user/project/crates/zamburak-monty/src/observer.rs)
+- [crates/zamburak-monty/src/observer.rs](/crates/zamburak-monty/src/observer.rs)
   currently records pending external calls and event counters only.
-- [crates/zamburak-monty/src/external_call.rs](/home/user/project/crates/zamburak-monty/src/external_call.rs)
+- [crates/zamburak-monty/src/external_call.rs](/crates/zamburak-monty/src/external_call.rs)
   currently exposes `CallContext { call_id, kind, function_name }` with no IFC
   payload.
-- [crates/zamburak-monty/src/run.rs](/home/user/project/crates/zamburak-monty/src/run.rs)
+- [crates/zamburak-monty/src/run.rs](/crates/zamburak-monty/src/run.rs)
   and
-  [crates/zamburak-monty/src/run/flow.rs](/home/user/project/crates/zamburak-monty/src/run/flow.rs)
+  [crates/zamburak-monty/src/run/flow.rs](/crates/zamburak-monty/src/run/flow.rs)
    mediate external calls but do not derive summaries from observer state.
-- [tests/integration/governed_run_bdd.rs](/home/user/project/tests/integration/governed_run_bdd.rs)
+- [tests/integration/governed_run_bdd.rs](/tests/integration/governed_run_bdd.rs)
   and
-  [tests/integration/features/governed_run.feature](/home/user/project/tests/integration/features/governed_run.feature)
+  [tests/integration/features/governed_run.feature](/tests/integration/features/governed_run.feature)
    already exercise the governed path and can be extended for IFC-aware
   scenarios.
-- [docs/zamburak-design-document.md](/home/user/project/docs/zamburak-design-document.md)
+- [docs/zamburak-design-document.md](/docs/zamburak-design-document.md)
   states that strict mode must include control-context summary in every effect
   check and that `full-monty` observer events are the canonical Track A signal
   surface.
@@ -251,19 +248,19 @@ tests that prove no supported event class is ignored.
 The implementation is expected to touch these existing files and may add a
 small number of internal helper modules beneath them:
 
-- [crates/zamburak-monty/src/observer.rs](/home/user/project/crates/zamburak-monty/src/observer.rs)
-- [crates/zamburak-monty/src/external_call.rs](/home/user/project/crates/zamburak-monty/src/external_call.rs)
-- [crates/zamburak-monty/src/run.rs](/home/user/project/crates/zamburak-monty/src/run.rs)
-- [crates/zamburak-monty/src/run/flow.rs](/home/user/project/crates/zamburak-monty/src/run/flow.rs)
-- [crates/zamburak-monty/src/lib.rs](/home/user/project/crates/zamburak-monty/src/lib.rs)
-- [crates/zamburak-monty/src/observer_tests.rs](/home/user/project/crates/zamburak-monty/src/observer_tests.rs)
-- [crates/zamburak-monty/src/run_tests.rs](/home/user/project/crates/zamburak-monty/src/run_tests.rs)
-- [tests/integration/governed_run_bdd.rs](/home/user/project/tests/integration/governed_run_bdd.rs)
-- [tests/integration/features/governed_run.feature](/home/user/project/tests/integration/features/governed_run.feature)
-- [tests/security/main.rs](/home/user/project/tests/security/main.rs)
-- [docs/zamburak-design-document.md](/home/user/project/docs/zamburak-design-document.md)
-- [docs/users-guide.md](/home/user/project/docs/users-guide.md)
-- [docs/roadmap.md](/home/user/project/docs/roadmap.md)
+- [crates/zamburak-monty/src/observer.rs](/crates/zamburak-monty/src/observer.rs)
+- [crates/zamburak-monty/src/external_call.rs](/crates/zamburak-monty/src/external_call.rs)
+- [crates/zamburak-monty/src/run.rs](/crates/zamburak-monty/src/run.rs)
+- [crates/zamburak-monty/src/run/flow.rs](/crates/zamburak-monty/src/run/flow.rs)
+- [crates/zamburak-monty/src/lib.rs](/crates/zamburak-monty/src/lib.rs)
+- [crates/zamburak-monty/src/observer_tests.rs](/crates/zamburak-monty/src/observer_tests.rs)
+- [crates/zamburak-monty/src/run_tests.rs](/crates/zamburak-monty/src/run_tests.rs)
+- [tests/integration/governed_run_bdd.rs](/tests/integration/governed_run_bdd.rs)
+- [tests/integration/features/governed_run.feature](/tests/integration/features/governed_run.feature)
+- [tests/security/main.rs](/tests/security/main.rs)
+- [docs/zamburak-design-document.md](/docs/zamburak-design-document.md)
+- [docs/users-guide.md](/docs/users-guide.md)
+- [docs/roadmap.md](/docs/roadmap.md)
 
 If the internal implementation becomes too large for the existing source files,
 extract internal submodules such as:
@@ -391,8 +388,8 @@ precise missing Track A signal. Do not guess.
 ### Stage B: add IFC runtime state and observer application logic
 
 Refactor
-[crates/zamburak-monty/src/observer.rs](/home/user/project/crates/zamburak-monty/src/observer.rs)
- so it owns both the existing queue bookkeeping and the new IFC runtime state.
+[crates/zamburak-monty/src/observer.rs](/crates/zamburak-monty/src/observer.rs)
+so it owns both the existing queue bookkeeping and the new IFC runtime state.
 Avoid making `observer.rs` a god object. Extract helper types or internal
 submodules early.
 
@@ -423,7 +420,7 @@ only update state; `run/flow.rs` should read that state later.
 ### Stage C: expose IFC-aware governed call contexts
 
 Extend
-[crates/zamburak-monty/src/external_call.rs](/home/user/project/crates/zamburak-monty/src/external_call.rs)
+[crates/zamburak-monty/src/external_call.rs](/crates/zamburak-monty/src/external_call.rs)
  with a nested public IFC payload, for example:
 
 ```rust
@@ -451,8 +448,8 @@ This gives Task 0.6.4 a stable input surface for policy evaluation and gives
 Task 0.6.3 tests a direct way to assert correctness.
 
 Update
-[crates/zamburak-monty/src/run/flow.rs](/home/user/project/crates/zamburak-monty/src/run/flow.rs)
- to pull the pending IFC snapshot from observer state when building
+[crates/zamburak-monty/src/run/flow.rs](/crates/zamburak-monty/src/run/flow.rs)
+to pull the pending IFC snapshot from observer state when building
 `CallContext`. Keep the existing observer-mismatch error, but add explicit
 fail-closed handling for:
 
@@ -485,7 +482,7 @@ Implementation steps:
 3. Increment `EffectCounters` at the effect boundary once per governed external
    call so context snapshots reflect actual effect history.
 4. Document the chosen strict-mode control-context model in
-   [docs/zamburak-design-document.md](/home/user/project/docs/zamburak-design-document.md),
+   [docs/zamburak-design-document.md](/docs/zamburak-design-document.md),
     including any conservative limitations discovered during implementation.
 
 ### Stage E: build the test matrix before claiming completion
@@ -511,7 +508,7 @@ Prefer small `rstest` fixtures and helper structs over large parameter lists.
 #### Behavioural integration tests
 
 Extend or add `rstest-bdd` v0.5.0 scenarios under
-[tests/integration/](/home/user/project/tests/integration/) for:
+[tests/integration/](/tests/integration/) for:
 
 1. A pure arithmetic program where a later external call sees operand-derived
    provenance in `CallContext.ifc.aggregate_summary`.
@@ -531,10 +528,9 @@ coherent. If not, add a sibling file such as
 
 #### Security-style regression
 
-Add at least one security regression under
-[tests/security/](/home/user/project/tests/security/) that demonstrates the
-control-context requirement from
-[docs/verification-targets.md](/home/user/project/docs/verification-targets.md):
+Add at least one security regression under [tests/security/](/tests/security/)
+that demonstrates the control-context requirement from
+[docs/verification-targets.md](/docs/verification-targets.md):
 
 - branch on an untrusted condition,
 - issue an external call with constant arguments,
@@ -548,16 +544,16 @@ deterministic denial when the context is missing expected taint.
 
 Update these documents in the same change:
 
-1. [docs/zamburak-design-document.md](/home/user/project/docs/zamburak-design-document.md)
+1. [docs/zamburak-design-document.md](/docs/zamburak-design-document.md)
    with the implementation decision for:
    - the runtime-state type used for observer-driven IFC wiring,
    - the default label-seeding rule,
    - the strict-mode control-context lifetime model,
    - any additive governed API introduced for IFC snapshots or context.
-2. [docs/users-guide.md](/home/user/project/docs/users-guide.md) with the new
+2. [docs/users-guide.md](/docs/users-guide.md) with the new
    governed-call IFC context shape and any new constructor or runner helper
    used by library consumers.
-3. [docs/roadmap.md](/home/user/project/docs/roadmap.md) by marking Task 0.6.3
+3. [docs/roadmap.md](/docs/roadmap.md) by marking Task 0.6.3
    done only after all gates pass.
 
 Run the final commands exactly this way so failures are preserved through `tee`:
