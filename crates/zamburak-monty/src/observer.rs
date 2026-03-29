@@ -223,5 +223,8 @@ fn lock_state(state: &Arc<Mutex<ObserverState>>) -> std::sync::MutexGuard<'_, Ob
 }
 
 #[cfg(test)]
+#[path = "observer_basic_tests.rs"]
+mod basic_tests;
+#[cfg(test)]
 #[path = "observer_tests.rs"]
 mod tests;

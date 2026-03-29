@@ -56,6 +56,11 @@ impl CallIfcTracker {
         );
     }
 
+    /// Converts an [`ExternalCallReturnedEvent`] into queued returned-call
+    /// provenance only for [`ExternalCallReturnKind::Return`]. Error and future
+    /// completions are intentionally ignored because only successful returns
+    /// produce tracked return values, although the matching
+    /// [`PendingCallIfcState`] is still removed and returned to the caller.
     pub(super) fn record_returned(
         &mut self,
         event: ExternalCallReturnedEvent,
@@ -71,6 +76,11 @@ impl CallIfcTracker {
         Some(pending_call)
     }
 
+    /// `take_returned_for_output` returns `None` when `inputs !=
+    /// OpInputIds::None`, when `output_was_observed` is true, or when
+    /// `returned_calls` is empty. Otherwise it updates `candidate_output_id`
+    /// with `output_id` and returns `Some(None)` if nothing was displaced or
+    /// `Some(Some(displaced_value))` when a previous candidate was replaced.
     pub(super) fn take_returned_for_output(
         &mut self,
         inputs: OpInputIds,
@@ -86,6 +96,9 @@ impl CallIfcTracker {
         Some(self.candidate_output_id.replace(output_id))
     }
 
+    /// `take_returned_for_value` only succeeds when `candidate_output_id ==
+    /// Some(value_id)`. In that case it clears `candidate_output_id` and
+    /// consumes the next returned call from `returned_calls`.
     pub(super) fn take_returned_for_value(
         &mut self,
         value_id: ValueId,

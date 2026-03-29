@@ -14,6 +14,8 @@ mod observer;
 mod run;
 
 #[cfg(test)]
+mod observer_test_helpers;
+#[cfg(test)]
 mod test_helpers;
 
 pub use external_call::{

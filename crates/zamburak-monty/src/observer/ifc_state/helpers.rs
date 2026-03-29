@@ -51,6 +51,11 @@ where
     (value_ids, summaries)
 }
 
+/// Collects kwarg summaries for every `(key, value)` pair in `runtime_ids`.
+///
+/// The returned `summaries` vector may contain entries whose corresponding
+/// runtime IDs could not be converted, so callers must not assume index parity
+/// between `value_ids` and `summaries`.
 pub(super) fn collect_kwarg_operands<F>(
     runtime_ids: &[(RuntimeValueId, RuntimeValueId)],
     mut summarize: F,
