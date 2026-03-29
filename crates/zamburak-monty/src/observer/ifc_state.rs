@@ -151,23 +151,19 @@ impl IfcRuntimeState {
         let Some(output_id) = self.runtime_to_value_id(event.output_id) else {
             return;
         };
-        let returned_call = self
-            .calls
-            .take_returned_for_output(event.inputs, self.graph.get_node(&output_id).is_some());
-        if let Some(returned_call) = returned_call {
-            let output_labels = join_labels(
-                &self.value_seeds.resumed_external_returns,
-                &returned_call.aggregate_summary,
-            );
-            self.ensure_value(output_id, &output_labels);
-            self.add_call_dependencies(output_id, &returned_call);
+        if let Some(displaced_candidate) = self.calls.take_returned_for_output(
+            event.inputs,
+            self.graph.get_node(&output_id).is_some(),
+            output_id,
+        ) {
+            if let Some(displaced_candidate) = displaced_candidate {
+                self.materialize_internal_value(displaced_candidate);
+            }
             return;
         }
 
-        let internal_labels = self.value_seeds.internal_values.clone();
-        self.ensure_value(output_id, &internal_labels);
+        self.materialize_internal_value(output_id);
         for input_id in self.input_value_ids(event.inputs) {
-            self.ensure_value(input_id, &internal_labels);
             if input_id != output_id {
                 self.add_dependency(output_id, input_id);
             }
@@ -179,6 +175,7 @@ impl IfcRuntimeState {
         let Some(condition_id) = self.runtime_to_value_id(event.condition_id) else {
             return;
         };
+        self.materialize_returned_value_if_needed(condition_id);
         let labels = self.value_seeds.internal_values.clone();
         self.ensure_value(condition_id, &labels);
         let summary = self
@@ -278,10 +275,18 @@ impl IfcRuntimeState {
     fn input_value_ids(&mut self, inputs: OpInputIds) -> Vec<ValueId> {
         match inputs {
             OpInputIds::None => Vec::new(),
-            OpInputIds::One(value_id) => self.runtime_to_value_id(value_id).into_iter().collect(),
+            OpInputIds::One(value_id) => self
+                .runtime_to_value_id(value_id)
+                .into_iter()
+                .inspect(|value_id| self.materialize_returned_value_if_needed(*value_id))
+                .collect(),
             OpInputIds::Two(lhs, rhs) => [lhs, rhs]
                 .into_iter()
-                .filter_map(|value_id| self.runtime_to_value_id(value_id))
+                .filter_map(|value_id| {
+                    self.runtime_to_value_id(value_id).inspect(|value_id| {
+                        self.materialize_returned_value_if_needed(*value_id);
+                    })
+                })
                 .collect(),
         }
     }
@@ -360,10 +365,28 @@ impl IfcRuntimeState {
     }
 
     fn summary_for_seeded(&mut self, value_id: ValueId) -> DependencySummary {
-        let labels = self.value_seeds.internal_values.clone();
-        self.ensure_value(value_id, &labels);
+        self.materialize_returned_value_if_needed(value_id);
+        self.materialize_internal_value(value_id);
         self.summary_for(value_id)
             .unwrap_or_else(DependencySummary::unknown_top)
+    }
+
+    fn materialize_returned_value_if_needed(&mut self, value_id: ValueId) {
+        let Some(returned_call) = self.calls.take_returned_for_value(value_id) else {
+            return;
+        };
+
+        let output_labels = join_labels(
+            &self.value_seeds.resumed_external_returns,
+            &returned_call.aggregate_summary,
+        );
+        self.ensure_value(value_id, &output_labels);
+        self.add_call_dependencies(value_id, &returned_call);
+    }
+
+    fn materialize_internal_value(&mut self, value_id: ValueId) {
+        let labels = self.value_seeds.internal_values.clone();
+        self.ensure_value(value_id, &labels);
     }
 
     fn summary_for(&mut self, value_id: ValueId) -> Option<DependencySummary> {
@@ -387,8 +410,7 @@ impl IfcRuntimeState {
                 .iter()
                 .flat_map(|(key_id, value_id)| [*key_id, *value_id]),
         ) {
-            let labels = self.value_seeds.internal_values.clone();
-            self.ensure_value(input_id, &labels);
+            self.materialize_internal_value(input_id);
             if input_id != output_id {
                 self.add_dependency(output_id, input_id);
             }

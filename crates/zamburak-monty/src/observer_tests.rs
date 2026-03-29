@@ -345,6 +345,7 @@ fn returned_call_provenance_flows_into_next_effect_argument() {
 fn zero_input_internal_op_does_not_consume_returned_call_provenance() {
     let mut obs =
         ZamburakObserver::with_ifc_config(GovernedIfcConfig::strict_with_boundary_seeds());
+    let internal_args = vec![RuntimeValueId::new(99)];
     let source_args = vec![RuntimeValueId::new(10)];
     let returned_args = vec![RuntimeValueId::new(20)];
     let kwarg_ids: Vec<(RuntimeValueId, RuntimeValueId)> = vec![];
@@ -366,9 +367,6 @@ fn zero_input_internal_op_does_not_consume_returned_call_provenance() {
             kind: ExternalCallReturnKind::Return,
         },
     ));
-    obs.on_event(RuntimeObserverEvent::ValueCreated(ValueCreatedEvent {
-        value_id: RuntimeValueId::new(99),
-    }));
     obs.on_event(RuntimeObserverEvent::OpResult(OpResultEvent {
         output_id: RuntimeValueId::new(99),
         inputs: OpInputIds::None,
@@ -385,16 +383,33 @@ fn zero_input_internal_op_does_not_consume_returned_call_provenance() {
             kwarg_runtime_ids: &kwarg_ids,
         },
     ));
+    obs.on_event(RuntimeObserverEvent::ExternalCallRequested(
+        ExternalCallRequestedEvent {
+            call_id: 9,
+            kind: ExternalCallKind::Function,
+            arg_runtime_ids: &internal_args,
+            kwarg_runtime_ids: &kwarg_ids,
+        },
+    ));
 
-    let ifc = obs
+    let sink_ifc = obs
         .shared_state()
         .call_ifc_context(8, ExternalCallKind::Function, "sink")
         .expect("returned provenance should remain available");
+    let internal_ifc = obs
+        .shared_state()
+        .call_ifc_context(9, ExternalCallKind::Function, "other")
+        .expect("internal zero-input output should remain internal");
     assert_eq!(
-        ifc.arg_summaries[0].integrity_join,
+        sink_ifc.arg_summaries[0].integrity_join,
         IntegrityLabel::Untrusted
     );
-    assert_eq!(ifc.arg_summaries[0].origin_count, 2);
+    assert_eq!(sink_ifc.arg_summaries[0].origin_count, 2);
+    assert_eq!(
+        internal_ifc.arg_summaries[0].integrity_join,
+        IntegrityLabel::Trusted
+    );
+    assert_eq!(internal_ifc.arg_summaries[0].origin_count, 1);
 }
 
 #[rstest]

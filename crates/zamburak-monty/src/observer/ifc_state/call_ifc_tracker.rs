@@ -34,6 +34,7 @@ pub(super) struct ReturnedCallIfcState {
 pub(super) struct CallIfcTracker {
     pending_calls: BTreeMap<u32, PendingCallIfcState>,
     returned_calls: VecDeque<ReturnedCallIfcState>,
+    candidate_output_id: Option<ValueId>,
 }
 
 impl CallIfcTracker {
@@ -41,6 +42,7 @@ impl CallIfcTracker {
         Self {
             pending_calls: BTreeMap::new(),
             returned_calls: VecDeque::new(),
+            candidate_output_id: None,
         }
     }
 
@@ -75,10 +77,26 @@ impl CallIfcTracker {
         &mut self,
         inputs: OpInputIds,
         output_was_observed: bool,
-    ) -> Option<ReturnedCallIfcState> {
-        if !matches!(inputs, OpInputIds::None) || output_was_observed {
+        output_id: ValueId,
+    ) -> Option<Option<ValueId>> {
+        if !matches!(inputs, OpInputIds::None)
+            || output_was_observed
+            || self.returned_calls.is_empty()
+        {
             return None;
         }
+        Some(self.candidate_output_id.replace(output_id))
+    }
+
+    pub(super) fn take_returned_for_value(
+        &mut self,
+        value_id: ValueId,
+    ) -> Option<ReturnedCallIfcState> {
+        if self.candidate_output_id != Some(value_id) {
+            return None;
+        }
+
+        self.candidate_output_id = None;
         self.returned_calls.pop_front()
     }
 
