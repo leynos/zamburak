@@ -10,6 +10,31 @@ use rstest::rstest;
 use crate::observer::EventCounts;
 use crate::observer_test_helpers::{allow_all_observer, observer_with_one_pending_call};
 
+#[allow(
+    clippy::too_many_arguments,
+    reason = "Keeps the extracted assertion helper aligned with the event-count fields under test."
+)]
+fn assert_event_counts_eq(
+    counts: EventCounts,
+    value_created: u32,
+    op_result: u32,
+    external_call_requested: u32,
+    external_call_returned: u32,
+    control_condition: u32,
+) {
+    assert_eq!(counts.value_created, value_created as usize);
+    assert_eq!(counts.op_result, op_result as usize);
+    assert_eq!(
+        counts.external_call_requested,
+        external_call_requested as usize
+    );
+    assert_eq!(
+        counts.external_call_returned,
+        external_call_returned as usize
+    );
+    assert_eq!(counts.control_condition, control_condition as usize);
+}
+
 #[rstest]
 fn new_observer_starts_with_empty_state() {
     let obs = allow_all_observer();
@@ -118,10 +143,5 @@ fn multiple_events_accumulate_correctly() {
         },
     ));
 
-    let counts = obs.event_counts();
-    assert_eq!(counts.value_created, 2);
-    assert_eq!(counts.op_result, 1);
-    assert_eq!(counts.external_call_requested, 1);
-    assert_eq!(counts.external_call_returned, 1);
-    assert_eq!(counts.control_condition, 1);
+    assert_event_counts_eq(obs.event_counts(), 2, 1, 1, 1, 1);
 }

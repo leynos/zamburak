@@ -8,10 +8,27 @@ use monty::{
 use rstest::rstest;
 use zamburak_core::IntegrityLabel;
 
+use crate::CallIfcContext;
 use crate::observer::{CallIfcLookupError, ZamburakObserver};
 use crate::observer_test_helpers::{
     allow_all_observer, observer_with_one_pending_call, strict_ifc_observer,
 };
+
+fn assert_single_arg_ifc(
+    ifc: &CallIfcContext,
+    expected_arg_origin: u32,
+    expected_agg_origin: u32,
+    expected_integrity: IntegrityLabel,
+) {
+    assert_eq!(
+        ifc.arg_summaries.len(),
+        1,
+        "expected exactly one arg summary"
+    );
+    assert_eq!(ifc.arg_summaries[0].origin_count, expected_arg_origin);
+    assert_eq!(ifc.aggregate_summary.origin_count, expected_agg_origin);
+    assert_eq!(ifc.aggregate_summary.integrity_join, expected_integrity);
+}
 
 #[rstest]
 fn op_result_dependencies_flow_into_external_call_ifc_context() {
@@ -42,13 +59,7 @@ fn op_result_dependencies_flow_into_external_call_ifc_context() {
         .shared_state()
         .call_ifc_context(9, ExternalCallKind::Function, "effect")
         .expect("IFC context should exist");
-    assert_eq!(ifc.arg_summaries.len(), 1);
-    assert_eq!(ifc.arg_summaries[0].origin_count, 3);
-    assert_eq!(ifc.aggregate_summary.origin_count, 3);
-    assert_eq!(
-        ifc.aggregate_summary.integrity_join,
-        IntegrityLabel::Trusted
-    );
+    assert_single_arg_ifc(&ifc, 3, 3, IntegrityLabel::Trusted);
 }
 
 #[rstest]
@@ -86,17 +97,12 @@ fn kwarg_dependencies_flow_into_external_call_ifc_context() {
         .shared_state()
         .call_ifc_context(10, ExternalCallKind::Function, "effect")
         .expect("IFC context with kwargs should exist");
-    assert_eq!(ifc.arg_summaries.len(), 1);
+    assert_single_arg_ifc(&ifc, 3, 9, IntegrityLabel::Trusted);
     assert_eq!(ifc.kwarg_summaries.len(), 2);
     assert_eq!(ifc.kwarg_summaries[0].0.origin_count, 1);
     assert_eq!(ifc.kwarg_summaries[0].1.origin_count, 3);
     assert_eq!(ifc.kwarg_summaries[1].0.origin_count, 1);
     assert_eq!(ifc.kwarg_summaries[1].1.origin_count, 1);
-    assert_eq!(ifc.aggregate_summary.origin_count, 9);
-    assert_eq!(
-        ifc.aggregate_summary.integrity_join,
-        IntegrityLabel::Trusted
-    );
 }
 
 #[rstest]

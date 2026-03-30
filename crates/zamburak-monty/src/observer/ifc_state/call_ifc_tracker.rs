@@ -76,6 +76,17 @@ impl CallIfcTracker {
         Some(pending_call)
     }
 
+    /// Returns `true` when the conditions required to gate an `OpResult` as a
+    /// resumed external-call return are not met, and the output should be
+    /// treated as a plain internal value.
+    fn returned_call_gating_unavailable(
+        &self,
+        inputs: OpInputIds,
+        output_was_observed: bool,
+    ) -> bool {
+        !matches!(inputs, OpInputIds::None) || output_was_observed || self.returned_calls.is_empty()
+    }
+
     /// `take_returned_for_output` returns `None` when `inputs !=
     /// OpInputIds::None`, when `output_was_observed` is true, or when
     /// `returned_calls` is empty. Otherwise it updates `candidate_output_id`
@@ -87,10 +98,7 @@ impl CallIfcTracker {
         output_was_observed: bool,
         output_id: ValueId,
     ) -> Option<Option<ValueId>> {
-        if !matches!(inputs, OpInputIds::None)
-            || output_was_observed
-            || self.returned_calls.is_empty()
-        {
+        if self.returned_call_gating_unavailable(inputs, output_was_observed) {
             return None;
         }
         Some(self.candidate_output_id.replace(output_id))
