@@ -148,28 +148,40 @@ impl IfcRuntimeState {
         self.ensure_value(value_id, &labels);
     }
 
+    fn handle_returned_for_output(&mut self, inputs: OpInputIds, output_id: ValueId) -> bool {
+        match self.calls.take_returned_for_output(
+            inputs,
+            self.graph.get_node(&output_id).is_some(),
+            output_id,
+        ) {
+            Some(displaced_candidate) => {
+                if let Some(displaced_candidate) = displaced_candidate {
+                    self.materialize_internal_value(displaced_candidate);
+                }
+                true
+            }
+            None => false,
+        }
+    }
+
+    fn add_input_dependencies(&mut self, output_id: ValueId, inputs: OpInputIds) {
+        for input_id in self.input_value_ids(inputs) {
+            if input_id != output_id {
+                self.add_dependency(output_id, input_id);
+            }
+        }
+    }
+
     /// Record an operation-result event from the VM.
     pub(crate) fn apply_op_result(&mut self, event: OpResultEvent) {
         let Some(output_id) = self.runtime_to_value_id(event.output_id) else {
             return;
         };
-        if let Some(displaced_candidate) = self.calls.take_returned_for_output(
-            event.inputs,
-            self.graph.get_node(&output_id).is_some(),
-            output_id,
-        ) {
-            if let Some(displaced_candidate) = displaced_candidate {
-                self.materialize_internal_value(displaced_candidate);
-            }
+        if self.handle_returned_for_output(event.inputs, output_id) {
             return;
         }
-
         self.materialize_internal_value(output_id);
-        for input_id in self.input_value_ids(event.inputs) {
-            if input_id != output_id {
-                self.add_dependency(output_id, input_id);
-            }
-        }
+        self.add_input_dependencies(output_id, event.inputs);
     }
 
     /// Record a control-condition event using the conservative lifetime model.

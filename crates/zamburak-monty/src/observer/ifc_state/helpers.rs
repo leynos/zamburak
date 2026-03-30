@@ -32,6 +32,11 @@ pub(super) fn join_labels(seed: &ValueLabels, summary: &DependencySummary) -> Va
     }
 }
 
+/// Collects positional-argument summaries for every value in `runtime_ids`.
+///
+/// The returned `summaries` vector always aligns one-to-one with
+/// `runtime_ids`, while `value_ids` may be shorter because `summarize(...)`
+/// can return `None` for runtime values that cannot be converted.
 pub(super) fn collect_arg_operands<F>(
     runtime_ids: &[RuntimeValueId],
     mut summarize: F,
