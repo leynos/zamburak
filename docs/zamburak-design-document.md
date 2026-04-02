@@ -831,6 +831,26 @@ choices:
   and transitive summary completeness. `kani` (bounded model checking) is
   deferred to a later task as it requires standalone toolchain installation.
 
+Implementation decision (2026-03-26): Task 0.6.3 wires the Track A observer
+stream into a Zamburak-owned `IfcRuntimeState` inside
+`crates/zamburak-monty/src/observer/ifc_state.rs`. The observer now:
+
+- lazily seeds newly observed internal values as `Trusted` with empty
+  confidentiality and full authority,
+- seeds resumed external-call return values as `Untrusted` with empty
+  confidentiality and full authority before joining in call provenance,
+- computes external-call `CallIfcContext` payloads from the dependency graph
+  rather than from ad hoc runner bookkeeping, and
+- records fail-closed conservative summaries when event ordering or graph state
+  becomes ambiguous.
+
+Implementation decision (2026-03-26): Track A exposes `ControlCondition` only
+at branch evaluation, with no explicit scope-exit event. Task 0.6.3 therefore
+uses a conservative control-context lifetime model in `zamburak-monty`:
+conditions accumulate for the remainder of the governed execution segment. This
+can over-approximate influence after merge points, but it preserves the
+required strict-mode security invariant.
+
 ## Data structures and interfaces
 
 ### Core runtime structures
@@ -1714,7 +1734,8 @@ progressively richer mediator implementations without changing the adapter
 crate's public run API.
 
 The mediator receives a `CallContext` describing the pending call (call ID,
-call kind, function name) and returns a `MediationDecision`:
+call kind, function name, and observer-derived IFC context) and returns a
+`MediationDecision`:
 
 - `Allow` — proceed with execution,
 - `Deny { reason }` — block the call with an explanation,
@@ -1723,6 +1744,16 @@ call kind, function name) and returns a `MediationDecision`:
 
 The shared mediator handle uses `Arc<Mutex<dyn ExternalCallMediator>>`,
 consistent with `full-monty`'s own `SharedRuntimeObserver` pattern.
+
+Task 0.6.3 extends `CallContext` with a nested `CallIfcContext` payload:
+
+- `propagation_mode` records whether the call summary was built in normal or
+  strict mode,
+- `aggregate_summary` contains the effect-time dependency summary for the whole
+  call,
+- `control_context` captures the active `ExecutionContextSummary`,
+- `arg_summaries` and `kwarg_summaries` expose per-argument provenance for
+  policy evaluation and tests.
 
 ### Built-in mediators
 

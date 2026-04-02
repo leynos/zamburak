@@ -9,6 +9,24 @@
 //! [`AllowAllMediator`] and [`DenyAllMediator`].
 
 use monty::ExternalCallKind;
+use zamburak_core::DependencySummary;
+use zamburak_core::control_context::ExecutionContextSummary;
+use zamburak_core::propagation::PropagationMode;
+
+/// IFC summary attached to a governed external-call boundary.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct CallIfcContext {
+    /// Propagation mode used when computing the aggregate summary.
+    pub propagation_mode: PropagationMode,
+    /// Aggregate dependency summary for the whole external call.
+    pub aggregate_summary: DependencySummary,
+    /// Control-context snapshot active at the call boundary.
+    pub control_context: ExecutionContextSummary,
+    /// Per-positional-argument dependency summaries.
+    pub arg_summaries: Vec<DependencySummary>,
+    /// Per-keyword `(key, value)` dependency summaries.
+    pub kwarg_summaries: Vec<(DependencySummary, DependencySummary)>,
+}
 
 /// Contextual metadata presented to the mediator at each external-call boundary.
 ///
@@ -21,6 +39,8 @@ pub struct CallContext {
     pub kind: ExternalCallKind,
     /// Name of the function or OS operation being called.
     pub function_name: String,
+    /// IFC snapshot derived from observer-maintained runtime state.
+    pub ifc: CallIfcContext,
 }
 
 /// Context attached to a `RequireConfirmation` decision for host-interactive
@@ -39,6 +59,10 @@ pub struct ConfirmationContext {
 /// execution after an external-call yield.
 #[derive(Clone, Debug, Eq, PartialEq)]
 #[non_exhaustive]
+#[expect(
+    clippy::large_enum_variant,
+    reason = "boxing RequireConfirmation would break the existing public mediator API"
+)]
 pub enum MediationDecision {
     /// Proceed with the external call.
     Allow,
@@ -66,12 +90,22 @@ pub enum MediationDecision {
 /// use zamburak_monty::{AllowAllMediator, ExternalCallMediator, MediationDecision};
 /// use zamburak_monty::CallContext;
 /// use monty::ExternalCallKind;
+/// use zamburak_core::control_context::ExecutionContextSummary;
+/// use zamburak_core::propagation::PropagationMode;
+/// use zamburak_core::DependencySummary;
 ///
 /// let mut mediator = AllowAllMediator;
 /// let ctx = CallContext {
 ///     call_id: 1,
 ///     kind: ExternalCallKind::Function,
 ///     function_name: "print".to_owned(),
+///     ifc: zamburak_monty::CallIfcContext {
+///         propagation_mode: PropagationMode::Normal,
+///         aggregate_summary: DependencySummary::unknown_top(),
+///         control_context: ExecutionContextSummary::new(),
+///         arg_summaries: vec![],
+///         kwarg_summaries: vec![],
+///     },
 /// };
 /// assert_eq!(mediator.mediate(&ctx), MediationDecision::Allow);
 /// ```
@@ -89,12 +123,22 @@ pub trait ExternalCallMediator: Send {
 /// use zamburak_monty::{AllowAllMediator, ExternalCallMediator, MediationDecision};
 /// use zamburak_monty::CallContext;
 /// use monty::ExternalCallKind;
+/// use zamburak_core::control_context::ExecutionContextSummary;
+/// use zamburak_core::propagation::PropagationMode;
+/// use zamburak_core::DependencySummary;
 ///
 /// let mut m = AllowAllMediator;
 /// let ctx = CallContext {
 ///     call_id: 0,
 ///     kind: ExternalCallKind::Os,
 ///     function_name: "open".to_owned(),
+///     ifc: zamburak_monty::CallIfcContext {
+///         propagation_mode: PropagationMode::Normal,
+///         aggregate_summary: DependencySummary::unknown_top(),
+///         control_context: ExecutionContextSummary::new(),
+///         arg_summaries: vec![],
+///         kwarg_summaries: vec![],
+///     },
 /// };
 /// assert_eq!(m.mediate(&ctx), MediationDecision::Allow);
 /// ```
@@ -115,12 +159,22 @@ impl ExternalCallMediator for AllowAllMediator {
 /// use zamburak_monty::{DenyAllMediator, ExternalCallMediator, MediationDecision};
 /// use zamburak_monty::CallContext;
 /// use monty::ExternalCallKind;
+/// use zamburak_core::control_context::ExecutionContextSummary;
+/// use zamburak_core::propagation::PropagationMode;
+/// use zamburak_core::DependencySummary;
 ///
 /// let mut m = DenyAllMediator;
 /// let ctx = CallContext {
 ///     call_id: 0,
 ///     kind: ExternalCallKind::Function,
 ///     function_name: "exit".to_owned(),
+///     ifc: zamburak_monty::CallIfcContext {
+///         propagation_mode: PropagationMode::Normal,
+///         aggregate_summary: DependencySummary::unknown_top(),
+///         control_context: ExecutionContextSummary::new(),
+///         arg_summaries: vec![],
+///         kwarg_summaries: vec![],
+///     },
 /// };
 /// assert!(matches!(m.mediate(&ctx), MediationDecision::Deny { .. }));
 /// ```

@@ -1,14 +1,19 @@
 //! Zamburak runtime observer bridging Track A events into governance semantics.
 //!
 //! [`ZamburakObserver`] implements the `full-monty` [`RuntimeObserver`] trait and
-//! records external-call events for the governed run entrypoint to intercept.
-//! Non-call events (`ValueCreated`, `OpResult`, `ControlCondition`) are counted
-//! locally for diagnostics, while the pending-call queue is used only as
-//! bookkeeping alongside `RunProgress`-driven mediation.
+//! translates Track A observer events into governed pending-call snapshots and
+//! live IFC state for the run loop to inspect.
 
 use std::sync::{Arc, Mutex};
 
-use monty::{ExternalCallKind, ExternalCallRequestedEvent, RuntimeObserver, RuntimeObserverEvent};
+use monty::{ExternalCallKind, RuntimeObserver, RuntimeObserverEvent};
+
+mod ifc_state;
+
+pub use ifc_state::{GovernedIfcConfig, IfcValueSeedConfig};
+
+use crate::external_call::CallIfcContext;
+use ifc_state::IfcRuntimeState;
 
 /// Recorded metadata from an `ExternalCallRequested` observer event.
 ///
@@ -22,14 +27,14 @@ pub struct RecordedCallRequest {
     pub kind: ExternalCallKind,
 }
 
-#[derive(Default)]
 struct ObserverState {
     pending_calls: Vec<RecordedCallRequest>,
     event_counts: EventCounts,
+    ifc_state: IfcRuntimeState,
 }
 
 /// Cloneable shared observer state used by the governed run loop.
-#[derive(Clone, Default)]
+#[derive(Clone)]
 pub(crate) struct SharedObserverState {
     inner: Arc<Mutex<ObserverState>>,
 }
@@ -65,12 +70,30 @@ pub struct EventCounts {
     pub control_condition: usize,
 }
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub(crate) enum CallIfcLookupError {
+    ObserverMismatch {
+        call_id: u32,
+        kind: ExternalCallKind,
+    },
+    MissingIfcSnapshot {
+        call_id: u32,
+        kind: ExternalCallKind,
+    },
+}
+
 impl ZamburakObserver {
     /// Creates a new observer with empty state.
     #[must_use]
     pub fn new() -> Self {
+        Self::with_ifc_config(GovernedIfcConfig::default())
+    }
+
+    /// Creates a new observer with explicit IFC configuration.
+    #[must_use]
+    pub fn with_ifc_config(config: GovernedIfcConfig) -> Self {
         Self {
-            state: SharedObserverState::default(),
+            state: SharedObserverState::new(config),
         }
     }
 
@@ -111,17 +134,35 @@ impl RuntimeObserver for ZamburakObserver {
 }
 
 impl SharedObserverState {
-    pub(crate) fn consume_pending_call(&self, call_id: u32, kind: ExternalCallKind) -> bool {
+    fn new(config: GovernedIfcConfig) -> Self {
+        Self {
+            inner: Arc::new(Mutex::new(ObserverState {
+                pending_calls: Vec::new(),
+                event_counts: EventCounts::default(),
+                ifc_state: IfcRuntimeState::new(config),
+            })),
+        }
+    }
+
+    pub(crate) fn call_ifc_context(
+        &self,
+        call_id: u32,
+        kind: ExternalCallKind,
+        function_name: &str,
+    ) -> Result<CallIfcContext, CallIfcLookupError> {
         let mut state = lock_state(&self.inner);
-        let maybe_index = state
+        let Some(index) = state
             .pending_calls
             .iter()
-            .position(|call| call.call_id == call_id && call.kind == kind);
-        if let Some(index) = maybe_index {
-            state.pending_calls.remove(index);
-            return true;
-        }
-        false
+            .position(|call| call.call_id == call_id && call.kind == kind)
+        else {
+            return Err(CallIfcLookupError::ObserverMismatch { call_id, kind });
+        };
+        state.pending_calls.remove(index);
+        state
+            .ifc_state
+            .call_ifc_context(call_id, kind, function_name)
+            .ok_or(CallIfcLookupError::MissingIfcSnapshot { call_id, kind })
     }
 
     fn pending_calls(&self) -> Vec<RecordedCallRequest> {
@@ -147,27 +188,29 @@ impl SharedObserverState {
 
 fn dispatch_event(state: &mut ObserverState, event: RuntimeObserverEvent<'_>) {
     match event {
-        RuntimeObserverEvent::ValueCreated(_) => {
+        RuntimeObserverEvent::ValueCreated(event) => {
             state.event_counts.value_created += 1;
+            state.ifc_state.apply_value_created(event);
         }
-        RuntimeObserverEvent::OpResult(_) => {
+        RuntimeObserverEvent::OpResult(event) => {
             state.event_counts.op_result += 1;
+            state.ifc_state.apply_op_result(event);
         }
-        RuntimeObserverEvent::ExternalCallRequested(ExternalCallRequestedEvent {
-            call_id,
-            kind,
-            ..
-        }) => {
+        RuntimeObserverEvent::ExternalCallRequested(event) => {
             state.event_counts.external_call_requested += 1;
-            state
-                .pending_calls
-                .push(RecordedCallRequest { call_id, kind });
+            state.pending_calls.push(RecordedCallRequest {
+                call_id: event.call_id,
+                kind: event.kind,
+            });
+            state.ifc_state.apply_external_call_requested(event);
         }
-        RuntimeObserverEvent::ExternalCallReturned(_) => {
+        RuntimeObserverEvent::ExternalCallReturned(event) => {
             state.event_counts.external_call_returned += 1;
+            state.ifc_state.apply_external_call_returned(event);
         }
-        RuntimeObserverEvent::ControlCondition(_) => {
+        RuntimeObserverEvent::ControlCondition(event) => {
             state.event_counts.control_condition += 1;
+            state.ifc_state.apply_control_condition(event);
         }
     }
 }
@@ -179,6 +222,9 @@ fn lock_state(state: &Arc<Mutex<ObserverState>>) -> std::sync::MutexGuard<'_, Ob
     }
 }
 
+#[cfg(test)]
+#[path = "observer_basic_tests.rs"]
+mod basic_tests;
 #[cfg(test)]
 #[path = "observer_tests.rs"]
 mod tests;

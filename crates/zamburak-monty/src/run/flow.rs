@@ -8,7 +8,7 @@ use monty::{
 };
 
 use crate::external_call::{CallContext, ExternalCallMediator, MediationDecision};
-use crate::observer::SharedObserverState;
+use crate::observer::{CallIfcLookupError, SharedObserverState};
 use crate::run::{GovernedRunError, GovernedRunProgress};
 
 /// A suspended external call awaiting host input before resume.
@@ -194,16 +194,14 @@ fn build_function_call_context<T: ResourceTracker>(
     } else {
         ExternalCallKind::Function
     };
-    if !observer_state.consume_pending_call(call.call_id, kind) {
-        return Err(GovernedRunError::ObserverMismatch {
-            call_id: call.call_id,
-            kind,
-        });
-    }
+    let ifc = observer_state
+        .call_ifc_context(call.call_id, kind, &call.function_name)
+        .map_err(map_call_ifc_lookup_error)?;
     Ok(CallContext {
         call_id: call.call_id,
         kind,
         function_name: call.function_name.clone(),
+        ifc,
     })
 }
 
@@ -211,16 +209,15 @@ fn build_os_call_context<T: ResourceTracker>(
     call: &monty::OsCall<T>,
     observer_state: &SharedObserverState,
 ) -> Result<CallContext, GovernedRunError> {
-    if !observer_state.consume_pending_call(call.call_id, ExternalCallKind::Os) {
-        return Err(GovernedRunError::ObserverMismatch {
-            call_id: call.call_id,
-            kind: ExternalCallKind::Os,
-        });
-    }
+    let function_name = format!("{:?}", call.function);
+    let ifc = observer_state
+        .call_ifc_context(call.call_id, ExternalCallKind::Os, &function_name)
+        .map_err(map_call_ifc_lookup_error)?;
     Ok(CallContext {
         call_id: call.call_id,
         kind: ExternalCallKind::Os,
-        function_name: format!("{:?}", call.function),
+        function_name,
+        ifc,
     })
 }
 
@@ -257,6 +254,17 @@ fn make_suspended_call<T: ResourceTracker>(
         kind,
         mediator: Arc::clone(resources.mediator),
         observer_state: resources.observer_state.clone(),
+    }
+}
+
+fn map_call_ifc_lookup_error(error: CallIfcLookupError) -> GovernedRunError {
+    match error {
+        CallIfcLookupError::ObserverMismatch { call_id, kind } => {
+            GovernedRunError::ObserverMismatch { call_id, kind }
+        }
+        CallIfcLookupError::MissingIfcSnapshot { call_id, kind } => {
+            GovernedRunError::MissingIfcSnapshot { call_id, kind }
+        }
     }
 }
 

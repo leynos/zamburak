@@ -13,11 +13,16 @@ mod external_call;
 mod observer;
 mod run;
 
+#[cfg(test)]
+mod observer_test_helpers;
+#[cfg(test)]
+mod test_helpers;
+
 pub use external_call::{
-    AllowAllMediator, CallContext, ConfirmationContext, DenyAllMediator, ExternalCallMediator,
-    MediationDecision,
+    AllowAllMediator, CallContext, CallIfcContext, ConfirmationContext, DenyAllMediator,
+    ExternalCallMediator, MediationDecision,
 };
-pub use observer::{EventCounts, ZamburakObserver};
+pub use observer::{EventCounts, GovernedIfcConfig, IfcValueSeedConfig, ZamburakObserver};
 pub use run::{
     GovernedRunError, GovernedRunProgress, GovernedRunner, SuspendedCall, SuspendedNameLookup,
     SuspendedResolveFutures,

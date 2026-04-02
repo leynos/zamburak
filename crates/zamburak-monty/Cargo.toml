@@ -6,6 +6,7 @@ edition = "2024"
 [dependencies]
 monty = { path = "../../third_party/full-monty/crates/monty" }
 thiserror.workspace = true
+tracing.workspace = true
 zamburak-core = { path = "../zamburak-core" }
 zamburak-policy = { path = "../zamburak-policy" }
 
