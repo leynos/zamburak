@@ -208,12 +208,15 @@ impl IfcRuntimeState {
             });
 
         let aggregate_operands = aggregate_operands(&arg_summaries, &kwarg_summaries);
-        let aggregate_summary = propagate_labels(
+        let mut aggregate_summary = propagate_labels(
             self.propagation_mode,
             &aggregate_operands,
             &self.control_context,
         )
         .unwrap_or_else(DependencySummary::unknown_top);
+        if self.is_conservative {
+            aggregate_summary = aggregate_summary.join(&DependencySummary::unknown_top());
+        }
 
         self.calls.record_requested(RequestedCallIfcState {
             call_id: event.call_id,

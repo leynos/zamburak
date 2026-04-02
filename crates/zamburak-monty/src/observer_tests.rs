@@ -5,7 +5,7 @@ use monty::{
     ExternalCallReturnedEvent, OpInputIds, OpResultEvent, RuntimeObserver, RuntimeObserverEvent,
     RuntimeValueId, ValueCreatedEvent,
 };
-use rstest::rstest;
+use rstest::{fixture, rstest};
 use zamburak_core::IntegrityLabel;
 
 use crate::CallIfcContext;
@@ -162,7 +162,8 @@ fn strict_mode_joins_control_context_into_aggregate_summary() {
     );
 }
 
-fn build_observer_after_source_call_returns() -> ZamburakObserver {
+#[fixture]
+fn observer_after_source_call_returns() -> ZamburakObserver {
     let mut obs = strict_ifc_observer();
     let source_args = vec![RuntimeValueId::new(10)];
     let kwarg_ids: Vec<(RuntimeValueId, RuntimeValueId)> = vec![];
@@ -187,8 +188,10 @@ fn build_observer_after_source_call_returns() -> ZamburakObserver {
 }
 
 #[rstest]
-fn returned_call_provenance_flows_into_next_effect_argument() {
-    let mut obs = build_observer_after_source_call_returns();
+fn returned_call_provenance_flows_into_next_effect_argument(
+    observer_after_source_call_returns: ZamburakObserver,
+) {
+    let mut obs = observer_after_source_call_returns;
     let returned_args = vec![RuntimeValueId::new(20)];
     let kwarg_ids: Vec<(RuntimeValueId, RuntimeValueId)> = vec![];
     obs.on_event(RuntimeObserverEvent::OpResult(OpResultEvent {
@@ -216,8 +219,10 @@ fn returned_call_provenance_flows_into_next_effect_argument() {
 }
 
 #[rstest]
-fn zero_input_internal_op_does_not_consume_returned_call_provenance() {
-    let mut obs = build_observer_after_source_call_returns();
+fn zero_input_internal_op_does_not_consume_returned_call_provenance(
+    observer_after_source_call_returns: ZamburakObserver,
+) {
+    let mut obs = observer_after_source_call_returns;
     let internal_args = vec![RuntimeValueId::new(99)];
     let returned_args = vec![RuntimeValueId::new(20)];
     let kwarg_ids: Vec<(RuntimeValueId, RuntimeValueId)> = vec![];

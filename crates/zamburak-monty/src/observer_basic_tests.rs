@@ -22,23 +22,53 @@ fn new_observer_starts_with_empty_state() {
 }
 
 #[rstest]
-fn value_created_event_increments_counter() {
-    let mut obs = allow_all_observer();
-    obs.on_event(RuntimeObserverEvent::ValueCreated(ValueCreatedEvent {
+#[case(
+    RuntimeObserverEvent::ValueCreated(ValueCreatedEvent {
         value_id: RuntimeValueId::new(1),
-    }));
-    assert_eq!(obs.event_counts().value_created, 1);
-    assert!(obs.pending_calls().is_empty());
-}
-
-#[rstest]
-fn op_result_event_increments_counter() {
-    let mut obs = allow_all_observer();
-    obs.on_event(RuntimeObserverEvent::OpResult(OpResultEvent {
+    }),
+    EventCounts {
+        value_created: 1,
+        ..EventCounts::default()
+    }
+)]
+#[case(
+    RuntimeObserverEvent::OpResult(OpResultEvent {
         output_id: RuntimeValueId::new(2),
         inputs: OpInputIds::None,
-    }));
-    assert_eq!(obs.event_counts().op_result, 1);
+    }),
+    EventCounts {
+        op_result: 1,
+        ..EventCounts::default()
+    }
+)]
+#[case(
+    RuntimeObserverEvent::ExternalCallReturned(ExternalCallReturnedEvent {
+        call_id: 1,
+        kind: ExternalCallReturnKind::Return,
+    }),
+    EventCounts {
+        external_call_returned: 1,
+        ..EventCounts::default()
+    }
+)]
+#[case(
+    RuntimeObserverEvent::ControlCondition(ControlConditionEvent {
+        condition_id: RuntimeValueId::new(10),
+        branch_taken: true,
+    }),
+    EventCounts {
+        control_condition: 1,
+        ..EventCounts::default()
+    }
+)]
+fn event_increments_correct_counter(
+    #[case] event: RuntimeObserverEvent<'static>,
+    #[case] expected_counts: EventCounts,
+) {
+    let mut obs = allow_all_observer();
+    obs.on_event(event);
+    assert_event_counts_eq(obs.event_counts(), expected_counts);
+    assert!(obs.pending_calls().is_empty());
 }
 
 #[rstest]
@@ -50,30 +80,6 @@ fn external_call_requested_records_pending_call() {
     let recorded = &pending_calls[0];
     assert_eq!(recorded.call_id, 42);
     assert_eq!(recorded.kind, ExternalCallKind::Function);
-}
-
-#[rstest]
-fn external_call_returned_increments_counter() {
-    let mut obs = allow_all_observer();
-    obs.on_event(RuntimeObserverEvent::ExternalCallReturned(
-        ExternalCallReturnedEvent {
-            call_id: 1,
-            kind: ExternalCallReturnKind::Return,
-        },
-    ));
-    assert_eq!(obs.event_counts().external_call_returned, 1);
-}
-
-#[rstest]
-fn control_condition_increments_counter() {
-    let mut obs = allow_all_observer();
-    obs.on_event(RuntimeObserverEvent::ControlCondition(
-        ControlConditionEvent {
-            condition_id: RuntimeValueId::new(10),
-            branch_taken: true,
-        },
-    ));
-    assert_eq!(obs.event_counts().control_condition, 1);
 }
 
 #[rstest]
