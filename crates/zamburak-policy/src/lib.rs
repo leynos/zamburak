@@ -1,7 +1,7 @@
 //! Policy schema loading, explicit migrations, sink enforcement contracts, and
 //! runtime policy-engine entrypoints.
 
-mod engine;
+pub mod engine;
 mod load_outcome;
 mod migration;
 mod policy_def;

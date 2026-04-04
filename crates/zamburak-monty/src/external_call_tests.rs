@@ -136,3 +136,164 @@ fn require_confirmation_round_trips_confirmation_context() {
         other => panic!("expected RequireConfirmation, got {other:?}"),
     }
 }
+
+// Policy-backed mediator tests.
+// These tests verify that the policy-backed mediator correctly translates
+// CallContext into policy engine input and converts policy decisions back
+// into MediationDecision.
+
+#[rstest]
+fn policy_mediator_denies_missing_tool() {
+    use crate::PolicyMediator;
+
+    let policy_yaml = r#"
+schema_version: 1
+policy_name: test_policy
+default_action: Deny
+strict_mode: true
+budgets:
+  max_values: 100
+  max_parents_per_value: 10
+  max_closure_steps: 100
+  max_witness_depth: 10
+tools: []
+"#;
+
+    let engine =
+        zamburak_policy::PolicyEngine::from_yaml_str(policy_yaml).expect("valid test policy");
+    let mut mediator = PolicyMediator::new(engine);
+    let ctx = function_call_context(1, "unknown_tool");
+    let decision = mediator.mediate(&ctx);
+
+    assert!(
+        matches!(decision, MediationDecision::Deny { .. }),
+        "missing tool policy should deny"
+    );
+}
+
+#[rstest]
+fn policy_mediator_allows_tool_with_allow_default() {
+    use crate::PolicyMediator;
+
+    let policy_yaml = r#"
+schema_version: 1
+policy_name: test_policy
+default_action: Deny
+strict_mode: true
+budgets:
+  max_values: 100
+  max_parents_per_value: 10
+  max_closure_steps: 100
+  max_witness_depth: 10
+tools:
+  - tool: safe_print
+    side_effect_class: ExternalWrite
+    default_decision: Allow
+"#;
+
+    let engine =
+        zamburak_policy::PolicyEngine::from_yaml_str(policy_yaml).expect("valid test policy");
+    let mut mediator = PolicyMediator::new(engine);
+    let ctx = function_call_context(1, "safe_print");
+    let decision = mediator.mediate(&ctx);
+
+    assert!(
+        matches!(decision, MediationDecision::Allow),
+        "tool with Allow default_decision should allow"
+    );
+}
+
+#[rstest]
+fn policy_mediator_denies_on_context_rule_violation() {
+    use crate::PolicyMediator;
+    use zamburak_core::DataLabels;
+    use zamburak_core::trust::IntegrityLabel;
+    use zamburak_core::value_id::ValueId;
+
+    let policy_yaml = r#"
+schema_version: 1
+policy_name: test_policy
+default_action: Deny
+strict_mode: true
+budgets:
+  max_values: 100
+  max_parents_per_value: 10
+  max_closure_steps: 100
+  max_witness_depth: 10
+tools:
+  - tool: llm_api_call
+    side_effect_class: ExternalWrite
+    context_rules:
+      deny_if_pc_integrity_contains:
+        - Untrusted
+    default_decision: Allow
+"#;
+
+    let engine =
+        zamburak_policy::PolicyEngine::from_yaml_str(policy_yaml).expect("valid test policy");
+    let mut mediator = PolicyMediator::new(engine);
+
+    // Create a context with Untrusted PC integrity.
+    let mut control_context = ExecutionContextSummary::new();
+    let untrusted_condition = DependencySummary {
+        integrity_join: IntegrityLabel::Untrusted,
+        confidentiality_join: DataLabels::new(),
+        authority_join: Default::default(),
+        origin_count: 1,
+        truncated: false,
+    };
+    control_context.push_condition(ValueId::new(1), &untrusted_condition);
+
+    let ifc = CallIfcContext {
+        propagation_mode: PropagationMode::Strict,
+        aggregate_summary: DependencySummary::unknown_top(),
+        control_context,
+        arg_summaries: vec![],
+        kwarg_summaries: vec![],
+    };
+    let ctx = CallContext {
+        call_id: 1,
+        kind: ExternalCallKind::Function,
+        function_name: "llm_api_call".to_owned(),
+        ifc,
+    };
+
+    let decision = mediator.mediate(&ctx);
+
+    assert!(
+        matches!(decision, MediationDecision::Deny { .. }),
+        "context rule should deny when PC integrity matches"
+    );
+}
+
+#[rstest]
+fn policy_mediator_requires_confirmation_when_configured() {
+    use crate::PolicyMediator;
+
+    let policy_yaml = r#"
+schema_version: 1
+policy_name: test_policy
+default_action: Deny
+strict_mode: true
+budgets:
+  max_values: 100
+  max_parents_per_value: 10
+  max_closure_steps: 100
+  max_witness_depth: 10
+tools:
+  - tool: sensitive_api
+    side_effect_class: ExternalWrite
+    default_decision: RequireConfirmation
+"#;
+
+    let engine =
+        zamburak_policy::PolicyEngine::from_yaml_str(policy_yaml).expect("valid test policy");
+    let mut mediator = PolicyMediator::new(engine);
+    let ctx = function_call_context(1, "sensitive_api");
+    let decision = mediator.mediate(&ctx);
+
+    assert!(
+        matches!(decision, MediationDecision::RequireConfirmation { .. }),
+        "tool with RequireConfirmation default_decision should require confirmation"
+    );
+}

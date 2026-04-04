@@ -20,7 +20,7 @@ mod test_helpers;
 
 pub use external_call::{
     AllowAllMediator, CallContext, CallIfcContext, ConfirmationContext, DenyAllMediator,
-    ExternalCallMediator, MediationDecision,
+    ExternalCallMediator, MediationDecision, PolicyMediator,
 };
 pub use observer::{EventCounts, GovernedIfcConfig, IfcValueSeedConfig, ZamburakObserver};
 pub use run::{

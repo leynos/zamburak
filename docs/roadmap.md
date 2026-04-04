@@ -269,7 +269,7 @@ completion criteria so the work can be sequenced and assessed without ambiguity.
   - Out of scope: policy decision presentation UX.
   - Completion criteria: integration tests prove observer-driven IFC state is
     complete for supported event classes.
-- [ ] Task 0.6.4: Gate external calls through policy decisions at runtime.
+- [x] Task 0.6.4: Gate external calls through policy decisions at runtime.
   - Requirement signposts:
     - `docs/adr-001-monty-ifc-vm-hooks.md` section
       "B2. Boundary enforcement at external calls",

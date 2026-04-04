@@ -1,5 +1,7 @@
 //! Runtime policy-engine construction from validated policy definitions.
 
+pub mod evaluation;
+
 use crate::load_outcome::LoadOutcome;
 use crate::migration::MigrationAuditRecord;
 use crate::policy_def::{PolicyDefinition, PolicyLoadError, PolicyLoadOutcome};

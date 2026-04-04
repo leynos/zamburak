@@ -6,7 +6,12 @@
 //! the call should be allowed, denied, or held for interactive confirmation.
 //!
 //! Two built-in mediators are provided for testing and permissive operation:
-//! [`AllowAllMediator`] and [`DenyAllMediator`].
+//! [`AllowAllMediator`] and [`DenyAllMediator`]. For production use, see
+//! [`PolicyMediator`] which evaluates calls against loaded policy rules.
+
+mod policy_mediator;
+
+pub use policy_mediator::PolicyMediator;
 
 use monty::ExternalCallKind;
 use zamburak_core::DependencySummary;
