@@ -11,6 +11,16 @@ use crate::external_call::{
     ExternalCallMediator, MediationDecision,
 };
 
+const POLICY_TEST_HEADER: &str = r#"schema_version: 1
+policy_name: test_policy
+default_action: Deny
+strict_mode: true
+budgets:
+  max_values: 100
+  max_parents_per_value: 10
+  max_closure_steps: 100
+  max_witness_depth: 10"#;
+
 struct RequireConfirmationMediator;
 
 impl ExternalCallMediator for RequireConfirmationMediator {
@@ -142,29 +152,26 @@ fn require_confirmation_round_trips_confirmation_context() {
 // CallContext into policy engine input and converts policy decisions back
 // into MediationDecision.
 
+fn make_mediator_with_no_tools() -> crate::PolicyMediator {
+    let yaml = format!("{}\ntools: []", POLICY_TEST_HEADER);
+    let engine = zamburak_policy::PolicyEngine::from_yaml_str(&yaml).expect("valid test policy");
+    crate::PolicyMediator::new(engine)
+}
+
+fn make_mediator_for_single_tool(tool: &str, default_decision: &str) -> crate::PolicyMediator {
+    let yaml = format!(
+        "{}\ntools:\n  - tool: {}\n    side_effect_class: ExternalWrite\n    default_decision: {}",
+        POLICY_TEST_HEADER, tool, default_decision
+    );
+    let engine = zamburak_policy::PolicyEngine::from_yaml_str(&yaml).expect("valid test policy");
+    crate::PolicyMediator::new(engine)
+}
+
 #[rstest]
 fn policy_mediator_denies_missing_tool() {
-    use crate::PolicyMediator;
-
-    let policy_yaml = r#"
-schema_version: 1
-policy_name: test_policy
-default_action: Deny
-strict_mode: true
-budgets:
-  max_values: 100
-  max_parents_per_value: 10
-  max_closure_steps: 100
-  max_witness_depth: 10
-tools: []
-"#;
-
-    let engine =
-        zamburak_policy::PolicyEngine::from_yaml_str(policy_yaml).expect("valid test policy");
-    let mut mediator = PolicyMediator::new(engine);
+    let mut mediator = make_mediator_with_no_tools();
     let ctx = function_call_context(1, "unknown_tool");
     let decision = mediator.mediate(&ctx);
-
     assert!(
         matches!(decision, MediationDecision::Deny { .. }),
         "missing tool policy should deny"
@@ -173,30 +180,9 @@ tools: []
 
 #[rstest]
 fn policy_mediator_allows_tool_with_allow_default() {
-    use crate::PolicyMediator;
-
-    let policy_yaml = r#"
-schema_version: 1
-policy_name: test_policy
-default_action: Deny
-strict_mode: true
-budgets:
-  max_values: 100
-  max_parents_per_value: 10
-  max_closure_steps: 100
-  max_witness_depth: 10
-tools:
-  - tool: safe_print
-    side_effect_class: ExternalWrite
-    default_decision: Allow
-"#;
-
-    let engine =
-        zamburak_policy::PolicyEngine::from_yaml_str(policy_yaml).expect("valid test policy");
-    let mut mediator = PolicyMediator::new(engine);
+    let mut mediator = make_mediator_for_single_tool("safe_print", "Allow");
     let ctx = function_call_context(1, "safe_print");
     let decision = mediator.mediate(&ctx);
-
     assert!(
         matches!(decision, MediationDecision::Allow),
         "tool with Allow default_decision should allow"
@@ -268,30 +254,9 @@ tools:
 
 #[rstest]
 fn policy_mediator_requires_confirmation_when_configured() {
-    use crate::PolicyMediator;
-
-    let policy_yaml = r#"
-schema_version: 1
-policy_name: test_policy
-default_action: Deny
-strict_mode: true
-budgets:
-  max_values: 100
-  max_parents_per_value: 10
-  max_closure_steps: 100
-  max_witness_depth: 10
-tools:
-  - tool: sensitive_api
-    side_effect_class: ExternalWrite
-    default_decision: RequireConfirmation
-"#;
-
-    let engine =
-        zamburak_policy::PolicyEngine::from_yaml_str(policy_yaml).expect("valid test policy");
-    let mut mediator = PolicyMediator::new(engine);
+    let mut mediator = make_mediator_for_single_tool("sensitive_api", "RequireConfirmation");
     let ctx = function_call_context(1, "sensitive_api");
     let decision = mediator.mediate(&ctx);
-
     assert!(
         matches!(decision, MediationDecision::RequireConfirmation { .. }),
         "tool with RequireConfirmation default_decision should require confirmation"

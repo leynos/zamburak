@@ -87,8 +87,7 @@ impl PolicyEngine {
     ///
     /// ```no_run
     /// # use zamburak_policy::{PolicyEngine, PolicyLoadError};
-    /// # use zamburak_policy::engine::evaluation::{ExternalCallPolicyInput, ExternalCallPolicyDecision};
-    /// # use monty::ExternalCallKind;
+    /// # use zamburak_policy::engine::evaluation::{ExternalCallPolicyInput, ExternalCallPolicyDecision, ExternalCallKind};
     /// # use zamburak_core::{DependencySummary, control_context::ExecutionContextSummary};
     /// #
     /// # let policy_yaml = r#"
@@ -132,8 +131,6 @@ fn evaluate_external_call_impl(
     policy: &crate::policy_def::PolicyDefinition,
     input: &ExternalCallPolicyInput,
 ) -> ExternalCallPolicyDecision {
-    use crate::policy_def::PolicyAction;
-
     // Step 1: Find the matching tool policy.
     let Some(tool_policy) = policy.tools.iter().find(|t| t.tool == input.tool_name) else {
         // Missing tool policy fails closed.
@@ -143,72 +140,112 @@ fn evaluate_external_call_impl(
     };
 
     // Step 2: Check hard deny constraints (context rules).
-    if let Some(context_rules) = &tool_policy.context_rules {
-        for integrity_label_str in &context_rules.deny_if_pc_integrity_contains {
-            if matches_integrity_label(input.control_context.pc_integrity(), integrity_label_str) {
-                return ExternalCallPolicyDecision::Deny(PolicyDecisionExplanation {
-                    summary: format!(
-                        "denied by context rule: PC integrity '{}' matched",
-                        integrity_label_str
-                    ),
-                });
-            }
-        }
+    if let Some(decision) = check_context_rules(tool_policy, input) {
+        return decision;
     }
 
     // Step 3: Check authority token requirements (placeholder for now).
     // Task 0.6.4 does not yet expose authority validation in the external-call input.
 
     // Step 4: Check argument rules.
-    for (arg_index, arg_summary) in input.arg_summaries.iter().enumerate() {
-        let Some(arg_rule) = tool_policy.arg_rules.get(arg_index) else {
-            continue;
-        };
+    if let Some(decision) = check_arg_rules(tool_policy, input) {
+        return decision;
+    }
 
-        // Check integrity requirement.
-        if let Some(required_integrity_str) = &arg_rule.requires_integrity
-            && !satisfies_integrity_requirement(
-                arg_summary.integrity_join,
-                required_integrity_str,
-            )
-        {
-            return ExternalCallPolicyDecision::Deny(PolicyDecisionExplanation {
+    // Step 5: Return the tool's default decision.
+    resolve_default_decision(tool_policy, &input.tool_name)
+}
+
+/// Check hard deny constraints (context rules).
+fn check_context_rules(
+    tool_policy: &crate::policy_def::ToolPolicy,
+    input: &ExternalCallPolicyInput,
+) -> Option<ExternalCallPolicyDecision> {
+    let context_rules = tool_policy.context_rules.as_ref()?;
+    context_rules
+        .deny_if_pc_integrity_contains
+        .iter()
+        .find(|label_str| matches_integrity_label(input.control_context.pc_integrity(), label_str))
+        .map(|label_str| {
+            ExternalCallPolicyDecision::Deny(PolicyDecisionExplanation {
+                summary: format!(
+                    "denied by context rule: PC integrity '{}' matched",
+                    label_str
+                ),
+            })
+        })
+}
+
+/// Check argument rules.
+fn check_arg_rules(
+    tool_policy: &crate::policy_def::ToolPolicy,
+    input: &ExternalCallPolicyInput,
+) -> Option<ExternalCallPolicyDecision> {
+    input
+        .arg_summaries
+        .iter()
+        .enumerate()
+        .find_map(|(arg_index, arg_summary)| {
+            let arg_rule = tool_policy.arg_rules.get(arg_index)?;
+            check_single_arg_rule(arg_rule, arg_summary)
+        })
+}
+
+/// Check a single argument rule.
+fn check_single_arg_rule(
+    arg_rule: &crate::policy_def::ArgRule,
+    arg_summary: &DependencySummary,
+) -> Option<ExternalCallPolicyDecision> {
+    // Check integrity requirement.
+    if let Some(required_integrity_str) = &arg_rule.requires_integrity
+        && !satisfies_integrity_requirement(arg_summary.integrity_join, required_integrity_str)
+    {
+        return Some(ExternalCallPolicyDecision::Deny(
+            PolicyDecisionExplanation {
                 summary: format!(
                     "argument '{}' requires integrity '{}', found '{:?}'",
                     arg_rule.arg, required_integrity_str, arg_summary.integrity_join
                 ),
-            });
-        }
-
-        // Check confidentiality deny-list.
-        for forbidden_label_str in &arg_rule.forbids_confidentiality {
-            if contains_confidentiality_label(
-                &arg_summary.confidentiality_join,
-                forbidden_label_str,
-            ) {
-                return ExternalCallPolicyDecision::Deny(PolicyDecisionExplanation {
-                    summary: format!(
-                        "argument '{}' contains forbidden confidentiality label '{}'",
-                        arg_rule.arg, forbidden_label_str
-                    ),
-                });
-            }
-        }
+            },
+        ));
     }
 
-    // Step 5: Return the tool's default decision.
+    // Check confidentiality deny-list.
+    arg_rule
+        .forbids_confidentiality
+        .iter()
+        .find(|label_str| {
+            contains_confidentiality_label(&arg_summary.confidentiality_join, label_str)
+        })
+        .map(|label| {
+            ExternalCallPolicyDecision::Deny(PolicyDecisionExplanation {
+                summary: format!(
+                    "argument '{}' contains forbidden confidentiality label '{}'",
+                    arg_rule.arg, label
+                ),
+            })
+        })
+}
+
+/// Resolve the default decision for a tool.
+fn resolve_default_decision(
+    tool_policy: &crate::policy_def::ToolPolicy,
+    tool_name: &str,
+) -> ExternalCallPolicyDecision {
+    use crate::policy_def::PolicyAction;
+
     match tool_policy.default_decision {
         PolicyAction::Allow => ExternalCallPolicyDecision::Allow(PolicyDecisionExplanation {
-            summary: format!("allowed by default decision for tool '{}'", input.tool_name),
+            summary: format!("allowed by default decision for tool '{}'", tool_name),
         }),
         PolicyAction::Deny => ExternalCallPolicyDecision::Deny(PolicyDecisionExplanation {
-            summary: format!("denied by default decision for tool '{}'", input.tool_name),
+            summary: format!("denied by default decision for tool '{}'", tool_name),
         }),
         PolicyAction::RequireConfirmation => {
             ExternalCallPolicyDecision::RequireConfirmation(PolicyDecisionExplanation {
                 summary: format!(
                     "confirmation required by default decision for tool '{}'",
-                    input.tool_name
+                    tool_name
                 ),
             })
         }
@@ -217,7 +254,7 @@ fn evaluate_external_call_impl(
             ExternalCallPolicyDecision::RequireConfirmation(PolicyDecisionExplanation {
                 summary: format!(
                     "confirmation required (mapped from RequireDraft) for tool '{}'",
-                    input.tool_name
+                    tool_name
                 ),
             })
         }
