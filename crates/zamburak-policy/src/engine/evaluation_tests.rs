@@ -169,7 +169,11 @@ fn arg_rule_requires_integrity_denies_when_missing() {
     );
 
     let path_summary = summary_with_integrity(IntegrityLabel::Untrusted);
-    let input = make_input("file_write", vec![path_summary], ExecutionContextSummary::new());
+    let input = make_input(
+        "file_write",
+        vec![path_summary],
+        ExecutionContextSummary::new(),
+    );
     let decision = engine.evaluate_external_call(&input);
 
     assert!(
@@ -192,7 +196,11 @@ fn arg_rules_pass_when_constraints_are_met() {
     );
 
     let data_summary = summary_with_integrity(IntegrityLabel::Verified);
-    let input = make_input("safe_write", vec![data_summary], ExecutionContextSummary::new());
+    let input = make_input(
+        "safe_write",
+        vec![data_summary],
+        ExecutionContextSummary::new(),
+    );
     let decision = engine.evaluate_external_call(&input);
 
     assert!(
