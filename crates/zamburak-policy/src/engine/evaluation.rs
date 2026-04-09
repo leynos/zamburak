@@ -7,7 +7,7 @@
 
 use zamburak_core::DependencySummary;
 use zamburak_core::control_context::ExecutionContextSummary;
-use zamburak_core::trust::IntegrityLabel;
+use zamburak_core::trust::{AuthoritySet, IntegrityLabel};
 
 use crate::engine::PolicyEngine;
 
@@ -43,6 +43,8 @@ pub struct ExternalCallPolicyInput {
     pub arg_summaries: Vec<DependencySummary>,
     /// Per-keyword `(key, value)` dependency summaries.
     pub kwarg_summaries: Vec<(DependencySummary, DependencySummary)>,
+    /// Authority capabilities held by the caller at this call boundary.
+    pub caller_authority: AuthoritySet,
     /// Control-context snapshot at the call boundary.
     pub control_context: ExecutionContextSummary,
 }
@@ -88,7 +90,7 @@ impl PolicyEngine {
     /// ```no_run
     /// # use zamburak_policy::{PolicyEngine, PolicyLoadError};
     /// # use zamburak_policy::engine::evaluation::{ExternalCallPolicyInput, ExternalCallPolicyDecision, ExternalCallKind};
-    /// # use zamburak_core::{DependencySummary, control_context::ExecutionContextSummary};
+    /// # use zamburak_core::{AuthoritySet, DependencySummary, control_context::ExecutionContextSummary};
     /// #
     /// # let policy_yaml = r#"
     /// # schema_version: 1
@@ -110,6 +112,7 @@ impl PolicyEngine {
     ///     aggregate_summary: DependencySummary::unknown_top(),
     ///     arg_summaries: vec![],
     ///     kwarg_summaries: vec![],
+    ///     caller_authority: AuthoritySet::full(),
     ///     control_context: ExecutionContextSummary::new(),
     /// };
     ///
@@ -144,15 +147,22 @@ fn evaluate_external_call_impl(
         return decision;
     }
 
-    // Step 3: Check authority token requirements (placeholder for now).
-    // Task 0.6.4 does not yet expose authority validation in the external-call input.
+    // Step 3: Check authority token requirements.
+    if let Some(decision) = check_required_authority(tool_policy, input) {
+        return decision;
+    }
 
-    // Step 4: Check argument rules.
+    // Step 4: Check positional argument rules.
     if let Some(decision) = check_arg_rules(tool_policy, input) {
         return decision;
     }
 
-    // Step 5: Return the tool's default decision.
+    // Step 5: Check keyword argument rules.
+    if let Some(decision) = check_kwarg_rules(tool_policy, input) {
+        return decision;
+    }
+
+    // Step 6: Return the tool's default decision.
     resolve_default_decision(tool_policy, &input.tool_name)
 }
 
@@ -165,22 +175,61 @@ fn check_context_rules(
     context_rules
         .deny_if_pc_integrity_contains
         .iter()
-        .find(|label_str| matches_integrity_label(input.control_context.pc_integrity(), label_str))
-        .map(|label_str| {
-            ExternalCallPolicyDecision::Deny(PolicyDecisionExplanation {
-                summary: format!(
-                    "denied by context rule: PC integrity '{}' matched",
-                    label_str
-                ),
-            })
+        .find_map(|label_str| match label_str.parse::<IntegrityLabel>() {
+            Ok(label) if input.control_context.pc_integrity() == label => Some(deny(format!(
+                "denied by context rule: PC integrity '{}' matched",
+                label_str
+            ))),
+            Ok(_) => None,
+            Err(_) => Some(deny(format!(
+                "denied by context rule: unrecognised integrity label '{}'",
+                label_str
+            ))),
         })
 }
 
-/// Check argument rules.
+/// Check required authority capabilities.
+///
+/// If the tool policy declares `required_authority` entries, the caller
+/// must hold every listed capability. Missing capabilities fail closed.
+fn check_required_authority(
+    tool_policy: &crate::policy_def::ToolPolicy,
+    input: &ExternalCallPolicyInput,
+) -> Option<ExternalCallPolicyDecision> {
+    use zamburak_core::AuthorityCapability;
+
+    tool_policy.required_authority.iter().find_map(|cap_str| {
+        let Ok(cap) = AuthorityCapability::try_from(cap_str.as_str()) else {
+            return Some(deny(format!(
+                "denied: invalid authority capability '{}' in policy",
+                cap_str
+            )));
+        };
+        if input.caller_authority.contains(&cap) {
+            None
+        } else {
+            Some(deny(format!(
+                "denied: caller lacks required authority '{}'",
+                cap_str
+            )))
+        }
+    })
+}
+
+/// Check positional argument rules.
+///
+/// Argument rules are matched positionally: `tool_policy.arg_rules[i]` applies
+/// to `input.arg_summaries[i]`. Arguments beyond the length of `arg_rules` are
+/// intentionally left unconstrained—the default/fail-closed policy decision
+/// still applies to the call as a whole via `resolve_default_decision`.
 fn check_arg_rules(
     tool_policy: &crate::policy_def::ToolPolicy,
     input: &ExternalCallPolicyInput,
 ) -> Option<ExternalCallPolicyDecision> {
+    // Iterate supplied arguments and look up the corresponding positional rule.
+    // `arg_rules.get(i)` returns `None` when there is no rule for that index,
+    // which the inner `?` converts to a `find_map` skip—leaving that argument
+    // unconstrained by any per-argument rule.
     input
         .arg_summaries
         .iter()
@@ -189,6 +238,24 @@ fn check_arg_rules(
             let arg_rule = tool_policy.arg_rules.get(arg_index)?;
             check_single_arg_rule(arg_rule, arg_summary)
         })
+}
+
+/// Check keyword argument rules.
+///
+/// Each keyword argument's value summary is checked against every `arg_rule`
+/// whose `arg` name matches the keyword name from the summary. This ensures
+/// that guarded parameters cannot bypass policy constraints by being passed
+/// as keyword arguments instead of positional ones.
+fn check_kwarg_rules(
+    tool_policy: &crate::policy_def::ToolPolicy,
+    input: &ExternalCallPolicyInput,
+) -> Option<ExternalCallPolicyDecision> {
+    input.kwarg_summaries.iter().find_map(|(_key, value)| {
+        tool_policy
+            .arg_rules
+            .iter()
+            .find_map(|arg_rule| check_single_arg_rule(arg_rule, value))
+    })
 }
 
 /// Check a single argument rule.
@@ -238,9 +305,10 @@ fn resolve_default_decision(
         PolicyAction::Allow => ExternalCallPolicyDecision::Allow(PolicyDecisionExplanation {
             summary: format!("allowed by default decision for tool '{}'", tool_name),
         }),
-        PolicyAction::Deny => ExternalCallPolicyDecision::Deny(PolicyDecisionExplanation {
-            summary: format!("denied by default decision for tool '{}'", tool_name),
-        }),
+        PolicyAction::Deny => deny(format!(
+            "denied by default decision for tool '{}'",
+            tool_name
+        )),
         PolicyAction::RequireConfirmation => {
             ExternalCallPolicyDecision::RequireConfirmation(PolicyDecisionExplanation {
                 summary: format!(
@@ -261,37 +329,30 @@ fn resolve_default_decision(
     }
 }
 
-/// Check if the given integrity label matches the policy string.
-fn matches_integrity_label(integrity: IntegrityLabel, label_str: &str) -> bool {
-    match label_str {
-        "Untrusted" => integrity == IntegrityLabel::Untrusted,
-        "Trusted" => integrity == IntegrityLabel::Trusted,
-        "Verified" => integrity == IntegrityLabel::Verified,
-        _ => false,
-    }
+/// Shorthand for constructing a deny decision with a summary message.
+fn deny(summary: String) -> ExternalCallPolicyDecision {
+    ExternalCallPolicyDecision::Deny(PolicyDecisionExplanation { summary })
 }
 
 /// Check if the given integrity level satisfies the requirement.
+///
+/// Unknown requirement strings fail closed (return `false`), delegating
+/// to `IntegrityLabel::from_str` in `zamburak_core` for parsing.
 fn satisfies_integrity_requirement(integrity: IntegrityLabel, required_str: &str) -> bool {
-    let required = match required_str {
-        "Untrusted" => IntegrityLabel::Untrusted,
-        "Trusted" => IntegrityLabel::Trusted,
-        "Verified" => IntegrityLabel::Verified,
-        _ => return false,
+    let Ok(required) = required_str.parse::<IntegrityLabel>() else {
+        return false;
     };
     integrity >= required
 }
 
 /// Check if the confidentiality label set contains the specified label.
+///
+/// Delegates to `DataLabel::from_str` in `zamburak_core` for parsing.
+/// Unknown label strings fail closed (return `true` to trigger deny).
 fn contains_confidentiality_label(labels: &zamburak_core::DataLabels, label_str: &str) -> bool {
-    use zamburak_core::DataLabel;
-    let target_label = match label_str {
-        "Pii" => DataLabel::Pii,
-        "AuthSecret" => DataLabel::AuthSecret,
-        "PrivateEmailBody" => DataLabel::PrivateEmailBody,
-        "PaymentInstrument" => DataLabel::PaymentInstrument,
-        "InternalPolicyNote" => DataLabel::InternalPolicyNote,
-        _ => return false,
+    let Ok(target_label) = label_str.parse::<zamburak_core::DataLabel>() else {
+        // Fail closed: unrecognised label in policy is treated as present.
+        return true;
     };
     labels.contains(&target_label)
 }

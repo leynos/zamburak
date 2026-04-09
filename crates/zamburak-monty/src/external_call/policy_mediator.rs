@@ -89,6 +89,7 @@ fn translate_call_context_to_policy_input(context: &CallContext) -> ExternalCall
         aggregate_summary: context.ifc.aggregate_summary.clone(),
         arg_summaries: context.ifc.arg_summaries.clone(),
         kwarg_summaries: context.ifc.kwarg_summaries.clone(),
+        caller_authority: context.ifc.aggregate_summary.authority_join.clone(),
         control_context: context.ifc.control_context.clone(),
     }
 }

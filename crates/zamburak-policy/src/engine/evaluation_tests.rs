@@ -2,36 +2,52 @@
 
 use rstest::rstest;
 use zamburak_core::control_context::ExecutionContextSummary;
-use zamburak_core::trust::IntegrityLabel;
-use zamburak_core::{DataLabel, DataLabels, DependencySummary};
+use zamburak_core::trust::{AuthoritySet, IntegrityLabel};
+use zamburak_core::{AuthorityCapability, DataLabel, DataLabels, DependencySummary};
 
 use super::{ExternalCallKind, ExternalCallPolicyDecision, ExternalCallPolicyInput};
 use crate::engine::PolicyEngine;
 
-/// Helper to build a minimal test policy with custom tools configuration.
 fn minimal_policy_with_tools(tools_yaml: &str) -> PolicyEngine {
-    let policy_yaml = format!(
-        r#"
-schema_version: 1
-policy_name: test_policy
-default_action: Deny
-strict_mode: true
-budgets:
-  max_values: 100
-  max_parents_per_value: 10
-  max_closure_steps: 100
-  max_witness_depth: 10
-tools:
-{tools_yaml}
-"#
+    let yaml = format!(
+        concat!(
+            "schema_version: 1\n",
+            "policy_name: test_policy\n",
+            "default_action: Deny\n",
+            "strict_mode: true\n",
+            "budgets:\n",
+            "  max_values: 100\n",
+            "  max_parents_per_value: 10\n",
+            "  max_closure_steps: 100\n",
+            "  max_witness_depth: 10\n",
+            "tools:\n",
+            "{}"
+        ),
+        tools_yaml
     );
-    PolicyEngine::from_yaml_str(&policy_yaml).expect("valid test policy")
+    PolicyEngine::from_yaml_str(&yaml).expect("valid test policy")
 }
 
-/// Helper to build an ExternalCallPolicyInput for testing.
 fn make_input(
     tool_name: &str,
     arg_summaries: Vec<DependencySummary>,
+    control_context: ExecutionContextSummary,
+) -> ExternalCallPolicyInput {
+    make_input_full(
+        tool_name,
+        arg_summaries,
+        vec![],
+        AuthoritySet::full(),
+        control_context,
+    )
+}
+
+#[expect(clippy::too_many_arguments, reason = "test helper covers all input fields")]
+fn make_input_full(
+    tool_name: &str,
+    arg_summaries: Vec<DependencySummary>,
+    kwarg_summaries: Vec<(DependencySummary, DependencySummary)>,
+    caller_authority: AuthoritySet,
     control_context: ExecutionContextSummary,
 ) -> ExternalCallPolicyInput {
     ExternalCallPolicyInput {
@@ -39,12 +55,12 @@ fn make_input(
         call_kind: ExternalCallKind::Function,
         aggregate_summary: DependencySummary::unknown_top(),
         arg_summaries,
-        kwarg_summaries: vec![],
+        kwarg_summaries,
+        caller_authority,
         control_context,
     }
 }
 
-/// Helper to build a DependencySummary with specified integrity and default other fields.
 fn summary_with_integrity(integrity: IntegrityLabel) -> DependencySummary {
     DependencySummary {
         integrity_join: integrity,
@@ -55,7 +71,6 @@ fn summary_with_integrity(integrity: IntegrityLabel) -> DependencySummary {
     }
 }
 
-/// Helper to build a DependencySummary with specified confidentiality labels and default other fields.
 fn summary_with_confidentiality(labels: &[DataLabel]) -> DependencySummary {
     DependencySummary {
         integrity_join: IntegrityLabel::Trusted,
@@ -66,192 +81,320 @@ fn summary_with_confidentiality(labels: &[DataLabel]) -> DependencySummary {
     }
 }
 
-/// Helper to build a control context with an untrusted condition pushed.
 fn control_context_with_untrusted_pc() -> ExecutionContextSummary {
     use zamburak_core::value_id::ValueId;
-    let mut context = ExecutionContextSummary::new();
-    let untrusted_condition = summary_with_integrity(IntegrityLabel::Untrusted);
-    context.push_condition(ValueId::new(1), &untrusted_condition);
-    context
+    let mut ctx = ExecutionContextSummary::new();
+    ctx.push_condition(
+        ValueId::new(1),
+        &summary_with_integrity(IntegrityLabel::Untrusted),
+    );
+    ctx
 }
 
 #[test]
 fn missing_tool_policy_fails_closed_with_deny() {
     let engine = minimal_policy_with_tools("");
-    let input = ExternalCallPolicyInput {
-        tool_name: "unknown_tool".to_owned(),
-        call_kind: ExternalCallKind::Function,
-        aggregate_summary: DependencySummary::unknown_top(),
-        arg_summaries: vec![],
-        kwarg_summaries: vec![],
-        control_context: ExecutionContextSummary::new(),
-    };
-
+    let input = make_input("unknown_tool", vec![], ExecutionContextSummary::new());
     let decision = engine.evaluate_external_call(&input);
-
-    assert!(
-        matches!(decision, ExternalCallPolicyDecision::Deny(_)),
-        "missing tool policy must fail closed with deny"
-    );
+    assert!(matches!(decision, ExternalCallPolicyDecision::Deny(_)));
 }
 
 #[rstest]
 #[case("Allow", "safe_print", "allow")]
 #[case("Deny", "dangerous_exec", "deny")]
-#[case("RequireConfirmation", "sensitive_api_call", "require confirmation")]
+#[case("RequireConfirmation", "sensitive_api", "confirm")]
 fn tool_default_decision_returns_expected_outcome(
     #[case] default_decision: &str,
     #[case] tool_name: &str,
-    #[case] expected_outcome: &str,
+    #[case] expected: &str,
 ) {
-    let tools_yaml = format!(
-        r#"
-  - tool: {tool_name}
-    side_effect_class: ExternalWrite
-    default_decision: {default_decision}
-"#
+    let yaml = format!(
+        "  - tool: {tool_name}\n    side_effect_class: ExternalWrite\n    default_decision: {default_decision}"
     );
-    let engine = minimal_policy_with_tools(&tools_yaml);
+    let engine = minimal_policy_with_tools(&yaml);
     let input = make_input(tool_name, vec![], ExecutionContextSummary::new());
-
     let decision = engine.evaluate_external_call(&input);
-
-    match expected_outcome {
-        "allow" => assert!(
-            matches!(decision, ExternalCallPolicyDecision::Allow(_)),
-            "tool with Allow default_decision should allow when no rules fire"
-        ),
-        "deny" => assert!(
-            matches!(decision, ExternalCallPolicyDecision::Deny(_)),
-            "tool with Deny default_decision should deny when no rules fire"
-        ),
-        "require confirmation" => assert!(
-            matches!(decision, ExternalCallPolicyDecision::RequireConfirmation(_)),
-            "tool with RequireConfirmation default_decision should require confirmation"
-        ),
-        _ => panic!("unexpected outcome: {expected_outcome}"),
+    match expected {
+        "allow" => assert!(matches!(decision, ExternalCallPolicyDecision::Allow(_))),
+        "deny" => assert!(matches!(decision, ExternalCallPolicyDecision::Deny(_))),
+        "confirm" => assert!(matches!(
+            decision,
+            ExternalCallPolicyDecision::RequireConfirmation(_)
+        )),
+        _ => panic!("unexpected: {expected}"),
     }
 }
 
-#[test]
-fn strict_mode_context_rule_denies_on_pc_integrity_match() {
-    let engine = minimal_policy_with_tools(
-        r#"
-  - tool: llm_api_call
-    side_effect_class: ExternalWrite
-    context_rules:
-      deny_if_pc_integrity_contains:
-        - Untrusted
-    default_decision: Allow
-"#,
+#[rstest]
+#[case("Untrusted")]
+#[case("UNTRUSTED")]
+fn context_rule_denies_on_pc_integrity_match(#[case] label: &str) {
+    let yaml = format!(
+        concat!(
+            "  - tool: llm_api_call\n",
+            "    side_effect_class: ExternalWrite\n",
+            "    context_rules:\n",
+            "      deny_if_pc_integrity_contains:\n",
+            "        - {}\n",
+            "    default_decision: Allow"
+        ),
+        label
     );
-
+    let engine = minimal_policy_with_tools(&yaml);
     let input = make_input("llm_api_call", vec![], control_context_with_untrusted_pc());
-    let decision = engine.evaluate_external_call(&input);
-
-    assert!(
-        matches!(decision, ExternalCallPolicyDecision::Deny(_)),
-        "deny_if_pc_integrity_contains should deny when PC integrity matches"
-    );
+    assert!(matches!(
+        engine.evaluate_external_call(&input),
+        ExternalCallPolicyDecision::Deny(_)
+    ));
 }
 
 #[test]
 fn arg_rule_requires_integrity_denies_when_missing() {
-    let engine = minimal_policy_with_tools(
-        r#"
-  - tool: file_write
-    side_effect_class: ExternalWrite
-    arg_rules:
-      - arg: path
-        requires_integrity: Verified
-    default_decision: Allow
-"#,
-    );
-
-    let path_summary = summary_with_integrity(IntegrityLabel::Untrusted);
+    let engine = minimal_policy_with_tools(concat!(
+        "  - tool: file_write\n",
+        "    side_effect_class: ExternalWrite\n",
+        "    arg_rules:\n",
+        "      - arg: path\n",
+        "        requires_integrity: Verified\n",
+        "    default_decision: Allow"
+    ));
     let input = make_input(
         "file_write",
-        vec![path_summary],
+        vec![summary_with_integrity(IntegrityLabel::Untrusted)],
         ExecutionContextSummary::new(),
     );
-    let decision = engine.evaluate_external_call(&input);
-
-    assert!(
-        matches!(decision, ExternalCallPolicyDecision::Deny(_)),
-        "requires_integrity should deny when argument integrity is insufficient"
-    );
+    assert!(matches!(
+        engine.evaluate_external_call(&input),
+        ExternalCallPolicyDecision::Deny(_)
+    ));
 }
 
 #[test]
 fn arg_rules_pass_when_constraints_are_met() {
-    let engine = minimal_policy_with_tools(
-        r#"
-  - tool: safe_write
-    side_effect_class: ExternalWrite
-    arg_rules:
-      - arg: data
-        requires_integrity: Trusted
-    default_decision: Allow
-"#,
-    );
-
-    let data_summary = summary_with_integrity(IntegrityLabel::Verified);
+    let engine = minimal_policy_with_tools(concat!(
+        "  - tool: safe_write\n",
+        "    side_effect_class: ExternalWrite\n",
+        "    arg_rules:\n",
+        "      - arg: data\n",
+        "        requires_integrity: Trusted\n",
+        "    default_decision: Allow"
+    ));
     let input = make_input(
         "safe_write",
-        vec![data_summary],
+        vec![summary_with_integrity(IntegrityLabel::Verified)],
         ExecutionContextSummary::new(),
     );
-    let decision = engine.evaluate_external_call(&input);
-
-    assert!(
-        matches!(decision, ExternalCallPolicyDecision::Allow(_)),
-        "arg rules should allow when all constraints are satisfied"
-    );
+    assert!(matches!(
+        engine.evaluate_external_call(&input),
+        ExternalCallPolicyDecision::Allow(_)
+    ));
 }
 
 #[test]
-fn arg_rule_forbids_confidentiality_denies_when_present() {
-    let engine = minimal_policy_with_tools(
-        r#"
-  - tool: public_log
-    side_effect_class: ExternalWrite
-    arg_rules:
-      - arg: message
-        forbids_confidentiality:
-          - AuthSecret
-    default_decision: Allow
-"#,
-    );
-
-    let message_summary = summary_with_confidentiality(&[DataLabel::AuthSecret]);
+fn more_arg_rules_than_arguments_does_not_panic() {
+    let engine = minimal_policy_with_tools(concat!(
+        "  - tool: guarded_write\n",
+        "    side_effect_class: ExternalWrite\n",
+        "    arg_rules:\n",
+        "      - arg: first\n",
+        "        requires_integrity: Trusted\n",
+        "      - arg: second\n",
+        "        requires_integrity: Verified\n",
+        "    default_decision: Allow"
+    ));
     let input = make_input(
-        "public_log",
-        vec![message_summary],
+        "guarded_write",
+        vec![summary_with_integrity(IntegrityLabel::Verified)],
         ExecutionContextSummary::new(),
     );
-    let decision = engine.evaluate_external_call(&input);
+    assert!(matches!(
+        engine.evaluate_external_call(&input),
+        ExternalCallPolicyDecision::Allow(_)
+    ));
+}
 
-    assert!(
-        matches!(decision, ExternalCallPolicyDecision::Deny(_)),
-        "forbids_confidentiality should deny when forbidden label is present"
+#[test]
+fn more_arguments_than_arg_rules_falls_through_to_default() {
+    let engine = minimal_policy_with_tools(concat!(
+        "  - tool: guarded_write\n",
+        "    side_effect_class: ExternalWrite\n",
+        "    arg_rules:\n",
+        "      - arg: first\n",
+        "        requires_integrity: Trusted\n",
+        "    default_decision: Allow"
+    ));
+    let input = make_input(
+        "guarded_write",
+        vec![
+            summary_with_integrity(IntegrityLabel::Verified),
+            summary_with_integrity(IntegrityLabel::Untrusted),
+        ],
+        ExecutionContextSummary::new(),
     );
+    assert!(matches!(
+        engine.evaluate_external_call(&input),
+        ExternalCallPolicyDecision::Allow(_)
+    ));
+}
+
+#[rstest]
+#[case("AuthSecret")]
+#[case("AUTH_SECRET")]
+fn arg_rule_forbids_confidentiality_denies_when_present(#[case] label: &str) {
+    let yaml = format!(
+        concat!(
+            "  - tool: public_log\n",
+            "    side_effect_class: ExternalWrite\n",
+            "    arg_rules:\n",
+            "      - arg: message\n",
+            "        forbids_confidentiality:\n",
+            "          - {}\n",
+            "    default_decision: Allow"
+        ),
+        label
+    );
+    let engine = minimal_policy_with_tools(&yaml);
+    let input = make_input(
+        "public_log",
+        vec![summary_with_confidentiality(&[DataLabel::AuthSecret])],
+        ExecutionContextSummary::new(),
+    );
+    assert!(matches!(
+        engine.evaluate_external_call(&input),
+        ExternalCallPolicyDecision::Deny(_)
+    ));
+}
+
+#[test]
+fn context_rule_with_unrecognised_integrity_label_fails_closed() {
+    let engine = minimal_policy_with_tools(concat!(
+        "  - tool: api_call\n",
+        "    side_effect_class: ExternalWrite\n",
+        "    context_rules:\n",
+        "      deny_if_pc_integrity_contains:\n",
+        "        - Typoed\n",
+        "    default_decision: Allow"
+    ));
+    let input = make_input("api_call", vec![], ExecutionContextSummary::new());
+    let decision = engine.evaluate_external_call(&input);
+    match &decision {
+        ExternalCallPolicyDecision::Deny(e) => assert!(
+            e.summary.contains("unrecognised integrity label"),
+            "should mention unrecognised label: {}",
+            e.summary
+        ),
+        other => panic!("expected Deny, got {other:?}"),
+    }
+}
+
+#[test]
+fn arg_rule_with_unrecognised_confidentiality_label_fails_closed() {
+    let engine = minimal_policy_with_tools(concat!(
+        "  - tool: log_call\n",
+        "    side_effect_class: ExternalWrite\n",
+        "    arg_rules:\n",
+        "      - arg: msg\n",
+        "        forbids_confidentiality:\n",
+        "          - NonExistentLabel\n",
+        "    default_decision: Allow"
+    ));
+    let input = make_input(
+        "log_call",
+        vec![summary_with_integrity(IntegrityLabel::Trusted)],
+        ExecutionContextSummary::new(),
+    );
+    assert!(matches!(
+        engine.evaluate_external_call(&input),
+        ExternalCallPolicyDecision::Deny(_)
+    ));
 }
 
 #[test]
 fn require_draft_maps_to_require_confirmation_conservatively() {
-    let engine = minimal_policy_with_tools(
-        r#"
-  - tool: draft_email
-    side_effect_class: ExternalWrite
-    default_decision: RequireDraft
-"#,
-    );
-
+    let engine = minimal_policy_with_tools(concat!(
+        "  - tool: draft_email\n",
+        "    side_effect_class: ExternalWrite\n",
+        "    default_decision: RequireDraft"
+    ));
     let input = make_input("draft_email", vec![], ExecutionContextSummary::new());
-    let decision = engine.evaluate_external_call(&input);
+    assert!(matches!(
+        engine.evaluate_external_call(&input),
+        ExternalCallPolicyDecision::RequireConfirmation(_)
+    ));
+}
 
-    assert!(
-        matches!(decision, ExternalCallPolicyDecision::RequireConfirmation(_)),
-        "RequireDraft should map to RequireConfirmation for Task 0.6.4"
+#[test]
+fn required_authority_denies_when_caller_lacks_capability() {
+    let engine = minimal_policy_with_tools(concat!(
+        "  - tool: send_email\n",
+        "    side_effect_class: ExternalWrite\n",
+        "    required_authority:\n",
+        "      - EmailSendCap\n",
+        "    default_decision: Allow"
+    ));
+    let input = make_input_full(
+        "send_email",
+        vec![],
+        vec![],
+        AuthoritySet::new(),
+        ExecutionContextSummary::new(),
     );
+    let decision = engine.evaluate_external_call(&input);
+    match &decision {
+        ExternalCallPolicyDecision::Deny(e) => assert!(
+            e.summary.contains("lacks required authority"),
+            "should mention missing authority: {}",
+            e.summary
+        ),
+        other => panic!("expected Deny, got {other:?}"),
+    }
+}
+
+#[test]
+fn required_authority_allows_when_caller_holds_capability() {
+    let engine = minimal_policy_with_tools(concat!(
+        "  - tool: send_email\n",
+        "    side_effect_class: ExternalWrite\n",
+        "    required_authority:\n",
+        "      - EmailSendCap\n",
+        "    default_decision: Allow"
+    ));
+    let cap = AuthorityCapability::try_from("EmailSendCap").expect("valid capability");
+    let input = make_input_full(
+        "send_email",
+        vec![],
+        vec![],
+        AuthoritySet::from_iter([cap]),
+        ExecutionContextSummary::new(),
+    );
+    assert!(matches!(
+        engine.evaluate_external_call(&input),
+        ExternalCallPolicyDecision::Allow(_)
+    ));
+}
+
+#[test]
+fn kwarg_rule_forbids_confidentiality_denies_when_present() {
+    let engine = minimal_policy_with_tools(concat!(
+        "  - tool: public_log\n",
+        "    side_effect_class: ExternalWrite\n",
+        "    arg_rules:\n",
+        "      - arg: message\n",
+        "        forbids_confidentiality:\n",
+        "          - AuthSecret\n",
+        "    default_decision: Allow"
+    ));
+    let key = summary_with_integrity(IntegrityLabel::Trusted);
+    let val = summary_with_confidentiality(&[DataLabel::AuthSecret]);
+    let input = make_input_full(
+        "public_log",
+        vec![],
+        vec![(key, val)],
+        AuthoritySet::full(),
+        ExecutionContextSummary::new(),
+    );
+    assert!(matches!(
+        engine.evaluate_external_call(&input),
+        ExternalCallPolicyDecision::Deny(_)
+    ));
 }

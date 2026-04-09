@@ -2,10 +2,14 @@
 
 use monty::ExternalCallKind;
 use rstest::rstest;
+use zamburak_core::DataLabels;
 use zamburak_core::DependencySummary;
 use zamburak_core::control_context::ExecutionContextSummary;
 use zamburak_core::propagation::PropagationMode;
+use zamburak_core::trust::IntegrityLabel;
+use zamburak_core::value_id::ValueId;
 
+use crate::PolicyMediator;
 use crate::external_call::{
     AllowAllMediator, CallContext, CallIfcContext, ConfirmationContext, DenyAllMediator,
     ExternalCallMediator, MediationDecision,
@@ -47,6 +51,15 @@ fn os_call_context(call_id: u32, name: &str) -> CallContext {
     CallContext {
         call_id,
         kind: ExternalCallKind::Os,
+        function_name: name.to_owned(),
+        ifc: default_ifc_context(),
+    }
+}
+
+fn method_call_context(call_id: u32, name: &str) -> CallContext {
+    CallContext {
+        call_id,
+        kind: ExternalCallKind::Method,
         function_name: name.to_owned(),
         ifc: default_ifc_context(),
     }
@@ -172,10 +185,15 @@ fn policy_mediator_denies_missing_tool() {
     let mut mediator = make_mediator_with_no_tools();
     let ctx = function_call_context(1, "unknown_tool");
     let decision = mediator.mediate(&ctx);
-    assert!(
-        matches!(decision, MediationDecision::Deny { .. }),
-        "missing tool policy should deny"
-    );
+    match &decision {
+        MediationDecision::Deny { reason } => {
+            assert!(
+                reason.contains("no policy defined for tool"),
+                "deny reason should mention missing tool: {reason}"
+            );
+        }
+        other => panic!("expected Deny, got {other:?}"),
+    }
 }
 
 #[rstest]
@@ -190,12 +208,29 @@ fn policy_mediator_allows_tool_with_allow_default() {
 }
 
 #[rstest]
-fn policy_mediator_denies_on_context_rule_violation() {
-    use crate::PolicyMediator;
-    use zamburak_core::DataLabels;
-    use zamburak_core::trust::IntegrityLabel;
-    use zamburak_core::value_id::ValueId;
+fn policy_mediator_allows_os_call_with_allow_default() {
+    let mut mediator = make_mediator_for_single_tool("safe_print", "Allow");
+    let ctx = os_call_context(1, "safe_print");
+    let decision = mediator.mediate(&ctx);
+    assert!(
+        matches!(decision, MediationDecision::Allow),
+        "OS call for tool with Allow default should be allowed"
+    );
+}
 
+#[rstest]
+fn policy_mediator_allows_method_call_with_allow_default() {
+    let mut mediator = make_mediator_for_single_tool("safe_print", "Allow");
+    let ctx = method_call_context(1, "safe_print");
+    let decision = mediator.mediate(&ctx);
+    assert!(
+        matches!(decision, MediationDecision::Allow),
+        "Method call for tool with Allow default should be allowed"
+    );
+}
+
+#[rstest]
+fn policy_mediator_denies_on_context_rule_violation() {
     let policy_yaml = r#"
 schema_version: 1
 policy_name: test_policy
@@ -246,10 +281,15 @@ tools:
 
     let decision = mediator.mediate(&ctx);
 
-    assert!(
-        matches!(decision, MediationDecision::Deny { .. }),
-        "context rule should deny when PC integrity matches"
-    );
+    match &decision {
+        MediationDecision::Deny { reason } => {
+            assert!(
+                reason.contains("context rule"),
+                "deny reason should mention context rule: {reason}"
+            );
+        }
+        other => panic!("expected Deny, got {other:?}"),
+    }
 }
 
 #[rstest]
@@ -257,8 +297,14 @@ fn policy_mediator_requires_confirmation_when_configured() {
     let mut mediator = make_mediator_for_single_tool("sensitive_api", "RequireConfirmation");
     let ctx = function_call_context(1, "sensitive_api");
     let decision = mediator.mediate(&ctx);
-    assert!(
-        matches!(decision, MediationDecision::RequireConfirmation { .. }),
-        "tool with RequireConfirmation default_decision should require confirmation"
-    );
+    match &decision {
+        MediationDecision::RequireConfirmation { request } => {
+            assert!(
+                request.description.contains("confirmation required"),
+                "confirmation description should contain policy explanation: {}",
+                request.description
+            );
+        }
+        other => panic!("expected RequireConfirmation, got {other:?}"),
+    }
 }

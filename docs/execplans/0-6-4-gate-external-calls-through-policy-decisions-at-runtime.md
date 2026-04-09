@@ -5,7 +5,7 @@ This ExecPlan (execution plan) is a living document. The sections
 `Decision Log`, and `Outcomes & Retrospective` must be kept up to date as work
 proceeds.
 
-Status: DRAFT
+Status: COMPLETE
 
 ## Purpose / big picture
 
@@ -27,12 +27,12 @@ that:
 
 This is Track B PR B4 from `docs/adr-001-monty-ifc-vm-hooks.md` section "Track
 B staged pull requests". It builds directly on Task 0.6.3, which already
-derives observer-backed IFC summaries, and on Task 0.1.2, which already
-provides migrated, auditable policy loading.
+derives observer-backed information-flow control (IFC) summaries, and on Task
+0.1.2, which already provides migrated, auditable policy loading.
 
 ## Constraints
 
-- Implement to the requirement signposts in
+- Implement per the requirement signposts in
   `docs/adr-001-monty-ifc-vm-hooks.md` section "B2. Boundary enforcement at
   external calls", `docs/zamburak-design-document.md` section "Policy
   evaluation semantics", and `docs/verification-targets.md` rows "Policy
@@ -40,8 +40,8 @@ provides migrated, auditable policy loading.
 - Dependency precondition: Tasks 0.6.3 and 0.1.2 must remain marked complete in
   `docs/roadmap.md` before implementation starts.
 - In scope: allow, deny, and confirmation decision wiring for governed
-  external-function boundaries; deterministic policy evaluation order; fail-
-  closed handling when tool or summary information is missing; unit and
+  external-function boundaries; deterministic policy evaluation order;
+  fail-closed handling when tool or summary information is missing; unit and
   behavioural tests covering happy and unhappy paths.
 - Out of scope: tool-specific host user-interface design for confirmation,
   audit-pipeline persistence, and snapshot-governance continuity beyond what is
@@ -281,7 +281,7 @@ Current relevant repository state:
   - `PolicyAction` with `Allow`, `Deny`, `RequireConfirmation`,
     `RequireDraft`,
   - `ToolPolicy` with `tool`, `side_effect_class`, `required_authority`,
-    `arg_rules`, `context_rules`, and `default_decision`,
+    `arg_rules`, `context_rules`, and `default_decision`.
   - `ContextRules::deny_if_pc_integrity_contains`.
 - `crates/zamburak-policy/src/engine.rs` currently constructs and validates a
   `PolicyEngine`, but does not yet evaluate external-call requests.
@@ -508,7 +508,8 @@ Extend behavioural tests using `rstest-bdd` v0.5.0:
 - `tests/security/` new policy-gating suite:
   - missing tool policy is blocked fail closed,
   - strict-mode untrusted context denies or confirms before effect execution,
-  - LLM-like sink call path is gated before resumable execution continues.
+  - large language model (LLM)-like sink call path is gated before resumable
+    execution continues.
 
 Follow the existing repository BDD style:
 

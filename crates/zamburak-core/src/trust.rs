@@ -7,6 +7,8 @@
 //! grants as a narrowing intersection.
 
 use std::collections::BTreeSet;
+use std::fmt;
+use std::str::FromStr;
 
 use crate::authority::AuthorityCapability;
 
@@ -24,6 +26,18 @@ use crate::authority::AuthorityCapability;
 ///
 /// let result = IntegrityLabel::Trusted.join(IntegrityLabel::Untrusted);
 /// assert_eq!(result, IntegrityLabel::Untrusted);
+/// ```
+///
+/// ## Parsing from strings
+///
+/// `FromStr` accepts both CamelCase (`Untrusted`) and canonical uppercase
+/// (`UNTRUSTED`) spellings, so policy YAML files can use either convention.
+///
+/// ```
+/// use zamburak_core::IntegrityLabel;
+///
+/// assert_eq!("Untrusted".parse::<IntegrityLabel>().unwrap(), IntegrityLabel::Untrusted);
+/// assert_eq!("TRUSTED".parse::<IntegrityLabel>().unwrap(), IntegrityLabel::Trusted);
 /// ```
 #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub enum IntegrityLabel {
@@ -47,11 +61,54 @@ impl IntegrityLabel {
     }
 }
 
+/// Error returned when an unrecognised integrity label string is parsed.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct ParseIntegrityLabelError {
+    /// The unrecognised input string.
+    pub label: String,
+}
+
+impl fmt::Display for ParseIntegrityLabelError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "unrecognised integrity label '{}'", self.label)
+    }
+}
+
+impl std::error::Error for ParseIntegrityLabelError {}
+
+impl FromStr for IntegrityLabel {
+    type Err = ParseIntegrityLabelError;
+
+    /// Parse an integrity label from CamelCase or canonical uppercase.
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "Untrusted" | "UNTRUSTED" => Ok(Self::Untrusted),
+            "Trusted" | "TRUSTED" => Ok(Self::Trusted),
+            "Verified" | "VERIFIED" => Ok(Self::Verified),
+            _ => Err(ParseIntegrityLabelError {
+                label: s.to_owned(),
+            }),
+        }
+    }
+}
+
 /// Confidentiality classification tag for a runtime value.
 ///
 /// Each variant identifies a distinct class of sensitive data. Labels are
 /// combined via set union in `DataLabels::join`: once a value acquires a
 /// confidentiality tag, it cannot be removed by further computation.
+///
+/// ## Parsing from strings
+///
+/// `FromStr` accepts both CamelCase (`AuthSecret`) and canonical uppercase
+/// (`AUTH_SECRET`) spellings, so policy YAML files can use either convention.
+///
+/// ```
+/// use zamburak_core::DataLabel;
+///
+/// assert_eq!("AuthSecret".parse::<DataLabel>().unwrap(), DataLabel::AuthSecret);
+/// assert_eq!("AUTH_SECRET".parse::<DataLabel>().unwrap(), DataLabel::AuthSecret);
+/// ```
 #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub enum DataLabel {
     /// Personally identifiable information.
@@ -77,6 +134,39 @@ impl DataLabel {
             Self::PaymentInstrument,
             Self::InternalPolicyNote,
         ]
+    }
+}
+
+/// Error returned when an unrecognised data label string is parsed.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct ParseDataLabelError {
+    /// The unrecognised input string.
+    pub label: String,
+}
+
+impl fmt::Display for ParseDataLabelError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "unrecognised data label '{}'", self.label)
+    }
+}
+
+impl std::error::Error for ParseDataLabelError {}
+
+impl FromStr for DataLabel {
+    type Err = ParseDataLabelError;
+
+    /// Parse a confidentiality label from CamelCase or canonical uppercase.
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "Pii" | "PII" => Ok(Self::Pii),
+            "AuthSecret" | "AUTH_SECRET" => Ok(Self::AuthSecret),
+            "PrivateEmailBody" | "PRIVATE_EMAIL_BODY" => Ok(Self::PrivateEmailBody),
+            "PaymentInstrument" | "PAYMENT_INSTRUMENT" => Ok(Self::PaymentInstrument),
+            "InternalPolicyNote" | "INTERNAL_POLICY_NOTE" => Ok(Self::InternalPolicyNote),
+            _ => Err(ParseDataLabelError {
+                label: s.to_owned(),
+            }),
+        }
     }
 }
 
