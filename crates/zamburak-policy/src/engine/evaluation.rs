@@ -1,9 +1,10 @@
 //! Runtime policy evaluation for governed external-call requests.
 //!
 //! This module implements deterministic, fail-closed policy decisions for
-//! external-function and OS-call boundaries in governed execution. The
-//! evaluation engine consumes IFC summaries and control-context snapshots
-//! from the runtime and matches them against loaded policy rules.
+//! external-function, OS-call, and method-call boundaries
+//! (`ExternalCallKind::Method`) in governed execution. The evaluation engine
+//! consumes IFC summaries and control-context snapshots from the runtime and
+//! matches them against loaded policy rules.
 
 use zamburak_core::DependencySummary;
 use zamburak_core::trust::IntegrityLabel;
@@ -205,11 +206,24 @@ fn check_kwarg_rules(
     input: &ExternalCallPolicyInput,
 ) -> Option<ExternalCallPolicyDecision> {
     input.kwarg_summaries.iter().find_map(|kwarg_summary| {
-        let arg_rule = tool_policy
+        let mut allow_decision = None;
+        for arg_rule in tool_policy
             .arg_rules
             .iter()
-            .find(|arg_rule| arg_rule.arg == kwarg_summary.name)?;
-        check_single_arg_rule(arg_rule, &kwarg_summary.value_summary)
+            .filter(|arg_rule| arg_rule.arg == kwarg_summary.name)
+        {
+            match check_single_arg_rule(arg_rule, &kwarg_summary.value_summary) {
+                Some(ExternalCallPolicyDecision::Deny(explanation)) => {
+                    return Some(ExternalCallPolicyDecision::Deny(explanation));
+                }
+                Some(ExternalCallPolicyDecision::Allow(explanation)) => {
+                    allow_decision = Some(ExternalCallPolicyDecision::Allow(explanation));
+                }
+                Some(decision) => return Some(decision),
+                None => {}
+            }
+        }
+        allow_decision
     })
 }
 

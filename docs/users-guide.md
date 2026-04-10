@@ -425,8 +425,17 @@ decision order:
 
 ### Policy evaluation types
 
-The `zamburak-policy` crate exposes the following public types for runtime in
-`zamburak_policy::engine::evaluation`:
+The `zamburak-policy` crate exposes the following public runtime evaluation
+types at the crate root, for example:
+
+```rust
+use zamburak_policy::{
+    ExternalCallKind, ExternalCallPolicyDecision, ExternalCallPolicyInput,
+    KeywordArgumentSummary, PolicyDecisionExplanation, PolicyDecisionReason,
+};
+```
+
+These public crate-root exports are:
 
 - `ExternalCallKind` — external-call classification used for policy
   diagnostics: `Function`, `Os`, or `Method`. This enum allows the policy layer

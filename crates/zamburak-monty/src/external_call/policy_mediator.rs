@@ -81,12 +81,9 @@ impl ExternalCallMediator for PolicyMediator {
     fn mediate(&mut self, context: &CallContext) -> MediationDecision {
         if context.kwarg_names.len() != context.ifc.kwarg_summaries.len() {
             return MediationDecision::Deny {
-                reason: format!(
-                    "invalid call context for call_id {}: kwarg_names length {} does not match kwarg_summaries length {}",
-                    context.call_id,
-                    context.kwarg_names.len(),
-                    context.ifc.kwarg_summaries.len()
-                ),
+                reason:
+                    "invalid call context: kwarg_names length does not match kwarg_summaries length"
+                        .to_owned(),
             };
         }
         let policy_input = translate_call_context_to_policy_input(context);

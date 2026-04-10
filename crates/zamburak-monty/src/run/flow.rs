@@ -238,9 +238,9 @@ fn build_os_call_context<T: ResourceTracker>(
 
 fn effective_caller_authority() -> AuthoritySet {
     // Runtime authority-token plumbing is not yet threaded through the
-    // governed runner, so policy mediation must carry caller authority via an
-    // explicit field rather than reusing IFC provenance intersections.
-    AuthoritySet::full()
+    // governed runner. Missing authority context must therefore fail closed
+    // rather than implicitly granting every capability.
+    AuthoritySet::new()
 }
 
 fn extract_kwarg_names(

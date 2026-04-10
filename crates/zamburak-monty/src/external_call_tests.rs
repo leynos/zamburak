@@ -350,7 +350,7 @@ tools:
         kind: ExternalCallKind::Function,
         function_name: "guarded_write".to_owned(),
         caller_authority: AuthoritySet::full(),
-        kwarg_names: vec!["message".to_owned()],
+        kwarg_names: vec!["path".to_owned()],
         ifc: CallIfcContext {
             propagation_mode: PropagationMode::Normal,
             aggregate_summary: DependencySummary::unknown_top(),
@@ -369,7 +369,10 @@ tools:
         },
     };
 
-    assert_eq!(mediator.mediate(&ctx), MediationDecision::Allow);
+    assert!(matches!(
+        mediator.mediate(&ctx),
+        MediationDecision::Deny { .. }
+    ));
 }
 
 #[rstest]

@@ -234,6 +234,36 @@ fn arg_rule_with_unrecognized_confidentiality_label_fails_closed() {
 }
 
 #[test]
+fn kwarg_rules_apply_all_matching_constraints_for_same_keyword() {
+    let engine = minimal_policy_with_tools(concat!(
+        "  - tool: guarded_write\n",
+        "    side_effect_class: ExternalWrite\n",
+        "    arg_rules:\n",
+        "      - arg: path\n",
+        "        requires_integrity: Verified\n",
+        "      - arg: path\n",
+        "        forbids_confidentiality:\n",
+        "          - AuthSecret\n",
+        "    default_decision: Allow"
+    ));
+    let input = make_input_full(
+        "guarded_write",
+        vec![],
+        vec![named_kwarg_summary(
+            "path",
+            summary_with_integrity(IntegrityLabel::Verified),
+            summary_with_confidentiality(&[DataLabel::AuthSecret]),
+        )],
+        AuthoritySet::full(),
+        ExecutionContextSummary::new(),
+    );
+    assert!(matches!(
+        engine.evaluate_external_call(&input),
+        ExternalCallPolicyDecision::Deny(_)
+    ));
+}
+
+#[test]
 fn require_draft_maps_to_require_confirmation_conservatively() {
     let engine = minimal_policy_with_tools(concat!(
         "  - tool: draft_email\n",
