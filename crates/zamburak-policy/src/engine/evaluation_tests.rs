@@ -1,17 +1,20 @@
 //! Unit tests for external-call policy evaluation.
 
 #[cfg(test)]
+#[path = "evaluation_authority_tests.rs"]
+mod authority_tests;
+#[cfg(test)]
 #[path = "evaluation_test_helpers.rs"]
 mod helpers;
 
 use rstest::rstest;
+use zamburak_core::DataLabel;
 use zamburak_core::control_context::ExecutionContextSummary;
-use zamburak_core::trust::{AuthoritySet, IntegrityLabel};
-use zamburak_core::{AuthorityCapability, DataLabel};
+use zamburak_core::trust::IntegrityLabel;
 
 use super::ExternalCallPolicyDecision;
 use helpers::{
-    control_context_with_untrusted_pc, make_input, make_input_full, minimal_policy_with_tools,
+    PolicyInputBuilder, control_context_with_untrusted_pc, make_input, minimal_policy_with_tools,
     named_kwarg_summary, summary_with_confidentiality, summary_with_integrity,
 };
 
@@ -246,17 +249,13 @@ fn kwarg_rules_apply_all_matching_constraints_for_same_keyword() {
         "          - AuthSecret\n",
         "    default_decision: Allow"
     ));
-    let input = make_input_full(
-        "guarded_write",
-        vec![],
-        vec![named_kwarg_summary(
+    let input = PolicyInputBuilder::new("guarded_write")
+        .kwarg_summaries(vec![named_kwarg_summary(
             "path",
             summary_with_integrity(IntegrityLabel::Verified),
             summary_with_confidentiality(&[DataLabel::AuthSecret]),
-        )],
-        AuthoritySet::full(),
-        ExecutionContextSummary::new(),
-    );
+        )])
+        .build();
     assert!(matches!(
         engine.evaluate_external_call(&input),
         ExternalCallPolicyDecision::Deny(_)
@@ -278,56 +277,6 @@ fn require_draft_maps_to_require_confirmation_conservatively() {
 }
 
 #[test]
-fn required_authority_denies_when_caller_lacks_capability() {
-    let engine = minimal_policy_with_tools(concat!(
-        "  - tool: send_email\n",
-        "    side_effect_class: ExternalWrite\n",
-        "    required_authority:\n",
-        "      - EmailSendCap\n",
-        "    default_decision: Allow"
-    ));
-    let input = make_input_full(
-        "send_email",
-        vec![],
-        vec![],
-        AuthoritySet::new(),
-        ExecutionContextSummary::new(),
-    );
-    let decision = engine.evaluate_external_call(&input);
-    match &decision {
-        ExternalCallPolicyDecision::Deny(e) => assert!(
-            e.summary.contains("lacks required authority"),
-            "should mention missing authority: {}",
-            e.summary
-        ),
-        other => panic!("expected Deny, got {other:?}"),
-    }
-}
-
-#[test]
-fn required_authority_allows_when_caller_holds_capability() {
-    let engine = minimal_policy_with_tools(concat!(
-        "  - tool: send_email\n",
-        "    side_effect_class: ExternalWrite\n",
-        "    required_authority:\n",
-        "      - EmailSendCap\n",
-        "    default_decision: Allow"
-    ));
-    let cap = AuthorityCapability::try_from("EmailSendCap").expect("valid capability");
-    let input = make_input_full(
-        "send_email",
-        vec![],
-        vec![],
-        AuthoritySet::from_iter([cap]),
-        ExecutionContextSummary::new(),
-    );
-    assert!(matches!(
-        engine.evaluate_external_call(&input),
-        ExternalCallPolicyDecision::Allow(_)
-    ));
-}
-
-#[test]
 fn kwarg_rule_forbids_confidentiality_denies_when_present() {
     let engine = minimal_policy_with_tools(concat!(
         "  - tool: public_log\n",
@@ -340,13 +289,9 @@ fn kwarg_rule_forbids_confidentiality_denies_when_present() {
     ));
     let key = summary_with_integrity(IntegrityLabel::Trusted);
     let val = summary_with_confidentiality(&[DataLabel::AuthSecret]);
-    let input = make_input_full(
-        "public_log",
-        vec![],
-        vec![named_kwarg_summary("message", key, val)],
-        AuthoritySet::full(),
-        ExecutionContextSummary::new(),
-    );
+    let input = PolicyInputBuilder::new("public_log")
+        .kwarg_summaries(vec![named_kwarg_summary("message", key, val)])
+        .build();
     assert!(matches!(
         engine.evaluate_external_call(&input),
         ExternalCallPolicyDecision::Deny(_)
@@ -363,17 +308,13 @@ fn kwarg_rules_ignore_non_matching_keyword_names() {
         "        requires_integrity: Verified\n",
         "    default_decision: Allow"
     ));
-    let input = make_input_full(
-        "guarded_write",
-        vec![],
-        vec![named_kwarg_summary(
+    let input = PolicyInputBuilder::new("guarded_write")
+        .kwarg_summaries(vec![named_kwarg_summary(
             "message",
             summary_with_integrity(IntegrityLabel::Trusted),
             summary_with_integrity(IntegrityLabel::Untrusted),
-        )],
-        AuthoritySet::full(),
-        ExecutionContextSummary::new(),
-    );
+        )])
+        .build();
     assert!(matches!(
         engine.evaluate_external_call(&input),
         ExternalCallPolicyDecision::Allow(_)

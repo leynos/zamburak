@@ -13,6 +13,7 @@ use monty::{
     ResourceTracker, RuntimeObserverHandle,
 };
 use thiserror::Error;
+use zamburak_core::trust::AuthoritySet;
 
 use crate::external_call::{CallContext, ConfirmationContext, ExternalCallMediator};
 use crate::observer::{EventCounts, GovernedIfcConfig, ZamburakObserver};
@@ -134,6 +135,8 @@ pub struct GovernedRunner {
     mediator: Arc<Mutex<dyn ExternalCallMediator>>,
     /// Observer-driven IFC configuration for this governed execution.
     ifc_config: GovernedIfcConfig,
+    /// Host-supplied caller authority applied at governed external-call boundaries.
+    caller_authority: AuthoritySet,
 }
 
 impl GovernedRunner {
@@ -144,6 +147,7 @@ impl GovernedRunner {
             monty_run,
             mediator,
             ifc_config: GovernedIfcConfig::default(),
+            caller_authority: AuthoritySet::new(),
         }
     }
 
@@ -151,6 +155,13 @@ impl GovernedRunner {
     #[must_use]
     pub fn with_ifc_config(mut self, ifc_config: GovernedIfcConfig) -> Self {
         self.ifc_config = ifc_config;
+        self
+    }
+
+    /// Overrides the caller authority presented to policy-backed mediation.
+    #[must_use]
+    pub fn with_caller_authority(mut self, caller_authority: AuthoritySet) -> Self {
+        self.caller_authority = caller_authority;
         self
     }
 
@@ -213,7 +224,7 @@ impl GovernedRunner {
         let progress =
             self.monty_run
                 .start_with_observer(inputs, resource_tracker, print, handle)?;
-        let progress = step(progress, &mediator, &observer_state)?;
+        let progress = step(progress, &mediator, &observer_state, &self.caller_authority)?;
         let counts = observer_state.event_counts();
         Ok((progress, counts))
     }

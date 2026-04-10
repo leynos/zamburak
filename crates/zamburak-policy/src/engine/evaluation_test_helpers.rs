@@ -29,40 +29,67 @@ pub(super) fn minimal_policy_with_tools(tools_yaml: &str) -> PolicyEngine {
     PolicyEngine::from_yaml_str(&yaml).expect("valid test policy")
 }
 
+pub(super) struct PolicyInputBuilder<'a> {
+    tool_name: &'a str,
+    arg_summaries: Vec<DependencySummary>,
+    kwarg_summaries: Vec<KeywordArgumentSummary>,
+    caller_authority: AuthoritySet,
+    control_context: ExecutionContextSummary,
+}
+
+impl<'a> PolicyInputBuilder<'a> {
+    pub(super) fn new(tool_name: &'a str) -> Self {
+        Self {
+            tool_name,
+            arg_summaries: vec![],
+            kwarg_summaries: vec![],
+            caller_authority: AuthoritySet::full(),
+            control_context: ExecutionContextSummary::new(),
+        }
+    }
+
+    pub(super) fn arg_summaries(mut self, v: Vec<DependencySummary>) -> Self {
+        self.arg_summaries = v;
+        self
+    }
+
+    pub(super) fn kwarg_summaries(mut self, v: Vec<KeywordArgumentSummary>) -> Self {
+        self.kwarg_summaries = v;
+        self
+    }
+
+    pub(super) fn caller_authority(mut self, a: AuthoritySet) -> Self {
+        self.caller_authority = a;
+        self
+    }
+
+    pub(super) fn control_context(mut self, c: ExecutionContextSummary) -> Self {
+        self.control_context = c;
+        self
+    }
+
+    pub(super) fn build(self) -> ExternalCallPolicyInput {
+        ExternalCallPolicyInput {
+            tool_name: self.tool_name.to_owned(),
+            call_kind: ExternalCallKind::Function,
+            aggregate_summary: DependencySummary::unknown_top(),
+            arg_summaries: self.arg_summaries,
+            kwarg_summaries: self.kwarg_summaries,
+            caller_authority: self.caller_authority,
+            control_context: self.control_context,
+        }
+    }
+}
+
 pub(super) fn make_input(
     tool_name: &str,
     arg_summaries: Vec<DependencySummary>,
     control_context: ExecutionContextSummary,
 ) -> ExternalCallPolicyInput {
-    make_input_full(
-        tool_name,
-        arg_summaries,
-        vec![],
-        AuthoritySet::full(),
-        control_context,
-    )
-}
-
-#[expect(
-    clippy::too_many_arguments,
-    reason = "test helper covers all input fields"
-)]
-pub(super) fn make_input_full(
-    tool_name: &str,
-    arg_summaries: Vec<DependencySummary>,
-    kwarg_summaries: Vec<KeywordArgumentSummary>,
-    caller_authority: AuthoritySet,
-    control_context: ExecutionContextSummary,
-) -> ExternalCallPolicyInput {
-    ExternalCallPolicyInput {
-        tool_name: tool_name.to_owned(),
-        call_kind: ExternalCallKind::Function,
-        aggregate_summary: DependencySummary::unknown_top(),
-        arg_summaries,
-        kwarg_summaries,
-        caller_authority,
-        control_context,
-    }
+    PolicyInputBuilder::new(tool_name)
+        .arg_summaries(arg_summaries)
+        .control_context(control_context)
+        .build()
 }
 
 pub(super) fn named_kwarg_summary(

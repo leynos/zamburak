@@ -455,9 +455,10 @@ These public crate-root exports are:
 - `PolicyDecisionReason` — machine-parseable reason code for policy decisions,
   enabling structured audit pipelines and programmatic handling of policy
   outcomes. Variants include `MissingToolPolicy`, `ContextRuleDeny`,
-  `MissingAuthority`, `ArgumentIntegrityRequirement`,
-  `ArgumentConfidentialityForbidden`, `DefaultAllow`, `DefaultDeny`,
-  `DefaultRequireConfirmation`, and `RequireDraftMappedToConfirmation`.
+  `MissingAuthority`, `InvalidAuthorityInPolicy`,
+  `ArgumentIntegrityRequirement`, `ArgumentConfidentialityForbidden`,
+  `DefaultAllow`, `DefaultDeny`, `DefaultRequireConfirmation`, and
+  `RequireDraftMappedToConfirmation`.
 
 ### Fail-closed behaviours
 
