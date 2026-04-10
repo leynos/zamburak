@@ -22,31 +22,21 @@ budgets:
   max_witness_depth: 10"#;
 
 pub(super) fn function_call_context(call_id: u32, name: &str) -> CallContext {
-    CallContext {
-        call_id,
-        kind: ExternalCallKind::Function,
-        function_name: name.to_owned(),
-        caller_authority: AuthoritySet::full(),
-        kwarg_names: vec![],
-        ifc: default_ifc_context(),
-    }
+    call_context(call_id, ExternalCallKind::Function, name)
 }
 
 pub(super) fn os_call_context(call_id: u32, name: &str) -> CallContext {
-    CallContext {
-        call_id,
-        kind: ExternalCallKind::Os,
-        function_name: name.to_owned(),
-        caller_authority: AuthoritySet::full(),
-        kwarg_names: vec![],
-        ifc: default_ifc_context(),
-    }
+    call_context(call_id, ExternalCallKind::Os, name)
 }
 
 fn method_call_context(call_id: u32, name: &str) -> CallContext {
+    call_context(call_id, ExternalCallKind::Method, name)
+}
+
+fn call_context(call_id: u32, kind: ExternalCallKind, name: &str) -> CallContext {
     CallContext {
         call_id,
-        kind: ExternalCallKind::Method,
+        kind,
         function_name: name.to_owned(),
         caller_authority: AuthoritySet::full(),
         kwarg_names: vec![],

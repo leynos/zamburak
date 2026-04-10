@@ -49,9 +49,8 @@ impl<T: ResourceTracker> SuspendedCall<T> {
         result: impl Into<ExtFunctionResult>,
         print: PrintWriter<'_>,
     ) -> Result<GovernedRunProgress<T>, GovernedRunError> {
-        let progress = resume_suspended_call(self.kind, result, print)?;
-        step(
-            progress,
+        resume_and_step(
+            || resume_suspended_call(self.kind, result, print),
             &self.mediator,
             &self.observer_state,
             &self.caller_authority,
@@ -93,9 +92,8 @@ impl<T: ResourceTracker> SuspendedNameLookup<T> {
         result: impl Into<NameLookupResult>,
         print: PrintWriter<'_>,
     ) -> Result<GovernedRunProgress<T>, GovernedRunError> {
-        let progress = self.inner.resume(result, print)?;
-        step(
-            progress,
+        resume_and_step(
+            || self.inner.resume(result, print),
             &self.mediator,
             &self.observer_state,
             &self.caller_authority,
@@ -137,9 +135,8 @@ impl<T: ResourceTracker> SuspendedResolveFutures<T> {
         results: Vec<(u32, ExtFunctionResult)>,
         print: PrintWriter<'_>,
     ) -> Result<GovernedRunProgress<T>, GovernedRunError> {
-        let progress = self.inner.resume(results, print)?;
-        step(
-            progress,
+        resume_and_step(
+            || self.inner.resume(results, print),
             &self.mediator,
             &self.observer_state,
             &self.caller_authority,
@@ -151,6 +148,13 @@ struct MediationResources<'a> {
     mediator: &'a Arc<Mutex<dyn ExternalCallMediator>>,
     observer_state: &'a SharedObserverState,
     caller_authority: &'a AuthoritySet,
+}
+
+struct CallContextRequest<'a> {
+    call_id: u32,
+    kind: ExternalCallKind,
+    function_name: String,
+    kwargs: &'a [(MontyObject, MontyObject)],
 }
 
 /// Processes a single `RunProgress` step, mediating external calls.
@@ -219,22 +223,16 @@ fn build_function_call_context<T: ResourceTracker>(
     } else {
         ExternalCallKind::Function
     };
-    let ifc = observer_state
-        .call_ifc_context(call.call_id, kind, &call.function_name)
-        .map_err(map_call_ifc_lookup_error)?;
-    Ok(CallContext {
-        call_id: call.call_id,
-        kind,
-        function_name: call.function_name.clone(),
-        caller_authority: caller_authority.clone(),
-        kwarg_names: extract_kwarg_names(
-            &call.kwargs,
-            ifc.kwarg_summaries.len(),
-            call.call_id,
+    build_call_context(
+        CallContextRequest {
+            call_id: call.call_id,
             kind,
-        )?,
-        ifc,
-    })
+            function_name: call.function_name.clone(),
+            kwargs: &call.kwargs,
+        },
+        observer_state,
+        caller_authority,
+    )
 }
 
 fn build_os_call_context<T: ResourceTracker>(
@@ -242,20 +240,36 @@ fn build_os_call_context<T: ResourceTracker>(
     observer_state: &SharedObserverState,
     caller_authority: &AuthoritySet,
 ) -> Result<CallContext, GovernedRunError> {
-    let function_name = format!("{:?}", call.function);
+    build_call_context(
+        CallContextRequest {
+            call_id: call.call_id,
+            kind: ExternalCallKind::Os,
+            function_name: format!("{:?}", call.function),
+            kwargs: &call.kwargs,
+        },
+        observer_state,
+        caller_authority,
+    )
+}
+
+fn build_call_context(
+    request: CallContextRequest<'_>,
+    observer_state: &SharedObserverState,
+    caller_authority: &AuthoritySet,
+) -> Result<CallContext, GovernedRunError> {
     let ifc = observer_state
-        .call_ifc_context(call.call_id, ExternalCallKind::Os, &function_name)
+        .call_ifc_context(request.call_id, request.kind, &request.function_name)
         .map_err(map_call_ifc_lookup_error)?;
     Ok(CallContext {
-        call_id: call.call_id,
-        kind: ExternalCallKind::Os,
-        function_name,
+        call_id: request.call_id,
+        kind: request.kind,
+        function_name: request.function_name,
         caller_authority: caller_authority.clone(),
         kwarg_names: extract_kwarg_names(
-            &call.kwargs,
+            request.kwargs,
             ifc.kwarg_summaries.len(),
-            call.call_id,
-            ExternalCallKind::Os,
+            request.call_id,
+            request.kind,
         )?,
         ifc,
     })
@@ -363,6 +377,21 @@ fn resume_suspended_call<T: ResourceTracker>(
         }
         SuspendedCallKind::Os(call) => call.resume(result, print).map_err(GovernedRunError::from),
     }
+}
+
+fn resume_and_step<T, E, F>(
+    resume: F,
+    mediator: &Arc<Mutex<dyn ExternalCallMediator>>,
+    observer_state: &SharedObserverState,
+    caller_authority: &AuthoritySet,
+) -> Result<GovernedRunProgress<T>, GovernedRunError>
+where
+    T: ResourceTracker,
+    E: Into<GovernedRunError>,
+    F: FnOnce() -> Result<RunProgress<T>, E>,
+{
+    let progress = resume().map_err(Into::into)?;
+    step(progress, mediator, observer_state, caller_authority)
 }
 
 fn query_mediator(
