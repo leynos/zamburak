@@ -51,6 +51,7 @@ use crate::external_call::{
 ///     call_id: 1,
 ///     kind: ExternalCallKind::Function,
 ///     function_name: "unknown_tool".to_owned(),
+///     caller_authority: zamburak_core::AuthoritySet::full(),
 ///     kwarg_names: vec![],
 ///     ifc: zamburak_monty::CallIfcContext {
 ///         propagation_mode: PropagationMode::Normal,
@@ -113,7 +114,7 @@ fn translate_call_context_to_policy_input(context: &CallContext) -> ExternalCall
                 },
             )
             .collect(),
-        caller_authority: context.ifc.aggregate_summary.authority_join.clone(),
+        caller_authority: context.caller_authority.clone(),
         control_context: context.ifc.control_context.clone(),
     }
 }

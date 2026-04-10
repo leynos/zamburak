@@ -6,6 +6,7 @@ use monty::{
     ExtFunctionResult, ExternalCallKind, MontyObject, NameLookupResult, PrintWriter,
     ResourceTracker, RunProgress,
 };
+use zamburak_core::trust::AuthoritySet;
 
 use crate::external_call::{CallContext, ExternalCallMediator, MediationDecision};
 use crate::observer::{CallIfcLookupError, SharedObserverState};
@@ -201,6 +202,7 @@ fn build_function_call_context<T: ResourceTracker>(
         call_id: call.call_id,
         kind,
         function_name: call.function_name.clone(),
+        caller_authority: effective_caller_authority(),
         kwarg_names: extract_kwarg_names(
             &call.kwargs,
             ifc.kwarg_summaries.len(),
@@ -223,6 +225,7 @@ fn build_os_call_context<T: ResourceTracker>(
         call_id: call.call_id,
         kind: ExternalCallKind::Os,
         function_name,
+        caller_authority: effective_caller_authority(),
         kwarg_names: extract_kwarg_names(
             &call.kwargs,
             ifc.kwarg_summaries.len(),
@@ -231,6 +234,13 @@ fn build_os_call_context<T: ResourceTracker>(
         )?,
         ifc,
     })
+}
+
+fn effective_caller_authority() -> AuthoritySet {
+    // Runtime authority-token plumbing is not yet threaded through the
+    // governed runner, so policy mediation must carry caller authority via an
+    // explicit field rather than reusing IFC provenance intersections.
+    AuthoritySet::full()
 }
 
 fn extract_kwarg_names(

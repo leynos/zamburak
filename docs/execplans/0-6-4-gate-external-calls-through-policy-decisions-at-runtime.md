@@ -143,15 +143,16 @@ derives observer-backed information-flow control (IFC) summaries, and on Task
 - [x] (2026-04-04) Locked tool mapping decision: use `function_name` as policy
   tool key.
 - [x] (2026-04-04) Stage A complete: wrote failing tests for policy engine
-  evaluation (9 unit tests in `zamburak-policy`) and policy-backed mediator (4
-  unit tests in `zamburak-monty`). Tests compile and fail as expected.
+  evaluation (19 unit tests in the current `zamburak-policy` suite) and
+  policy-backed mediator (8 unit tests in the current `zamburak-monty` suite).
+  Tests compile and fail as expected.
 - [x] (2026-04-04) Stage B complete: implemented `evaluate_external_call` with
   deterministic evaluation order (context rules, arg rules, default decision).
-  All 9 policy evaluation unit tests pass.
+  All 19 policy evaluation unit tests now pass.
 - [x] (2026-04-04) Stage C complete: created `PolicyMediator` in
   `zamburak-monty/src/external_call/policy_mediator.rs` that bridges
   `CallContext` to policy evaluation and converts decisions to
-  `MediationDecision`. All 4 policy mediator unit tests pass.
+  `MediationDecision`. All 8 policy mediator unit tests now pass.
 - [x] (2026-04-04) Stage D skipped: unit tests provide sufficient coverage for
   this milestone; BDD scenarios deferred to Task 0.6.5.
 - [x] (2026-04-04) Stage E complete: marked Task 0.6.4 done in roadmap.
@@ -227,24 +228,25 @@ Task 0.6.4 complete on 2026-04-04.
   - `crates/zamburak-monty/src/external_call.rs`: added `policy_mediator`
     submodule and exported `PolicyMediator`.
   - `crates/zamburak-monty/src/lib.rs`: exported `PolicyMediator`.
-  - `crates/zamburak-monty/src/external_call_tests.rs`: added 4 policy mediator
-    unit tests.
+  - `crates/zamburak-monty/src/external_call_tests.rs`: added and expanded the
+    policy mediator unit tests (8 in the current suite).
   - `docs/roadmap.md`: marked Task 0.6.4 complete.
   - `docs/execplans/0-6-4-gate-external-calls-through-policy-decisions-at-runtime.md`:
     updated Progress, Decision Log, and this Outcomes section.
 
 ### Test coverage
 
-- 9 new unit tests in `zamburak-policy` policy evaluation (all pass).
-- 4 new unit tests in `zamburak-monty` policy mediator (all pass).
-- Total workspace test count: 216 tests (all pass).
+- 19 policy evaluation unit tests in `zamburak-policy` (all pass).
+- 8 policy mediator unit tests in `zamburak-monty` (all pass).
+- Total workspace test count: 308 tests (all pass).
 
 ### Key decisions
 
 - Tool lookup uses `CallContext.function_name` as the policy tool key.
 - `RequireDraft` maps conservatively to `RequireConfirmation` for Task 0.6.4.
-- Policy evaluation follows deterministic order: context rules, arg rules,
-  default decision.
+- Policy evaluation follows the canonical policy-order contract: tool lookup,
+  context rules, authority token requirements, positional-argument rules,
+  keyword-argument rules, then default action.
 - Reduced nesting via let-else and let-chain patterns to satisfy
   `clippy::excessive_nesting`.
 
@@ -261,7 +263,7 @@ Task 0.6.4 complete on 2026-04-04.
 - `make fmt`: pass
 - `make check-fmt`: pass
 - `make lint`: pass (after refactoring to reduce nesting)
-- `make test`: pass (all 216 tests)
+- `make test`: pass (all 308 tests)
 
 ## Context and orientation
 

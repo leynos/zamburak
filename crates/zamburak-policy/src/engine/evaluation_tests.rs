@@ -190,7 +190,7 @@ fn arg_rule_forbids_confidentiality_denies_when_present(#[case] label: &str) {
 }
 
 #[test]
-fn context_rule_with_unrecognised_integrity_label_fails_closed() {
+fn context_rule_with_unrecognized_integrity_label_fails_closed() {
     let engine = minimal_policy_with_tools(concat!(
         "  - tool: api_call\n",
         "    side_effect_class: ExternalWrite\n",
@@ -203,8 +203,8 @@ fn context_rule_with_unrecognised_integrity_label_fails_closed() {
     let decision = engine.evaluate_external_call(&input);
     match &decision {
         ExternalCallPolicyDecision::Deny(e) => assert!(
-            e.summary.contains("unrecognised integrity label"),
-            "should mention unrecognised label: {}",
+            e.summary.contains("unrecognized integrity label"),
+            "should mention unrecognized label: {}",
             e.summary
         ),
         other => panic!("expected Deny, got {other:?}"),
@@ -212,7 +212,7 @@ fn context_rule_with_unrecognised_integrity_label_fails_closed() {
 }
 
 #[test]
-fn arg_rule_with_unrecognised_confidentiality_label_fails_closed() {
+fn arg_rule_with_unrecognized_confidentiality_label_fails_closed() {
     let engine = minimal_policy_with_tools(concat!(
         "  - tool: log_call\n",
         "    side_effect_class: ExternalWrite\n",

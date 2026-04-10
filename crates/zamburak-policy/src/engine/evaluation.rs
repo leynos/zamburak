@@ -21,11 +21,11 @@ impl PolicyEngine {
     /// Evaluate an external-call request against the loaded policy.
     ///
     /// Evaluation follows the documented decision order:
-    /// 1. Hard deny constraints (context rules),
-    /// 2. Authority token requirements,
-    /// 3. Verification requirements,
-    /// 4. Context constraints,
-    /// 5. Confirmation and draft requirements,
+    /// 1. Tool lookup (missing tool policy fails closed),
+    /// 2. Context rules / hard-deny constraints,
+    /// 3. Authority token requirements,
+    /// 4. Positional-argument rules,
+    /// 5. Keyword-argument rules,
     /// 6. Default action.
     ///
     /// Missing tool policy fails closed. Missing or unavailable information
@@ -134,7 +134,7 @@ fn check_context_rules(
             Err(_) => Some(deny(
                 PolicyDecisionReason::ContextRuleDeny,
                 format!(
-                    "denied by context rule: unrecognised integrity label '{}'",
+                    "denied by context rule: unrecognized integrity label '{}'",
                     label_str
                 ),
             )),
@@ -311,7 +311,7 @@ fn satisfies_integrity_requirement(integrity: IntegrityLabel, required_str: &str
 /// Unknown label strings fail closed (return `true` to trigger deny).
 fn contains_confidentiality_label(labels: &zamburak_core::DataLabels, label_str: &str) -> bool {
     let Ok(target_label) = label_str.parse::<zamburak_core::DataLabel>() else {
-        // Fail closed: unrecognised label in policy is treated as present.
+        // Fail closed: unrecognized label in policy is treated as present.
         return true;
     };
     labels.contains(&target_label)

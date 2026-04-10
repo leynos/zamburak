@@ -1778,8 +1778,9 @@ for governed external-call boundaries. Key design choices:
 - `ExternalCallPolicyInput` in `zamburak-policy` is a policy-layer-owned
   request type decoupled from Monty runtime internals. It carries tool name,
   call kind, dependency summaries, caller authority, and control-context
-  snapshot. The `caller_authority` field is populated from the aggregate
-  summary's `authority_join`.
+  snapshot. The `caller_authority` field is carried explicitly on `CallContext`
+  so policy mediation does not infer caller capabilities from IFC provenance
+  intersections.
 - `ExternalCallPolicyDecision` has three variants: `Allow`, `Deny`, and
   `RequireConfirmation`, each carrying a `PolicyDecisionExplanation` with a
   human-readable `summary` field. Richer audit-pipeline metadata (rule
@@ -1795,14 +1796,14 @@ for governed external-call boundaries. Key design choices:
   decision.
 - `RequireDraft` is conservatively mapped to `RequireConfirmation` because
   the governed-run public flow does not yet expose a draft-specific state.
-- Evaluation follows a deterministic order: context rules, authority token
-  requirements, positional argument rules, keyword argument rules, then default
-  decision. This is a conservative subset of the documented six-step order;
-  verification requirements (step 3) remain placeholder until Task 1.1.1.
+- Evaluation follows the canonical policy-order contract: tool lookup (missing
+  tool fails closed), context rules / hard-deny constraints, authority token
+  requirements, positional-argument rules, keyword-argument rules, then the
+  default action.
 - All label-string parsing uses `FromStr` implementations in
-  `zamburak-core` (`IntegrityLabel`, `DataLabel`). Unrecognised label strings
+  `zamburak-core` (`IntegrityLabel`, `DataLabel`). Unrecognized label strings
   fail closed: deny for integrity checks, treat-as-present for confidentiality
-  checks.
+  checks. Verification requirements remain a placeholder until Task 1.1.1.
 - Keyword argument rules prevent bypass of guarded parameters: each keyword
   value summary is checked against every `arg_rule` whose `arg` name matches.
 

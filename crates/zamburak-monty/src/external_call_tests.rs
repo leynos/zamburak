@@ -8,6 +8,7 @@ use zamburak_core::control_context::ExecutionContextSummary;
 use zamburak_core::propagation::PropagationMode;
 use zamburak_core::trust::IntegrityLabel;
 use zamburak_core::value_id::ValueId;
+use zamburak_core::{AuthorityCapability, AuthoritySet};
 
 use crate::PolicyMediator;
 use crate::external_call::{
@@ -43,6 +44,7 @@ fn function_call_context(call_id: u32, name: &str) -> CallContext {
         call_id,
         kind: ExternalCallKind::Function,
         function_name: name.to_owned(),
+        caller_authority: AuthoritySet::full(),
         kwarg_names: vec![],
         ifc: default_ifc_context(),
     }
@@ -53,6 +55,7 @@ fn os_call_context(call_id: u32, name: &str) -> CallContext {
         call_id,
         kind: ExternalCallKind::Os,
         function_name: name.to_owned(),
+        caller_authority: AuthoritySet::full(),
         kwarg_names: vec![],
         ifc: default_ifc_context(),
     }
@@ -63,6 +66,7 @@ fn method_call_context(call_id: u32, name: &str) -> CallContext {
         call_id,
         kind: ExternalCallKind::Method,
         function_name: name.to_owned(),
+        caller_authority: AuthoritySet::full(),
         kwarg_names: vec![],
         ifc: default_ifc_context(),
     }
@@ -121,6 +125,7 @@ fn allow_all_mediator_allows_all_call_kinds(#[case] kind: ExternalCallKind) {
         call_id: 0,
         kind,
         function_name: "test_fn".to_owned(),
+        caller_authority: AuthoritySet::full(),
         kwarg_names: vec![],
         ifc: default_ifc_context(),
     };
@@ -137,6 +142,7 @@ fn deny_all_mediator_denies_all_call_kinds(#[case] kind: ExternalCallKind) {
         call_id: 0,
         kind,
         function_name: "test_fn".to_owned(),
+        caller_authority: AuthoritySet::full(),
         kwarg_names: vec![],
         ifc: default_ifc_context(),
     };
@@ -281,6 +287,7 @@ tools:
         call_id: 1,
         kind: ExternalCallKind::Function,
         function_name: "llm_api_call".to_owned(),
+        caller_authority: AuthoritySet::full(),
         kwarg_names: vec![],
         ifc,
     };
@@ -342,6 +349,7 @@ tools:
         call_id: 2,
         kind: ExternalCallKind::Function,
         function_name: "guarded_write".to_owned(),
+        caller_authority: AuthoritySet::full(),
         kwarg_names: vec!["message".to_owned()],
         ifc: CallIfcContext {
             propagation_mode: PropagationMode::Normal,
@@ -371,6 +379,7 @@ fn policy_mediator_denies_malformed_kwarg_context() {
         call_id: 3,
         kind: ExternalCallKind::Function,
         function_name: "guarded_write".to_owned(),
+        caller_authority: AuthoritySet::full(),
         kwarg_names: vec!["path".to_owned()],
         ifc: CallIfcContext {
             propagation_mode: PropagationMode::Normal,
@@ -385,4 +394,46 @@ fn policy_mediator_denies_malformed_kwarg_context() {
         mediator.mediate(&ctx),
         MediationDecision::Deny { .. }
     ));
+}
+
+#[rstest]
+fn policy_mediator_uses_explicit_caller_authority() {
+    let policy_yaml = r#"
+schema_version: 1
+policy_name: test_policy
+default_action: Deny
+strict_mode: true
+budgets:
+  max_values: 100
+  max_parents_per_value: 10
+  max_closure_steps: 100
+  max_witness_depth: 10
+tools:
+  - tool: guarded_write
+    side_effect_class: ExternalWrite
+    required_authority:
+      - email.send
+    default_decision: Allow
+"#;
+    let engine =
+        zamburak_policy::PolicyEngine::from_yaml_str(policy_yaml).expect("valid test policy");
+    let mut mediator = PolicyMediator::new(engine);
+    let ctx = CallContext {
+        call_id: 4,
+        kind: ExternalCallKind::Function,
+        function_name: "guarded_write".to_owned(),
+        caller_authority: AuthoritySet::from_iter([
+            AuthorityCapability::try_from("email.send").expect("valid authority capability")
+        ]),
+        kwarg_names: vec![],
+        ifc: CallIfcContext {
+            propagation_mode: PropagationMode::Normal,
+            aggregate_summary: DependencySummary::unknown_top(),
+            control_context: ExecutionContextSummary::new(),
+            arg_summaries: vec![],
+            kwarg_summaries: vec![],
+        },
+    };
+
+    assert_eq!(mediator.mediate(&ctx), MediationDecision::Allow);
 }

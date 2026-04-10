@@ -409,7 +409,7 @@ decision order:
    matched against `ToolPolicy.tool` in the loaded policy. A missing tool entry
    fails closed with a deny decision.
 2. **Context rules** — `deny_if_pc_integrity_contains` rules are checked
-   against the active control-context integrity. Unrecognised integrity label
+   against the active control-context integrity. Unrecognized integrity label
    strings in the policy also fail closed.
 3. **Authority requirements** — each `required_authority` capability must be
    present in the caller's authority set. Missing capabilities are denied.
@@ -456,7 +456,7 @@ Library consumers should be aware of the following fail-closed behaviours:
 
 - **Missing tool policy** — any external call to a tool name not present in
   the loaded policy is denied.
-- **Unrecognised label strings** — if the policy YAML contains a misspelt
+- **Unrecognized label strings** — if the policy YAML contains a misspelt
   integrity or confidentiality label, the evaluation treats it as a deny
   condition rather than silently skipping the rule.
 - **Missing caller authority** — if the caller's `AuthoritySet` does not
