@@ -42,7 +42,10 @@ fn make_input(
     )
 }
 
-#[expect(clippy::too_many_arguments, reason = "test helper covers all input fields")]
+#[expect(
+    clippy::too_many_arguments,
+    reason = "test helper covers all input fields"
+)]
 fn make_input_full(
     tool_name: &str,
     arg_summaries: Vec<DependencySummary>,

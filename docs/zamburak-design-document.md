@@ -1770,6 +1770,40 @@ Zamburak-owned wrapper types (`GovernedRunProgress`, `GovernedRunError`,
 internal types change and avoids leaking Track A internals into Track B
 consumers.
 
+Implementation decision (2026-04-04): Task 0.6.4 adds runtime policy evaluation
+for governed external-call boundaries. Key design choices:
+
+- `ExternalCallPolicyInput` in `zamburak-policy` is a policy-layer-owned
+  request type decoupled from Monty runtime internals. It carries tool name,
+  call kind, dependency summaries, caller authority, and control-context
+  snapshot. The `caller_authority` field is populated from the aggregate
+  summary's `authority_join`.
+- `ExternalCallPolicyDecision` has three variants: `Allow`, `Deny`, and
+  `RequireConfirmation`, each carrying a `PolicyDecisionExplanation` with a
+  human-readable `summary` field. Richer audit-pipeline metadata (rule
+  identifiers, redacted witnesses) can be added additively in later tasks.
+- `PolicyMediator` in `zamburak-monty` implements `ExternalCallMediator` by
+  translating `CallContext` into `ExternalCallPolicyInput`, evaluating via
+  `PolicyEngine::evaluate_external_call`, and converting the result to
+  `MediationDecision`. This preserves the existing adapter seam: consumers use
+  `Arc<Mutex<dyn ExternalCallMediator>>` and can swap between
+  `AllowAllMediator`, `DenyAllMediator`, or `PolicyMediator`.
+- Tool lookup uses `CallContext.function_name` as the policy tool key,
+  matching against `ToolPolicy.tool`. Tool absence fails closed with a deny
+  decision.
+- `RequireDraft` is conservatively mapped to `RequireConfirmation` because
+  the governed-run public flow does not yet expose a draft-specific state.
+- Evaluation follows a deterministic order: context rules, authority token
+  requirements, positional argument rules, keyword argument rules, then default
+  decision. This is a conservative subset of the documented six-step order;
+  verification requirements (step 3) remain placeholder until Task 1.1.1.
+- All label-string parsing uses `FromStr` implementations in
+  `zamburak-core` (`IntegrityLabel`, `DataLabel`). Unrecognised label strings
+  fail closed: deny for integrity checks, treat-as-present for confidentiality
+  checks.
+- Keyword argument rules prevent bypass of guarded parameters: each keyword
+  value summary is checked against every `arg_rule` whose `arg` name matches.
+
 ## References
 
 - Pydantic Monty: <https://github.com/pydantic/monty>

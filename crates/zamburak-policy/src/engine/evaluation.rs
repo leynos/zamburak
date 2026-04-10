@@ -242,10 +242,10 @@ fn check_arg_rules(
 
 /// Check keyword argument rules.
 ///
-/// Each keyword argument's value summary is checked against every `arg_rule`
-/// whose `arg` name matches the keyword name from the summary. This ensures
-/// that guarded parameters cannot bypass policy constraints by being passed
-/// as keyword arguments instead of positional ones.
+/// Every `arg_rule` is checked against every keyword argument value summary.
+/// The keyword name (key) is currently ignored; all argument rules apply to
+/// all keyword values. This prevents guarded parameters from bypassing policy
+/// constraints by being passed as keyword arguments instead of positional ones.
 fn check_kwarg_rules(
     tool_policy: &crate::policy_def::ToolPolicy,
     input: &ExternalCallPolicyInput,

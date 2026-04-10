@@ -132,7 +132,7 @@ derives observer-backed information-flow control (IFC) summaries, and on Task
   `tests/security/llm_sink_enforcement/mod.rs` fixture-driven security tests).
   Severity: low. Likelihood: medium. Mitigation: follow the guidance in
   `docs/rstest-bdd-users-guide.md` and stay close to the existing governed-run
-  and security suites so the new scenarios match repository conventions.
+  and security suites, so the new scenarios match repository conventions.
 
 ## Progress
 
