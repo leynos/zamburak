@@ -2,10 +2,11 @@
 
 use std::sync::{Arc, Mutex};
 
-use monty::{MontyObject, MontyRun, NoLimitTracker, PrintWriter};
+use monty::{MontyObject, MontyRun, NoLimitTracker, OsFunction, PrintWriter};
 use rstest::rstest;
 use zamburak_core::IntegrityLabel;
 use zamburak_core::propagation::PropagationMode;
+use zamburak_core::{AuthorityCapability, AuthoritySet};
 
 use crate::external_call::{AllowAllMediator, DenyAllMediator, ExternalCallMediator};
 use crate::observer::GovernedIfcConfig;
@@ -85,6 +86,47 @@ fn allowed_external_call_yields_pending_call_and_resumes_to_completion() {
             assert_eq!(value, MontyObject::Int(7));
         }
         other => panic!("expected Complete(7), got {other:?}"),
+    }
+}
+
+#[rstest]
+#[case(OsFunction::Exists, "Path.exists")]
+#[case(OsFunction::IsFile, "Path.is_file")]
+#[case(OsFunction::IsDir, "Path.is_dir")]
+#[case(OsFunction::IsSymlink, "Path.is_symlink")]
+#[case(OsFunction::ReadText, "Path.read_text")]
+#[case(OsFunction::ReadBytes, "Path.read_bytes")]
+#[case(OsFunction::WriteText, "Path.write_text")]
+#[case(OsFunction::WriteBytes, "Path.write_bytes")]
+#[case(OsFunction::Mkdir, "Path.mkdir")]
+#[case(OsFunction::Unlink, "Path.unlink")]
+#[case(OsFunction::Rmdir, "Path.rmdir")]
+#[case(OsFunction::Iterdir, "Path.iterdir")]
+#[case(OsFunction::Stat, "Path.stat")]
+#[case(OsFunction::Rename, "Path.rename")]
+#[case(OsFunction::Resolve, "Path.resolve")]
+#[case(OsFunction::Absolute, "Path.absolute")]
+#[case(OsFunction::Getenv, "os.getenv")]
+#[case(OsFunction::GetEnviron, "os.environ")]
+fn os_policy_name_mapping_is_stable(#[case] function: OsFunction, #[case] expected: &str) {
+    assert_eq!(
+        super::flow::mediation::map_os_function_to_policy_name(function),
+        expected
+    );
+}
+
+#[rstest]
+#[case("import os\nos.getenv(\"HOME\")", "os.getenv")]
+#[case("import os\nos.environ", "os.environ")]
+fn governed_runner_exports_stable_os_policy_names(#[case] code: &str, #[case] expected_name: &str) {
+    let runner = governed_runner(code, shared_mediator(AllowAllMediator));
+    let result = runner.run_no_limits(vec![]);
+    match result {
+        Ok(GovernedRunProgress::ExternalCallPending { context, .. }) => {
+            assert_eq!(context.kind, monty::ExternalCallKind::Os);
+            assert_eq!(context.function_name, expected_name);
+        }
+        other => panic!("expected ExternalCallPending, got {other:?}"),
     }
 }
 
@@ -228,4 +270,43 @@ fn resumed_external_return_provenance_flows_into_following_effect() {
         IntegrityLabel::Untrusted
     );
     assert!(sink_context.ifc.arg_summaries[0].origin_count >= 2);
+}
+
+#[rstest]
+fn policy_mediator_honors_governed_runner_caller_authority() {
+    let policy_yaml = r#"
+schema_version: 1
+policy_name: test_policy
+default_action: Deny
+strict_mode: true
+budgets:
+  max_values: 100
+  max_parents_per_value: 10
+  max_closure_steps: 100
+  max_witness_depth: 10
+tools:
+  - tool: send_email
+    side_effect_class: ExternalWrite
+    required_authority:
+      - EmailSendCap
+    default_decision: Allow
+"#;
+    let engine =
+        zamburak_policy::PolicyEngine::from_yaml_str(policy_yaml).expect("valid test policy");
+    let mediator = shared_mediator(crate::PolicyMediator::new(engine));
+    let monty_run =
+        MontyRun::new("send_email()".to_owned(), "test.py", vec![]).expect("parse should succeed");
+    let cap = AuthorityCapability::try_from("EmailSendCap").expect("valid authority capability");
+    let expected_authority = AuthoritySet::from_iter([cap.clone()]);
+    let runner =
+        GovernedRunner::new(monty_run, mediator).with_caller_authority(expected_authority.clone());
+
+    let result = runner.run_no_limits(vec![]);
+    match result {
+        Ok(GovernedRunProgress::ExternalCallPending { context, .. }) => {
+            assert_eq!(context.function_name, "send_email");
+            assert_eq!(context.caller_authority, expected_authority);
+        }
+        other => panic!("expected ExternalCallPending, got {other:?}"),
+    }
 }

@@ -21,7 +21,10 @@ pub use authority::{
 pub use dependency_graph::{DependencyGraph, GraphBudgets, ValueLabels, ValueNode};
 pub use ifc_errors::IfcError;
 pub use summary::DependencySummary;
-pub use trust::{AuthoritySet, DataLabel, DataLabels, IntegrityLabel};
+pub use trust::{
+    AuthoritySet, DataLabel, DataLabels, IntegrityLabel, ParseDataLabelError,
+    ParseIntegrityLabelError,
+};
 pub use value_id::ValueId;
 
 #[cfg(test)]

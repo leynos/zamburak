@@ -2,14 +2,16 @@
 
 use monty::ExternalCallKind;
 use rstest::rstest;
-use zamburak_core::DependencySummary;
-use zamburak_core::control_context::ExecutionContextSummary;
-use zamburak_core::propagation::PropagationMode;
+use zamburak_core::AuthoritySet;
 
 use crate::external_call::{
-    AllowAllMediator, CallContext, CallIfcContext, ConfirmationContext, DenyAllMediator,
-    ExternalCallMediator, MediationDecision,
+    AllowAllMediator, CallContext, ConfirmationContext, DenyAllMediator, ExternalCallMediator,
+    MediationDecision,
 };
+use policy_mediator_tests::{default_ifc_context, function_call_context, os_call_context};
+
+#[path = "external_call_policy_mediator_tests.rs"]
+mod policy_mediator_tests;
 
 struct RequireConfirmationMediator;
 
@@ -21,34 +23,6 @@ impl ExternalCallMediator for RequireConfirmationMediator {
                 call: context.clone(),
             },
         }
-    }
-}
-
-fn function_call_context(call_id: u32, name: &str) -> CallContext {
-    CallContext {
-        call_id,
-        kind: ExternalCallKind::Function,
-        function_name: name.to_owned(),
-        ifc: default_ifc_context(),
-    }
-}
-
-fn os_call_context(call_id: u32, name: &str) -> CallContext {
-    CallContext {
-        call_id,
-        kind: ExternalCallKind::Os,
-        function_name: name.to_owned(),
-        ifc: default_ifc_context(),
-    }
-}
-
-fn default_ifc_context() -> CallIfcContext {
-    CallIfcContext {
-        propagation_mode: PropagationMode::Normal,
-        aggregate_summary: DependencySummary::unknown_top(),
-        control_context: ExecutionContextSummary::new(),
-        arg_summaries: Vec::new(),
-        kwarg_summaries: Vec::new(),
     }
 }
 
@@ -95,6 +69,8 @@ fn allow_all_mediator_allows_all_call_kinds(#[case] kind: ExternalCallKind) {
         call_id: 0,
         kind,
         function_name: "test_fn".to_owned(),
+        caller_authority: AuthoritySet::full(),
+        kwarg_names: vec![],
         ifc: default_ifc_context(),
     };
     assert_eq!(mediator.mediate(&ctx), MediationDecision::Allow);
@@ -110,6 +86,8 @@ fn deny_all_mediator_denies_all_call_kinds(#[case] kind: ExternalCallKind) {
         call_id: 0,
         kind,
         function_name: "test_fn".to_owned(),
+        caller_authority: AuthoritySet::full(),
+        kwarg_names: vec![],
         ifc: default_ifc_context(),
     };
     assert!(matches!(

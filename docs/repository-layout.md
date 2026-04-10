@@ -103,13 +103,14 @@ _Table 2: Core crate file-purpose mapping._
 
 ### `crates/zamburak-monty`
 
-| Path                                           | Purpose                                            |
-| ---------------------------------------------- | -------------------------------------------------- |
-| `crates/zamburak-monty/src/lib.rs`             | `full-monty` adapter crate entry point             |
-| `crates/zamburak-monty/src/run.rs`             | Governed run orchestration around `MontyRun`       |
-| `crates/zamburak-monty/src/observer.rs`        | Runtime observer implementation and event bridging |
-| `crates/zamburak-monty/src/external_call.rs`   | External-call mediation and policy gate hand-off   |
-| `crates/zamburak-monty/src/snapshot_bridge.rs` | (planned) Snapshot extension persistence bridge    |
+| Path                                                         | Purpose                                            |
+| ------------------------------------------------------------ | -------------------------------------------------- |
+| `crates/zamburak-monty/src/lib.rs`                           | `full-monty` adapter crate entry point             |
+| `crates/zamburak-monty/src/run.rs`                           | Governed run orchestration around `MontyRun`       |
+| `crates/zamburak-monty/src/observer.rs`                      | Runtime observer implementation and event bridging |
+| `crates/zamburak-monty/src/external_call.rs`                 | External-call mediation and policy gate hand-off   |
+| `crates/zamburak-monty/src/external_call/policy_mediator.rs` | Policy-backed mediator bridging `PolicyEngine`     |
+| `crates/zamburak-monty/src/snapshot_bridge.rs`               | (planned) Snapshot extension persistence bridge    |
 
 _Table 3: `full-monty` adapter crate file-purpose mapping._
 
@@ -129,15 +130,16 @@ _Table 4: Interpreter crate file-purpose mapping._
 
 ### `crates/zamburak-policy`
 
-| Path                                           | Purpose                                            |
-| ---------------------------------------------- | -------------------------------------------------- |
-| `crates/zamburak-policy/src/lib.rs`            | Policy crate entry point                           |
-| `crates/zamburak-policy/src/engine.rs`         | `PolicyEngine` implementation and evaluation order |
-| `crates/zamburak-policy/src/policy_def.rs`     | YAML and JSON policy schema models                 |
-| `crates/zamburak-policy/src/tool_signature.rs` | Tool-side effect signatures and constraints        |
-| `crates/zamburak-policy/src/decision.rs`       | Decision enums and reason payloads                 |
-| `crates/zamburak-policy/src/audit.rs`          | Decision-to-audit record transformations           |
-| `crates/zamburak-policy/src/defaults.rs`       | Baseline policy presets and safe defaults          |
+| Path                                              | Purpose                                            |
+| ------------------------------------------------- | -------------------------------------------------- |
+| `crates/zamburak-policy/src/lib.rs`               | Policy crate entry point                           |
+| `crates/zamburak-policy/src/engine.rs`            | `PolicyEngine` implementation and evaluation order |
+| `crates/zamburak-policy/src/engine/evaluation.rs` | Runtime external-call policy evaluation logic      |
+| `crates/zamburak-policy/src/policy_def.rs`        | YAML and JSON policy schema models                 |
+| `crates/zamburak-policy/src/tool_signature.rs`    | Tool-side effect signatures and constraints        |
+| `crates/zamburak-policy/src/decision.rs`          | Decision enums and reason payloads                 |
+| `crates/zamburak-policy/src/audit.rs`             | Decision-to-audit record transformations           |
+| `crates/zamburak-policy/src/defaults.rs`          | Baseline policy presets and safe defaults          |
 
 _Table 5: Policy crate file-purpose mapping._
 

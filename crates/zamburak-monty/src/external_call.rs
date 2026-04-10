@@ -6,12 +6,18 @@
 //! the call should be allowed, denied, or held for interactive confirmation.
 //!
 //! Two built-in mediators are provided for testing and permissive operation:
-//! [`AllowAllMediator`] and [`DenyAllMediator`].
+//! [`AllowAllMediator`] and [`DenyAllMediator`]. For production use, see
+//! [`PolicyMediator`] which evaluates calls against loaded policy rules.
+
+mod policy_mediator;
+
+pub use policy_mediator::PolicyMediator;
 
 use monty::ExternalCallKind;
 use zamburak_core::DependencySummary;
 use zamburak_core::control_context::ExecutionContextSummary;
 use zamburak_core::propagation::PropagationMode;
+use zamburak_core::trust::AuthoritySet;
 
 /// IFC summary attached to a governed external-call boundary.
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -24,7 +30,8 @@ pub struct CallIfcContext {
     pub control_context: ExecutionContextSummary,
     /// Per-positional-argument dependency summaries.
     pub arg_summaries: Vec<DependencySummary>,
-    /// Per-keyword `(key, value)` dependency summaries.
+    /// Per-keyword `(key, value)` dependency summaries aligned to
+    /// `CallContext::kwarg_names`.
     pub kwarg_summaries: Vec<(DependencySummary, DependencySummary)>,
 }
 
@@ -39,6 +46,10 @@ pub struct CallContext {
     pub kind: ExternalCallKind,
     /// Name of the function or OS operation being called.
     pub function_name: String,
+    /// Effective caller authority presented to policy evaluation.
+    pub caller_authority: AuthoritySet,
+    /// Keyword argument names aligned to `ifc.kwarg_summaries`.
+    pub kwarg_names: Vec<String>,
     /// IFC snapshot derived from observer-maintained runtime state.
     pub ifc: CallIfcContext,
 }
@@ -99,6 +110,8 @@ pub enum MediationDecision {
 ///     call_id: 1,
 ///     kind: ExternalCallKind::Function,
 ///     function_name: "print".to_owned(),
+///     caller_authority: zamburak_core::AuthoritySet::full(),
+///     kwarg_names: vec![],
 ///     ifc: zamburak_monty::CallIfcContext {
 ///         propagation_mode: PropagationMode::Normal,
 ///         aggregate_summary: DependencySummary::unknown_top(),
@@ -132,6 +145,8 @@ pub trait ExternalCallMediator: Send {
 ///     call_id: 0,
 ///     kind: ExternalCallKind::Os,
 ///     function_name: "open".to_owned(),
+///     caller_authority: zamburak_core::AuthoritySet::full(),
+///     kwarg_names: vec![],
 ///     ifc: zamburak_monty::CallIfcContext {
 ///         propagation_mode: PropagationMode::Normal,
 ///         aggregate_summary: DependencySummary::unknown_top(),
@@ -168,6 +183,8 @@ impl ExternalCallMediator for AllowAllMediator {
 ///     call_id: 0,
 ///     kind: ExternalCallKind::Function,
 ///     function_name: "exit".to_owned(),
+///     caller_authority: zamburak_core::AuthoritySet::full(),
+///     kwarg_names: vec![],
 ///     ifc: zamburak_monty::CallIfcContext {
 ///         propagation_mode: PropagationMode::Normal,
 ///         aggregate_summary: DependencySummary::unknown_top(),

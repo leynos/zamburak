@@ -2,20 +2,25 @@
 
 use std::sync::{Arc, Mutex};
 
-use monty::{
-    ExtFunctionResult, ExternalCallKind, NameLookupResult, PrintWriter, ResourceTracker,
-    RunProgress,
-};
+use monty::{ExtFunctionResult, NameLookupResult, PrintWriter, ResourceTracker, RunProgress};
+use zamburak_core::trust::AuthoritySet;
 
 use crate::external_call::{CallContext, ExternalCallMediator, MediationDecision};
 use crate::observer::{CallIfcLookupError, SharedObserverState};
 use crate::run::{GovernedRunError, GovernedRunProgress};
+
+pub(crate) mod mediation;
+
+use mediation::{
+    MediationResources, build_function_call_context, build_os_call_context, resume_and_step,
+};
 
 /// A suspended external call awaiting host input before resume.
 pub struct SuspendedCall<T: ResourceTracker> {
     kind: SuspendedCallKind<T>,
     mediator: Arc<Mutex<dyn ExternalCallMediator>>,
     observer_state: SharedObserverState,
+    caller_authority: AuthoritySet,
 }
 
 /// Internal discriminant for the two suspendable call types.
@@ -47,8 +52,12 @@ impl<T: ResourceTracker> SuspendedCall<T> {
         result: impl Into<ExtFunctionResult>,
         print: PrintWriter<'_>,
     ) -> Result<GovernedRunProgress<T>, GovernedRunError> {
-        let progress = resume_suspended_call(self.kind, result, print)?;
-        step(progress, &self.mediator, &self.observer_state)
+        resume_and_step(
+            || resume_suspended_call(self.kind, result, print),
+            &self.mediator,
+            &self.observer_state,
+            &self.caller_authority,
+        )
     }
 }
 
@@ -57,6 +66,7 @@ pub struct SuspendedNameLookup<T: ResourceTracker> {
     inner: monty::NameLookup<T>,
     mediator: Arc<Mutex<dyn ExternalCallMediator>>,
     observer_state: SharedObserverState,
+    caller_authority: AuthoritySet,
 }
 
 impl<T: ResourceTracker> std::fmt::Debug for SuspendedNameLookup<T> {
@@ -85,8 +95,12 @@ impl<T: ResourceTracker> SuspendedNameLookup<T> {
         result: impl Into<NameLookupResult>,
         print: PrintWriter<'_>,
     ) -> Result<GovernedRunProgress<T>, GovernedRunError> {
-        let progress = self.inner.resume(result, print)?;
-        step(progress, &self.mediator, &self.observer_state)
+        resume_and_step(
+            || self.inner.resume(result, print),
+            &self.mediator,
+            &self.observer_state,
+            &self.caller_authority,
+        )
     }
 }
 
@@ -95,6 +109,7 @@ pub struct SuspendedResolveFutures<T: ResourceTracker> {
     inner: monty::ResolveFutures<T>,
     mediator: Arc<Mutex<dyn ExternalCallMediator>>,
     observer_state: SharedObserverState,
+    caller_authority: AuthoritySet,
 }
 
 impl<T: ResourceTracker> std::fmt::Debug for SuspendedResolveFutures<T> {
@@ -123,14 +138,13 @@ impl<T: ResourceTracker> SuspendedResolveFutures<T> {
         results: Vec<(u32, ExtFunctionResult)>,
         print: PrintWriter<'_>,
     ) -> Result<GovernedRunProgress<T>, GovernedRunError> {
-        let progress = self.inner.resume(results, print)?;
-        step(progress, &self.mediator, &self.observer_state)
+        resume_and_step(
+            || self.inner.resume(results, print),
+            &self.mediator,
+            &self.observer_state,
+            &self.caller_authority,
+        )
     }
-}
-
-struct MediationResources<'a> {
-    mediator: &'a Arc<Mutex<dyn ExternalCallMediator>>,
-    observer_state: &'a SharedObserverState,
 }
 
 /// Processes a single `RunProgress` step, mediating external calls.
@@ -138,10 +152,12 @@ pub(crate) fn step<T: ResourceTracker>(
     progress: RunProgress<T>,
     mediator: &Arc<Mutex<dyn ExternalCallMediator>>,
     observer_state: &SharedObserverState,
+    caller_authority: &AuthoritySet,
 ) -> Result<GovernedRunProgress<T>, GovernedRunError> {
     let resources = MediationResources {
         mediator,
         observer_state,
+        caller_authority,
     };
     match progress {
         RunProgress::Complete(value) => Ok(GovernedRunProgress::Complete(value)),
@@ -161,7 +177,8 @@ fn mediate_function_call<T: ResourceTracker>(
     call: monty::FunctionCall<T>,
     resources: &MediationResources<'_>,
 ) -> Result<GovernedRunProgress<T>, GovernedRunError> {
-    let call_context = build_function_call_context(&call, resources.observer_state)?;
+    let call_context =
+        build_function_call_context(&call, resources.observer_state, resources.caller_authority)?;
     let decision = query_mediator(resources.mediator, &call_context)?;
     resolve_call_decision(
         SuspendedCallKind::Function(call),
@@ -175,7 +192,8 @@ fn mediate_os_call<T: ResourceTracker>(
     call: monty::OsCall<T>,
     resources: &MediationResources<'_>,
 ) -> Result<GovernedRunProgress<T>, GovernedRunError> {
-    let call_context = build_os_call_context(&call, resources.observer_state)?;
+    let call_context =
+        build_os_call_context(&call, resources.observer_state, resources.caller_authority)?;
     let decision = query_mediator(resources.mediator, &call_context)?;
     resolve_call_decision(
         SuspendedCallKind::Os(call),
@@ -183,42 +201,6 @@ fn mediate_os_call<T: ResourceTracker>(
         decision,
         resources,
     )
-}
-
-fn build_function_call_context<T: ResourceTracker>(
-    call: &monty::FunctionCall<T>,
-    observer_state: &SharedObserverState,
-) -> Result<CallContext, GovernedRunError> {
-    let kind = if call.method_call {
-        ExternalCallKind::Method
-    } else {
-        ExternalCallKind::Function
-    };
-    let ifc = observer_state
-        .call_ifc_context(call.call_id, kind, &call.function_name)
-        .map_err(map_call_ifc_lookup_error)?;
-    Ok(CallContext {
-        call_id: call.call_id,
-        kind,
-        function_name: call.function_name.clone(),
-        ifc,
-    })
-}
-
-fn build_os_call_context<T: ResourceTracker>(
-    call: &monty::OsCall<T>,
-    observer_state: &SharedObserverState,
-) -> Result<CallContext, GovernedRunError> {
-    let function_name = format!("{:?}", call.function);
-    let ifc = observer_state
-        .call_ifc_context(call.call_id, ExternalCallKind::Os, &function_name)
-        .map_err(map_call_ifc_lookup_error)?;
-    Ok(CallContext {
-        call_id: call.call_id,
-        kind: ExternalCallKind::Os,
-        function_name,
-        ifc,
-    })
 }
 
 fn resolve_call_decision<T: ResourceTracker>(
@@ -254,6 +236,7 @@ fn make_suspended_call<T: ResourceTracker>(
         kind,
         mediator: Arc::clone(resources.mediator),
         observer_state: resources.observer_state.clone(),
+        caller_authority: resources.caller_authority.clone(),
     }
 }
 
@@ -276,6 +259,7 @@ fn suspended_name_lookup<T: ResourceTracker>(
         inner: lookup,
         mediator: Arc::clone(resources.mediator),
         observer_state: resources.observer_state.clone(),
+        caller_authority: resources.caller_authority.clone(),
     }
 }
 
@@ -287,6 +271,7 @@ fn suspended_resolve_futures<T: ResourceTracker>(
         inner: resolve_futures,
         mediator: Arc::clone(resources.mediator),
         observer_state: resources.observer_state.clone(),
+        caller_authority: resources.caller_authority.clone(),
     }
 }
 

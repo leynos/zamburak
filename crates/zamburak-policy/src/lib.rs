@@ -7,6 +7,10 @@ mod migration;
 mod policy_def;
 pub mod sink_enforcement;
 
+pub use engine::evaluation::{
+    ExternalCallKind, ExternalCallPolicyDecision, ExternalCallPolicyInput, KeywordArgumentSummary,
+    PolicyDecisionExplanation, PolicyDecisionReason,
+};
 pub use engine::{PolicyEngine, PolicyEngineLoadOutcome};
 pub use migration::{MigrationAuditRecord, MigrationError, MigrationStepRecord};
 pub use policy_def::{

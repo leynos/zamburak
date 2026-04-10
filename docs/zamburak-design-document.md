@@ -1753,7 +1753,9 @@ Task 0.6.3 extends `CallContext` with a nested `CallIfcContext` payload:
   call,
 - `control_context` captures the active `ExecutionContextSummary`,
 - `arg_summaries` and `kwarg_summaries` expose per-argument provenance for
-  policy evaluation and tests.
+  policy evaluation and tests, while `CallContext::kwarg_names` carries the
+  resolved keyword identifiers needed to match policy `arg_rules` to the
+  correct keyword value.
 
 ### Built-in mediators
 
@@ -1769,6 +1771,41 @@ Zamburak-owned wrapper types (`GovernedRunProgress`, `GovernedRunError`,
 `SuspendedCall`). This keeps the public API stable even if `full-monty`
 internal types change and avoids leaking Track A internals into Track B
 consumers.
+
+Implementation decision (2026-04-04): Task 0.6.4 adds runtime policy evaluation
+for governed external-call boundaries. Key design choices:
+
+- `ExternalCallPolicyInput` in `zamburak-policy` is a policy-layer-owned
+  request type decoupled from Monty runtime internals. It carries tool name,
+  call kind, dependency summaries, caller authority, and control-context
+  snapshot. The `caller_authority` field is carried explicitly on `CallContext`
+  so policy mediation does not infer caller capabilities from IFC provenance
+  intersections.
+- `ExternalCallPolicyDecision` has three variants: `Allow`, `Deny`, and
+  `RequireConfirmation`, each carrying a `PolicyDecisionExplanation` with a
+  human-readable `summary` field. Richer audit-pipeline metadata (rule
+  identifiers, redacted witnesses) can be added additively in later tasks.
+- `PolicyMediator` in `zamburak-monty` implements `ExternalCallMediator` by
+  translating `CallContext` into `ExternalCallPolicyInput`, evaluating via
+  `PolicyEngine::evaluate_external_call`, and converting the result to
+  `MediationDecision`. This preserves the existing adapter seam: consumers use
+  `Arc<Mutex<dyn ExternalCallMediator>>` and can swap between
+  `AllowAllMediator`, `DenyAllMediator`, or `PolicyMediator`.
+- Tool lookup uses `CallContext.function_name` as the policy tool key,
+  matching against `ToolPolicy.tool`. Tool absence fails closed with a deny
+  decision.
+- `RequireDraft` is conservatively mapped to `RequireConfirmation` because
+  the governed-run public flow does not yet expose a draft-specific state.
+- Evaluation follows the canonical policy-order contract: tool lookup (missing
+  tool fails closed), context rules / hard-deny constraints, authority token
+  requirements, positional-argument rules, keyword-argument rules, then the
+  default action.
+- All label-string parsing uses `FromStr` implementations in
+  `zamburak-core` (`IntegrityLabel`, `DataLabel`). Unrecognized label strings
+  fail closed: deny for integrity checks, treat-as-present for confidentiality
+  checks. Verification requirements remain a placeholder until Task 1.1.1.
+- Keyword argument rules prevent bypass of guarded parameters: each keyword
+  value summary is checked against every `arg_rule` whose `arg` name matches.
 
 ## References
 

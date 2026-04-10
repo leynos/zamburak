@@ -234,7 +234,9 @@ Built-in mediators:
 
 - `AllowAllMediator` — unconditionally allows every call (testing and
   permissive mode),
-- `DenyAllMediator` — unconditionally denies every call (deny-path testing).
+- `DenyAllMediator` — unconditionally denies every call (deny-path testing),
+- `PolicyMediator` — evaluates calls against loaded policy rules (production
+  use; see [Policy-backed mediation](#policy-backed-mediation) below).
 
 Each `CallContext` now includes an `ifc` payload describing the observer-driven
 information-flow state at that boundary:
@@ -243,7 +245,10 @@ information-flow state at that boundary:
 - `aggregate_summary` — dependency summary for the whole call,
 - `control_context` — the active program-counter summary,
 - `arg_summaries` — per-positional-argument provenance,
-- `kwarg_summaries` — per-keyword provenance as `(key, value)` pairs.
+- `kwarg_summaries` — per-keyword `(key, value)` provenance in the same order
+  as `CallContext::kwarg_names`,
+- `kwarg_names` — resolved keyword identifiers used to align policy rules with
+  the corresponding keyword value summary.
 
 For tests or embedder-controlled execution, `GovernedRunner::with_ifc_config`
 can override the default IFC configuration before execution starts. This is
@@ -318,6 +323,158 @@ match runner.run_no_limits(vec![]) {
     other => panic!("unexpected result: {other:?}"),
 }
 ```
+
+## Policy-backed mediation
+
+`PolicyMediator` connects the `zamburak-policy` evaluation engine to the
+governed runner's external-call boundary. Every call that reaches the mediator
+is evaluated against the loaded policy rules and fails closed when tool or
+summary information is unavailable.
+
+### Constructing a `PolicyMediator`
+
+Load a policy into a `PolicyEngine`, then pass it to `PolicyMediator::new`:
+
+```rust
+use zamburak_policy::PolicyEngine;
+use zamburak_monty::PolicyMediator;
+
+let policy_yaml = r#"
+schema_version: 1
+policy_name: production_policy
+default_action: Deny
+strict_mode: true
+budgets:
+  max_values: 100000
+  max_parents_per_value: 64
+  max_closure_steps: 10000
+  max_witness_depth: 32
+tools:
+  - tool: get_last_email
+    side_effect_class: ExternalRead
+    default_decision: Allow
+  - tool: send_email
+    side_effect_class: ExternalWrite
+    required_authority: [EmailSendCap]
+    arg_rules:
+      - arg: body
+        forbids_confidentiality: [AUTH_SECRET]
+    context_rules:
+      deny_if_pc_integrity_contains: [Untrusted]
+    default_decision: RequireConfirmation
+"#;
+
+let engine = PolicyEngine::from_yaml_str(policy_yaml)
+    .expect("valid policy");
+let mediator = PolicyMediator::new(engine);
+```
+
+### Integrating `PolicyMediator` with `GovernedRunner`
+
+Pass the mediator to `GovernedRunner::new` as the production
+`ExternalCallMediator` implementation:
+
+```rust
+use std::sync::{Arc, Mutex};
+use monty::MontyRun;
+use zamburak_monty::{
+    ExternalCallMediator, GovernedRunner, PolicyMediator,
+};
+use zamburak_policy::PolicyEngine;
+
+let policy_yaml = "..."; // omitted for brevity
+let engine = PolicyEngine::from_yaml_str(policy_yaml)
+    .expect("valid policy");
+let mediator: Arc<Mutex<dyn ExternalCallMediator>> =
+    Arc::new(Mutex::new(PolicyMediator::new(engine)));
+
+let monty_run = MontyRun::new(
+    "effect(\"x\")".to_owned(), "test.py", vec![],
+).expect("parse failed");
+
+let runner = GovernedRunner::new(monty_run, mediator);
+```
+
+The governed runner then evaluates every `FunctionCall` and `OsCall` yield
+through the policy engine before returning a `GovernedRunProgress` state.
+
+### Policy evaluation flow
+
+When `PolicyMediator::mediate` is called, the mediator translates the
+`CallContext` into a policy-layer-owned `ExternalCallPolicyInput` and calls
+`PolicyEngine::evaluate_external_call`. The evaluation follows a deterministic
+decision order:
+
+1. **Tool lookup** — the tool name (from `CallContext.function_name`) is
+   matched against `ToolPolicy.tool` in the loaded policy. A missing tool entry
+   fails closed with a deny decision.
+2. **Context rules** — `deny_if_pc_integrity_contains` rules are checked
+   against the active control-context integrity. Unrecognized integrity label
+   strings in the policy also fail closed.
+3. **Authority requirements** — each `required_authority` capability must be
+   present in the caller's authority set. Missing capabilities are denied.
+4. **Positional argument rules** — `requires_integrity` and
+   `forbids_confidentiality` rules are checked against each positional
+   argument's dependency summary.
+5. **Keyword argument rules** — the same argument rules are checked against
+   keyword argument value summaries, preventing bypass by passing guarded
+   parameters as keyword arguments.
+6. **Default decision** — when no earlier rule fires, the tool's
+   `default_decision` is returned. `RequireDraft` is conservatively mapped to
+   `RequireConfirmation` for Task 0.6.4.
+
+### Policy evaluation types
+
+The `zamburak-policy` crate exposes the following public runtime evaluation
+types at the crate root, for example:
+
+```rust
+use zamburak_policy::{
+    ExternalCallKind, ExternalCallPolicyDecision, ExternalCallPolicyInput,
+    KeywordArgumentSummary, PolicyDecisionExplanation, PolicyDecisionReason,
+};
+```
+
+These public crate-root exports are:
+
+- `ExternalCallKind` — external-call classification used for policy
+  diagnostics: `Function`, `Os`, or `Method`. This enum allows the policy layer
+  to distinguish between different call types without depending on Monty
+  runtime internals.
+- `ExternalCallPolicyInput` — input data for external-call evaluation
+  (tool name, call kind, dependency summaries, caller authority, and control
+  context).
+- `KeywordArgumentSummary` — per-keyword policy input entry carrying the
+  keyword name plus the key and value dependency summaries, so `arg_rules`
+  match the correct keyword argument.
+- `ExternalCallPolicyDecision` — decision outcome: `Allow`, `Deny`, or
+  `RequireConfirmation`, each carrying a `PolicyDecisionExplanation`.
+- `PolicyDecisionExplanation` — metadata attached to a decision with both a
+  machine-parseable `reason` code (`PolicyDecisionReason`) and a human-readable
+  `summary` field.
+- `PolicyDecisionReason` — machine-parseable reason code for policy decisions,
+  enabling structured audit pipelines and programmatic handling of policy
+  outcomes. Variants include `MissingToolPolicy`, `ContextRuleDeny`,
+  `MissingAuthority`, `InvalidAuthorityInPolicy`,
+  `ArgumentIntegrityRequirement`, `ArgumentConfidentialityForbidden`,
+  `DefaultAllow`, `DefaultDeny`, `DefaultRequireConfirmation`, and
+  `RequireDraftMappedToConfirmation`.
+
+### Fail-closed behaviours
+
+Library consumers should be aware of the following fail-closed behaviours:
+
+- **Missing tool policy** — any external call to a tool name not present in
+  the loaded policy is denied.
+- **Unrecognized label strings** — if the policy YAML contains a misspelt
+  integrity or confidentiality label, the evaluation treats it as a deny
+  condition rather than silently skipping the rule.
+- **Missing caller authority** — if the caller's `AuthoritySet` does not
+  contain a required capability, the call is denied.
+- **Budget overflow** — when the dependency graph's transitive summary
+  computation exceeds configured budgets, the summary becomes
+  `DependencySummary::unknown_top()`, which produces conservative policy
+  decisions.
 
 ## Example: canonical policy (schema v1)
 
