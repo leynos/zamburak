@@ -245,7 +245,10 @@ information-flow state at that boundary:
 - `aggregate_summary` — dependency summary for the whole call,
 - `control_context` — the active program-counter summary,
 - `arg_summaries` — per-positional-argument provenance,
-- `kwarg_summaries` — per-keyword provenance as `(key, value)` pairs.
+- `kwarg_summaries` — per-keyword `(key, value)` provenance in the same order
+  as `CallContext::kwarg_names`,
+- `kwarg_names` — resolved keyword identifiers used to align policy rules with
+  the corresponding keyword value summary.
 
 For tests or embedder-controlled execution, `GovernedRunner::with_ifc_config`
 can override the default IFC configuration before execution starts. This is
@@ -422,21 +425,24 @@ decision order:
 
 ### Policy evaluation types
 
-The `zamburak-policy` crate exposes four public types for runtime evaluation
-in `zamburak_policy::engine::evaluation`:
+The `zamburak-policy` crate exposes the following public types for runtime in
+`zamburak_policy::engine::evaluation`:
 
 - `ExternalCallKind` — external-call classification used for policy
   diagnostics: `Function`, `Os`, or `Method`. This enum allows the policy layer
-  to distinguish between different call types without depending on Monty runtime
-  internals.
+  to distinguish between different call types without depending on Monty
+  runtime internals.
 - `ExternalCallPolicyInput` — input data for external-call evaluation
   (tool name, call kind, dependency summaries, caller authority, and control
   context).
+- `KeywordArgumentSummary` — per-keyword policy input entry carrying the
+  keyword name plus the key and value dependency summaries, so `arg_rules`
+  match the correct keyword argument.
 - `ExternalCallPolicyDecision` — decision outcome: `Allow`, `Deny`, or
   `RequireConfirmation`, each carrying a `PolicyDecisionExplanation`.
 - `PolicyDecisionExplanation` — metadata attached to a decision with both a
-  machine-parseable `reason` code (`PolicyDecisionReason`) and a
-  human-readable `summary` field.
+  machine-parseable `reason` code (`PolicyDecisionReason`) and a human-readable
+  `summary` field.
 - `PolicyDecisionReason` — machine-parseable reason code for policy decisions,
   enabling structured audit pipelines and programmatic handling of policy
   outcomes. Variants include `MissingToolPolicy`, `ContextRuleDeny`,

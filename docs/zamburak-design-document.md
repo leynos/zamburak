@@ -1753,7 +1753,9 @@ Task 0.6.3 extends `CallContext` with a nested `CallIfcContext` payload:
   call,
 - `control_context` captures the active `ExecutionContextSummary`,
 - `arg_summaries` and `kwarg_summaries` expose per-argument provenance for
-  policy evaluation and tests.
+  policy evaluation and tests, while `CallContext::kwarg_names` carries the
+  resolved keyword identifiers needed to match policy `arg_rules` to the
+  correct keyword value.
 
 ### Built-in mediators
 

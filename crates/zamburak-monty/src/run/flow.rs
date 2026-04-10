@@ -3,8 +3,8 @@
 use std::sync::{Arc, Mutex};
 
 use monty::{
-    ExtFunctionResult, ExternalCallKind, NameLookupResult, PrintWriter, ResourceTracker,
-    RunProgress,
+    ExtFunctionResult, ExternalCallKind, MontyObject, NameLookupResult, PrintWriter,
+    ResourceTracker, RunProgress,
 };
 
 use crate::external_call::{CallContext, ExternalCallMediator, MediationDecision};
@@ -201,6 +201,12 @@ fn build_function_call_context<T: ResourceTracker>(
         call_id: call.call_id,
         kind,
         function_name: call.function_name.clone(),
+        kwarg_names: extract_kwarg_names(
+            &call.kwargs,
+            ifc.kwarg_summaries.len(),
+            call.call_id,
+            kind,
+        )?,
         ifc,
     })
 }
@@ -217,8 +223,33 @@ fn build_os_call_context<T: ResourceTracker>(
         call_id: call.call_id,
         kind: ExternalCallKind::Os,
         function_name,
+        kwarg_names: extract_kwarg_names(
+            &call.kwargs,
+            ifc.kwarg_summaries.len(),
+            call.call_id,
+            ExternalCallKind::Os,
+        )?,
         ifc,
     })
+}
+
+fn extract_kwarg_names(
+    kwargs: &[(MontyObject, MontyObject)],
+    expected_summary_count: usize,
+    call_id: u32,
+    kind: ExternalCallKind,
+) -> Result<Vec<String>, GovernedRunError> {
+    if kwargs.len() != expected_summary_count {
+        return Err(GovernedRunError::ObserverMismatch { call_id, kind });
+    }
+
+    kwargs
+        .iter()
+        .map(|(key, _value)| match key {
+            MontyObject::String(name) => Ok(name.clone()),
+            _ => Err(GovernedRunError::ObserverMismatch { call_id, kind }),
+        })
+        .collect()
 }
 
 fn resolve_call_decision<T: ResourceTracker>(

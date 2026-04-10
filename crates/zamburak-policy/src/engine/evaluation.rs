@@ -6,101 +6,16 @@
 //! from the runtime and matches them against loaded policy rules.
 
 use zamburak_core::DependencySummary;
-use zamburak_core::control_context::ExecutionContextSummary;
-use zamburak_core::trust::{AuthoritySet, IntegrityLabel};
+use zamburak_core::trust::IntegrityLabel;
 
 use crate::engine::PolicyEngine;
 
-/// External-call classification used for policy diagnostics.
-///
-/// This is a policy-layer-owned copy of the Monty runtime's call-kind
-/// discriminator, allowing the policy crate to remain independent of
-/// the interpreter implementation.
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub enum ExternalCallKind {
-    /// External function call.
-    Function,
-    /// OS-level system call.
-    Os,
-    /// Method call on an external object.
-    Method,
-}
+mod types;
 
-/// Input for external-call policy evaluation.
-///
-/// This type is policy-layer-owned and does not depend on Monty runtime
-/// internals, enabling independent testing and versioning of the evaluation
-/// contract.
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub struct ExternalCallPolicyInput {
-    /// Tool name used for policy lookup.
-    pub tool_name: String,
-    /// External-call classification.
-    pub call_kind: ExternalCallKind,
-    /// Aggregate dependency summary for the whole call.
-    pub aggregate_summary: DependencySummary,
-    /// Per-positional-argument dependency summaries.
-    pub arg_summaries: Vec<DependencySummary>,
-    /// Per-keyword `(key, value)` dependency summaries.
-    pub kwarg_summaries: Vec<(DependencySummary, DependencySummary)>,
-    /// Authority capabilities held by the caller at this call boundary.
-    pub caller_authority: AuthoritySet,
-    /// Control-context snapshot at the call boundary.
-    pub control_context: ExecutionContextSummary,
-}
-
-/// Decision outcome for an evaluated external-call request.
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub enum ExternalCallPolicyDecision {
-    /// Allow the external call to proceed.
-    Allow(PolicyDecisionExplanation),
-    /// Deny the external call before side-effect execution.
-    Deny(PolicyDecisionExplanation),
-    /// Require interactive confirmation before proceeding.
-    RequireConfirmation(PolicyDecisionExplanation),
-}
-
-/// Machine-parseable reason code for policy decisions.
-///
-/// This enum provides a stable, deterministic classification of decision
-/// rationale, enabling structured audit pipelines and programmatic handling
-/// of policy outcomes.
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub enum PolicyDecisionReason {
-    /// Tool not found in policy; failed closed.
-    MissingToolPolicy,
-    /// Denied by a hard constraint in context rules (e.g., PC integrity match).
-    ContextRuleDeny,
-    /// Caller lacks a required authority capability.
-    MissingAuthority,
-    /// Invalid authority capability string in policy definition.
-    InvalidAuthorityInPolicy,
-    /// Argument does not meet required integrity level.
-    ArgumentIntegrityRequirement,
-    /// Argument contains a forbidden confidentiality label.
-    ArgumentConfidentialityForbidden,
-    /// Denied by the tool's default policy action.
-    DefaultDeny,
-    /// Allowed by the tool's default policy action.
-    DefaultAllow,
-    /// Confirmation required by the tool's default policy action.
-    DefaultRequireConfirmation,
-    /// Confirmation required (mapped conservatively from RequireDraft).
-    RequireDraftMappedToConfirmation,
-}
-
-/// Explanation metadata attached to a policy decision.
-///
-/// This type provides deterministic, safely redacted evidence for why a
-/// decision was made, including both a machine-parseable reason code and a
-/// human-readable summary.
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub struct PolicyDecisionExplanation {
-    /// Machine-parseable reason code for this decision.
-    pub reason: PolicyDecisionReason,
-    /// Human-readable summary of the decision rationale.
-    pub summary: String,
-}
+pub use types::{
+    ExternalCallKind, ExternalCallPolicyDecision, ExternalCallPolicyInput, KeywordArgumentSummary,
+    PolicyDecisionExplanation, PolicyDecisionReason,
+};
 
 impl PolicyEngine {
     /// Evaluate an external-call request against the loaded policy.
@@ -208,15 +123,13 @@ fn check_context_rules(
         .deny_if_pc_integrity_contains
         .iter()
         .find_map(|label_str| match label_str.parse::<IntegrityLabel>() {
-            Ok(label) if input.control_context.pc_integrity() == label => {
-                Some(deny(
-                    PolicyDecisionReason::ContextRuleDeny,
-                    format!(
-                        "denied by context rule: PC integrity '{}' matched",
-                        label_str
-                    ),
-                ))
-            }
+            Ok(label) if input.control_context.pc_integrity() == label => Some(deny(
+                PolicyDecisionReason::ContextRuleDeny,
+                format!(
+                    "denied by context rule: PC integrity '{}' matched",
+                    label_str
+                ),
+            )),
             Ok(_) => None,
             Err(_) => Some(deny(
                 PolicyDecisionReason::ContextRuleDeny,
@@ -285,19 +198,18 @@ fn check_arg_rules(
 
 /// Check keyword argument rules.
 ///
-/// Every `arg_rule` is checked against every keyword argument value summary.
-/// The keyword name (key) is currently ignored; all argument rules apply to
-/// all keyword values. This prevents guarded parameters from bypassing policy
-/// constraints by being passed as keyword arguments instead of positional ones.
+/// Keyword rules are matched by the resolved keyword identifier so the policy
+/// applies each `arg_rule` only to the keyword argument it names.
 fn check_kwarg_rules(
     tool_policy: &crate::policy_def::ToolPolicy,
     input: &ExternalCallPolicyInput,
 ) -> Option<ExternalCallPolicyDecision> {
-    input.kwarg_summaries.iter().find_map(|(_key, value)| {
-        tool_policy
+    input.kwarg_summaries.iter().find_map(|kwarg_summary| {
+        let arg_rule = tool_policy
             .arg_rules
             .iter()
-            .find_map(|arg_rule| check_single_arg_rule(arg_rule, value))
+            .find(|arg_rule| arg_rule.arg == kwarg_summary.name)?;
+        check_single_arg_rule(arg_rule, &kwarg_summary.value_summary)
     })
 }
 

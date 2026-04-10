@@ -354,7 +354,8 @@ pub struct ExternalCallPolicyInput {
     pub call_kind: ExternalCallKind,
     pub aggregate_summary: DependencySummary,
     pub arg_summaries: Vec<DependencySummary>,
-    pub kwarg_summaries: Vec<(DependencySummary, DependencySummary)>,
+    pub kwarg_summaries: Vec<KeywordArgumentSummary>,
+    pub caller_authority: AuthoritySet,
     pub control_context: ExecutionContextSummary,
 }
 ```

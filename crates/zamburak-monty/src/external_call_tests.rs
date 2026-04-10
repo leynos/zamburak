@@ -43,6 +43,7 @@ fn function_call_context(call_id: u32, name: &str) -> CallContext {
         call_id,
         kind: ExternalCallKind::Function,
         function_name: name.to_owned(),
+        kwarg_names: vec![],
         ifc: default_ifc_context(),
     }
 }
@@ -52,6 +53,7 @@ fn os_call_context(call_id: u32, name: &str) -> CallContext {
         call_id,
         kind: ExternalCallKind::Os,
         function_name: name.to_owned(),
+        kwarg_names: vec![],
         ifc: default_ifc_context(),
     }
 }
@@ -61,6 +63,7 @@ fn method_call_context(call_id: u32, name: &str) -> CallContext {
         call_id,
         kind: ExternalCallKind::Method,
         function_name: name.to_owned(),
+        kwarg_names: vec![],
         ifc: default_ifc_context(),
     }
 }
@@ -118,6 +121,7 @@ fn allow_all_mediator_allows_all_call_kinds(#[case] kind: ExternalCallKind) {
         call_id: 0,
         kind,
         function_name: "test_fn".to_owned(),
+        kwarg_names: vec![],
         ifc: default_ifc_context(),
     };
     assert_eq!(mediator.mediate(&ctx), MediationDecision::Allow);
@@ -133,6 +137,7 @@ fn deny_all_mediator_denies_all_call_kinds(#[case] kind: ExternalCallKind) {
         call_id: 0,
         kind,
         function_name: "test_fn".to_owned(),
+        kwarg_names: vec![],
         ifc: default_ifc_context(),
     };
     assert!(matches!(
@@ -276,6 +281,7 @@ tools:
         call_id: 1,
         kind: ExternalCallKind::Function,
         function_name: "llm_api_call".to_owned(),
+        kwarg_names: vec![],
         ifc,
     };
 
@@ -307,4 +313,76 @@ fn policy_mediator_requires_confirmation_when_configured() {
         }
         other => panic!("expected RequireConfirmation, got {other:?}"),
     }
+}
+
+#[rstest]
+fn policy_mediator_matches_kwarg_rules_by_keyword_name() {
+    let policy_yaml = r#"
+schema_version: 1
+policy_name: test_policy
+default_action: Deny
+strict_mode: true
+budgets:
+  max_values: 100
+  max_parents_per_value: 10
+  max_closure_steps: 100
+  max_witness_depth: 10
+tools:
+  - tool: guarded_write
+    side_effect_class: ExternalWrite
+    arg_rules:
+      - arg: path
+        requires_integrity: Verified
+    default_decision: Allow
+"#;
+    let engine =
+        zamburak_policy::PolicyEngine::from_yaml_str(policy_yaml).expect("valid test policy");
+    let mut mediator = PolicyMediator::new(engine);
+    let ctx = CallContext {
+        call_id: 2,
+        kind: ExternalCallKind::Function,
+        function_name: "guarded_write".to_owned(),
+        kwarg_names: vec!["message".to_owned()],
+        ifc: CallIfcContext {
+            propagation_mode: PropagationMode::Normal,
+            aggregate_summary: DependencySummary::unknown_top(),
+            control_context: ExecutionContextSummary::new(),
+            arg_summaries: vec![],
+            kwarg_summaries: vec![(
+                DependencySummary::unknown_top(),
+                DependencySummary {
+                    integrity_join: IntegrityLabel::Untrusted,
+                    confidentiality_join: DataLabels::new(),
+                    authority_join: Default::default(),
+                    origin_count: 1,
+                    truncated: false,
+                },
+            )],
+        },
+    };
+
+    assert_eq!(mediator.mediate(&ctx), MediationDecision::Allow);
+}
+
+#[rstest]
+fn policy_mediator_denies_malformed_kwarg_context() {
+    let mut mediator = make_mediator_for_single_tool("guarded_write", "Allow");
+    let ctx = CallContext {
+        call_id: 3,
+        kind: ExternalCallKind::Function,
+        function_name: "guarded_write".to_owned(),
+        kwarg_names: vec!["path".to_owned()],
+        ifc: CallIfcContext {
+            propagation_mode: PropagationMode::Normal,
+            aggregate_summary: DependencySummary::unknown_top(),
+            control_context: ExecutionContextSummary::new(),
+            arg_summaries: vec![],
+            kwarg_summaries: vec![],
+        },
+    };
+
+    assert!(matches!(
+        mediator.mediate(&ctx),
+        MediationDecision::Deny { .. }
+    ));
 }

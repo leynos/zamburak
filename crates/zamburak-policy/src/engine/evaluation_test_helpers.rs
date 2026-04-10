@@ -4,8 +4,10 @@ use zamburak_core::control_context::ExecutionContextSummary;
 use zamburak_core::trust::{AuthoritySet, IntegrityLabel};
 use zamburak_core::{DataLabel, DataLabels, DependencySummary};
 
-use crate::engine::evaluation::{ExternalCallKind, ExternalCallPolicyInput};
 use crate::engine::PolicyEngine;
+use crate::engine::evaluation::{
+    ExternalCallKind, ExternalCallPolicyInput, KeywordArgumentSummary,
+};
 
 pub(super) fn minimal_policy_with_tools(tools_yaml: &str) -> PolicyEngine {
     let yaml = format!(
@@ -48,7 +50,7 @@ pub(super) fn make_input(
 pub(super) fn make_input_full(
     tool_name: &str,
     arg_summaries: Vec<DependencySummary>,
-    kwarg_summaries: Vec<(DependencySummary, DependencySummary)>,
+    kwarg_summaries: Vec<KeywordArgumentSummary>,
     caller_authority: AuthoritySet,
     control_context: ExecutionContextSummary,
 ) -> ExternalCallPolicyInput {
@@ -60,6 +62,18 @@ pub(super) fn make_input_full(
         kwarg_summaries,
         caller_authority,
         control_context,
+    }
+}
+
+pub(super) fn named_kwarg_summary(
+    name: &str,
+    key_summary: DependencySummary,
+    value_summary: DependencySummary,
+) -> KeywordArgumentSummary {
+    KeywordArgumentSummary {
+        name: name.to_owned(),
+        key_summary,
+        value_summary,
     }
 }
 

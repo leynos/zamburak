@@ -7,7 +7,9 @@
 
 use monty::ExternalCallKind;
 use zamburak_policy::PolicyEngine;
-use zamburak_policy::engine::evaluation::{ExternalCallPolicyDecision, ExternalCallPolicyInput};
+use zamburak_policy::engine::evaluation::{
+    ExternalCallPolicyDecision, ExternalCallPolicyInput, KeywordArgumentSummary,
+};
 
 use crate::external_call::{
     CallContext, ConfirmationContext, ExternalCallMediator, MediationDecision,
@@ -49,6 +51,7 @@ use crate::external_call::{
 ///     call_id: 1,
 ///     kind: ExternalCallKind::Function,
 ///     function_name: "unknown_tool".to_owned(),
+///     kwarg_names: vec![],
 ///     ifc: zamburak_monty::CallIfcContext {
 ///         propagation_mode: PropagationMode::Normal,
 ///         aggregate_summary: DependencySummary::unknown_top(),
@@ -75,6 +78,16 @@ impl PolicyMediator {
 
 impl ExternalCallMediator for PolicyMediator {
     fn mediate(&mut self, context: &CallContext) -> MediationDecision {
+        if context.kwarg_names.len() != context.ifc.kwarg_summaries.len() {
+            return MediationDecision::Deny {
+                reason: format!(
+                    "invalid call context for call_id {}: kwarg_names length {} does not match kwarg_summaries length {}",
+                    context.call_id,
+                    context.kwarg_names.len(),
+                    context.ifc.kwarg_summaries.len()
+                ),
+            };
+        }
         let policy_input = translate_call_context_to_policy_input(context);
         let policy_decision = self.engine.evaluate_external_call(&policy_input);
         translate_policy_decision_to_mediation_decision(policy_decision, context)
@@ -88,7 +101,18 @@ fn translate_call_context_to_policy_input(context: &CallContext) -> ExternalCall
         call_kind: translate_external_call_kind(context.kind),
         aggregate_summary: context.ifc.aggregate_summary.clone(),
         arg_summaries: context.ifc.arg_summaries.clone(),
-        kwarg_summaries: context.ifc.kwarg_summaries.clone(),
+        kwarg_summaries: context
+            .kwarg_names
+            .iter()
+            .zip(&context.ifc.kwarg_summaries)
+            .map(
+                |(name, (key_summary, value_summary))| KeywordArgumentSummary {
+                    name: name.clone(),
+                    key_summary: key_summary.clone(),
+                    value_summary: value_summary.clone(),
+                },
+            )
+            .collect(),
         caller_authority: context.ifc.aggregate_summary.authority_join.clone(),
         control_context: context.ifc.control_context.clone(),
     }
