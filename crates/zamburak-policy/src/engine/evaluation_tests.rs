@@ -1,9 +1,7 @@
 //! Unit tests for external-call policy evaluation.
 
-#[cfg(test)]
 #[path = "evaluation_authority_tests.rs"]
 mod authority_tests;
-#[cfg(test)]
 #[path = "evaluation_test_helpers.rs"]
 mod helpers;
 

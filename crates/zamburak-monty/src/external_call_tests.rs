@@ -10,7 +10,6 @@ use crate::external_call::{
 };
 use policy_mediator_tests::{default_ifc_context, function_call_context, os_call_context};
 
-#[cfg(test)]
 #[path = "external_call_policy_mediator_tests.rs"]
 mod policy_mediator_tests;
 
