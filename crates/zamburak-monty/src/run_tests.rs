@@ -297,14 +297,15 @@ tools:
     let monty_run =
         MontyRun::new("send_email()".to_owned(), "test.py", vec![]).expect("parse should succeed");
     let cap = AuthorityCapability::try_from("EmailSendCap").expect("valid authority capability");
-    let runner = GovernedRunner::new(monty_run, mediator)
-        .with_caller_authority(AuthoritySet::from_iter([cap]));
+    let expected_authority = AuthoritySet::from_iter([cap.clone()]);
+    let runner =
+        GovernedRunner::new(monty_run, mediator).with_caller_authority(expected_authority.clone());
 
     let result = runner.run_no_limits(vec![]);
     match result {
         Ok(GovernedRunProgress::ExternalCallPending { context, .. }) => {
             assert_eq!(context.function_name, "send_email");
-            assert!(!context.caller_authority.is_empty());
+            assert_eq!(context.caller_authority, expected_authority);
         }
         other => panic!("expected ExternalCallPending, got {other:?}"),
     }
