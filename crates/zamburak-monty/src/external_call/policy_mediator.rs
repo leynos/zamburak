@@ -7,7 +7,7 @@
 
 use monty::ExternalCallKind;
 use zamburak_policy::PolicyEngine;
-use zamburak_policy::engine::evaluation::{
+use zamburak_policy::{
     ExternalCallPolicyDecision, ExternalCallPolicyInput, KeywordArgumentSummary,
 };
 
@@ -120,10 +120,8 @@ fn translate_call_context_to_policy_input(context: &CallContext) -> ExternalCall
 }
 
 /// Translate Monty's `ExternalCallKind` to the policy crate's copy.
-fn translate_external_call_kind(
-    kind: ExternalCallKind,
-) -> zamburak_policy::engine::evaluation::ExternalCallKind {
-    use zamburak_policy::engine::evaluation::ExternalCallKind as PolicyCallKind;
+fn translate_external_call_kind(kind: ExternalCallKind) -> zamburak_policy::ExternalCallKind {
+    use zamburak_policy::ExternalCallKind as PolicyCallKind;
     match kind {
         ExternalCallKind::Function => PolicyCallKind::Function,
         ExternalCallKind::Os => PolicyCallKind::Os,

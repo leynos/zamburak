@@ -35,7 +35,7 @@ impl PolicyEngine {
     ///
     /// ```no_run
     /// # use zamburak_policy::{PolicyEngine, PolicyLoadError};
-    /// # use zamburak_policy::engine::evaluation::{ExternalCallPolicyInput, ExternalCallPolicyDecision, ExternalCallKind};
+    /// # use zamburak_policy::{ExternalCallPolicyInput, ExternalCallPolicyDecision, ExternalCallKind};
     /// # use zamburak_core::{AuthoritySet, DependencySummary, control_context::ExecutionContextSummary};
     /// #
     /// # let policy_yaml = r#"
