@@ -60,13 +60,44 @@ pub enum ExternalCallPolicyDecision {
     RequireConfirmation(PolicyDecisionExplanation),
 }
 
+/// Machine-parseable reason code for policy decisions.
+///
+/// This enum provides a stable, deterministic classification of decision
+/// rationale, enabling structured audit pipelines and programmatic handling
+/// of policy outcomes.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum PolicyDecisionReason {
+    /// Tool not found in policy; failed closed.
+    MissingToolPolicy,
+    /// Denied by a hard constraint in context rules (e.g., PC integrity match).
+    ContextRuleDeny,
+    /// Caller lacks a required authority capability.
+    MissingAuthority,
+    /// Invalid authority capability string in policy definition.
+    InvalidAuthorityInPolicy,
+    /// Argument does not meet required integrity level.
+    ArgumentIntegrityRequirement,
+    /// Argument contains a forbidden confidentiality label.
+    ArgumentConfidentialityForbidden,
+    /// Denied by the tool's default policy action.
+    DefaultDeny,
+    /// Allowed by the tool's default policy action.
+    DefaultAllow,
+    /// Confirmation required by the tool's default policy action.
+    DefaultRequireConfirmation,
+    /// Confirmation required (mapped conservatively from RequireDraft).
+    RequireDraftMappedToConfirmation,
+}
+
 /// Explanation metadata attached to a policy decision.
 ///
 /// This type provides deterministic, safely redacted evidence for why a
-/// decision was made. Task 0.6.4 keeps this minimal; richer audit-pipeline
-/// metadata can be added additively in later tasks.
+/// decision was made, including both a machine-parseable reason code and a
+/// human-readable summary.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct PolicyDecisionExplanation {
+    /// Machine-parseable reason code for this decision.
+    pub reason: PolicyDecisionReason,
     /// Human-readable summary of the decision rationale.
     pub summary: String,
 }
@@ -138,6 +169,7 @@ fn evaluate_external_call_impl(
     let Some(tool_policy) = policy.tools.iter().find(|t| t.tool == input.tool_name) else {
         // Missing tool policy fails closed.
         return ExternalCallPolicyDecision::Deny(PolicyDecisionExplanation {
+            reason: PolicyDecisionReason::MissingToolPolicy,
             summary: format!("no policy defined for tool '{}'", input.tool_name),
         });
     };
@@ -176,15 +208,23 @@ fn check_context_rules(
         .deny_if_pc_integrity_contains
         .iter()
         .find_map(|label_str| match label_str.parse::<IntegrityLabel>() {
-            Ok(label) if input.control_context.pc_integrity() == label => Some(deny(format!(
-                "denied by context rule: PC integrity '{}' matched",
-                label_str
-            ))),
+            Ok(label) if input.control_context.pc_integrity() == label => {
+                Some(deny(
+                    PolicyDecisionReason::ContextRuleDeny,
+                    format!(
+                        "denied by context rule: PC integrity '{}' matched",
+                        label_str
+                    ),
+                ))
+            }
             Ok(_) => None,
-            Err(_) => Some(deny(format!(
-                "denied by context rule: unrecognised integrity label '{}'",
-                label_str
-            ))),
+            Err(_) => Some(deny(
+                PolicyDecisionReason::ContextRuleDeny,
+                format!(
+                    "denied by context rule: unrecognised integrity label '{}'",
+                    label_str
+                ),
+            )),
         })
 }
 
@@ -200,18 +240,21 @@ fn check_required_authority(
 
     tool_policy.required_authority.iter().find_map(|cap_str| {
         let Ok(cap) = AuthorityCapability::try_from(cap_str.as_str()) else {
-            return Some(deny(format!(
-                "denied: invalid authority capability '{}' in policy",
-                cap_str
-            )));
+            return Some(deny(
+                PolicyDecisionReason::InvalidAuthorityInPolicy,
+                format!(
+                    "denied: invalid authority capability '{}' in policy",
+                    cap_str
+                ),
+            ));
         };
         if input.caller_authority.contains(&cap) {
             None
         } else {
-            Some(deny(format!(
-                "denied: caller lacks required authority '{}'",
-                cap_str
-            )))
+            Some(deny(
+                PolicyDecisionReason::MissingAuthority,
+                format!("denied: caller lacks required authority '{}'", cap_str),
+            ))
         }
     })
 }
@@ -269,6 +312,7 @@ fn check_single_arg_rule(
     {
         return Some(ExternalCallPolicyDecision::Deny(
             PolicyDecisionExplanation {
+                reason: PolicyDecisionReason::ArgumentIntegrityRequirement,
                 summary: format!(
                     "argument '{}' requires integrity '{}', found '{:?}'",
                     arg_rule.arg, required_integrity_str, arg_summary.integrity_join
@@ -286,6 +330,7 @@ fn check_single_arg_rule(
         })
         .map(|label| {
             ExternalCallPolicyDecision::Deny(PolicyDecisionExplanation {
+                reason: PolicyDecisionReason::ArgumentConfidentialityForbidden,
                 summary: format!(
                     "argument '{}' contains forbidden confidentiality label '{}'",
                     arg_rule.arg, label
@@ -303,14 +348,16 @@ fn resolve_default_decision(
 
     match tool_policy.default_decision {
         PolicyAction::Allow => ExternalCallPolicyDecision::Allow(PolicyDecisionExplanation {
+            reason: PolicyDecisionReason::DefaultAllow,
             summary: format!("allowed by default decision for tool '{}'", tool_name),
         }),
-        PolicyAction::Deny => deny(format!(
-            "denied by default decision for tool '{}'",
-            tool_name
-        )),
+        PolicyAction::Deny => deny(
+            PolicyDecisionReason::DefaultDeny,
+            format!("denied by default decision for tool '{}'", tool_name),
+        ),
         PolicyAction::RequireConfirmation => {
             ExternalCallPolicyDecision::RequireConfirmation(PolicyDecisionExplanation {
+                reason: PolicyDecisionReason::DefaultRequireConfirmation,
                 summary: format!(
                     "confirmation required by default decision for tool '{}'",
                     tool_name
@@ -320,6 +367,7 @@ fn resolve_default_decision(
         PolicyAction::RequireDraft => {
             // Task 0.6.4 maps RequireDraft conservatively to RequireConfirmation.
             ExternalCallPolicyDecision::RequireConfirmation(PolicyDecisionExplanation {
+                reason: PolicyDecisionReason::RequireDraftMappedToConfirmation,
                 summary: format!(
                     "confirmation required (mapped from RequireDraft) for tool '{}'",
                     tool_name
@@ -329,9 +377,9 @@ fn resolve_default_decision(
     }
 }
 
-/// Shorthand for constructing a deny decision with a summary message.
-fn deny(summary: String) -> ExternalCallPolicyDecision {
-    ExternalCallPolicyDecision::Deny(PolicyDecisionExplanation { summary })
+/// Shorthand for constructing a deny decision with a reason code and summary.
+fn deny(reason: PolicyDecisionReason, summary: String) -> ExternalCallPolicyDecision {
+    ExternalCallPolicyDecision::Deny(PolicyDecisionExplanation { reason, summary })
 }
 
 /// Check if the given integrity level satisfies the requirement.

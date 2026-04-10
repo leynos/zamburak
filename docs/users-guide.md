@@ -422,16 +422,27 @@ decision order:
 
 ### Policy evaluation types
 
-The `zamburak-policy` crate exposes three public types for runtime evaluation
+The `zamburak-policy` crate exposes four public types for runtime evaluation
 in `zamburak_policy::engine::evaluation`:
 
+- `ExternalCallKind` — external-call classification used for policy
+  diagnostics: `Function`, `Os`, or `Method`. This enum allows the policy layer
+  to distinguish between different call types without depending on Monty runtime
+  internals.
 - `ExternalCallPolicyInput` — input data for external-call evaluation
   (tool name, call kind, dependency summaries, caller authority, and control
   context).
 - `ExternalCallPolicyDecision` — decision outcome: `Allow`, `Deny`, or
   `RequireConfirmation`, each carrying a `PolicyDecisionExplanation`.
-- `PolicyDecisionExplanation` — metadata attached to a decision with a
+- `PolicyDecisionExplanation` — metadata attached to a decision with both a
+  machine-parseable `reason` code (`PolicyDecisionReason`) and a
   human-readable `summary` field.
+- `PolicyDecisionReason` — machine-parseable reason code for policy decisions,
+  enabling structured audit pipelines and programmatic handling of policy
+  outcomes. Variants include `MissingToolPolicy`, `ContextRuleDeny`,
+  `MissingAuthority`, `ArgumentIntegrityRequirement`,
+  `ArgumentConfidentialityForbidden`, `DefaultAllow`, `DefaultDeny`,
+  `DefaultRequireConfirmation`, and `RequireDraftMappedToConfirmation`.
 
 ### Fail-closed behaviours
 

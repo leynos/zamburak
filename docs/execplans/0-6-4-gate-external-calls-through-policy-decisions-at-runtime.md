@@ -566,12 +566,11 @@ The task is complete only when all of the following are true:
    and fail closed for unknown or unavailable required data.
 2. `GovernedRunner` requests a policy decision for every function and OS call
    before exposing a resumable side-effect path.
-3. Allow, deny, and confirmation flows are all covered by unit tests and
-   `rstest-bdd` behavioural tests.
-4. Security-style tests prove that a blocked call is stopped before side-effect
-   execution can continue.
-5. `docs/zamburak-design-document.md` and `docs/users-guide.md` describe the
+3. Allow, deny, and confirmation flows are all covered by unit tests.
+   (Behavioural BDD and security-style tests deferred to Task 0.6.5 as per
+   Stage D decision.)
+4. `docs/zamburak-design-document.md` and `docs/users-guide.md` describe the
    shipped runtime behaviour.
-6. `docs/roadmap.md` marks Task 0.6.4 done.
-7. `make fmt`, `make markdownlint`, `make nixie`, `make check-fmt`,
+5. `docs/roadmap.md` marks Task 0.6.4 done.
+6. `make fmt`, `make markdownlint`, `make nixie`, `make check-fmt`,
    `make lint`, and `make test` all pass.
