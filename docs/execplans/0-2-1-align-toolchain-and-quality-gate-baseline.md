@@ -1,4 +1,4 @@
-# Align toolchain and quality-gate baseline with repository configuration (Task 0.2.1)
+# Align toolchain and quality-gate baseline with repository configuration (Task 1.2.1)
 
 This ExecPlan is a living document. The sections `Constraints`, `Tolerances`,
 `Risks`, `Progress`, `Surprises & Discoveries`, `Decision Log`, and
@@ -11,7 +11,7 @@ the governing execution plan for this task.
 
 ## Purpose / big picture
 
-Implement roadmap Task 0.2.1 from `docs/roadmap.md`: align toolchain and
+Implement roadmap Task 1.2.1 from `docs/roadmap.md`: align toolchain and
 quality-gate baseline with repository configuration.
 
 After this change, every version pin, quality-gate command, and engineering
@@ -48,7 +48,7 @@ consistency reveals no remaining drift.
 - Update `docs/users-guide.md` only if library-consumer-visible behaviour or
   API changes; if no such change exists, document that determination in this
   ExecPlan.
-- Mark roadmap Task 0.2.1 as done in `docs/roadmap.md` only after all quality
+- Mark roadmap Task 1.2.1 as done in `docs/roadmap.md` only after all quality
   and documentation gates pass.
 
 ## Tolerances (exception triggers)
@@ -92,7 +92,7 @@ consistency reveals no remaining drift.
   descriptions to match actual Makefile behaviour.
 
 - Risk: `docs/tech-baseline.md` omits the `script-baseline` and `script-test`
-  targets added in Task 0.2.3, creating baseline-document drift on the same
+  targets added in Task 1.2.3, creating baseline-document drift on the same
   branch. Severity: medium Likelihood: confirmed. Mitigation: add the missing
   entries to tech-baseline tables.
 
@@ -104,7 +104,7 @@ consistency reveals no remaining drift.
 
 ## Progress
 
-- [x] (2026-02-22 00:00Z) Reviewed roadmap Task 0.2.1 requirements, scope, and
+- [x] (2026-02-22 00:00Z) Reviewed roadmap Task 1.2.1 requirements, scope, and
   traceability signposts.
 - [x] (2026-02-22 00:01Z) Audited all configuration files
       (`rust-toolchain.toml`,
@@ -127,7 +127,7 @@ consistency reveals no remaining drift.
 - [x] (2026-02-22 00:20Z) Stage E: reconciled `docs/repository-layout.md`
   with actual repository contents (Tables 10, 11, 12, 13, 14).
 - [x] (2026-02-22 00:25Z) Stage F: all eight quality gates passed.
-- [x] (2026-02-22 00:27Z) Stage G: marked roadmap Task 0.2.1 done and
+- [x] (2026-02-22 00:27Z) Stage G: marked roadmap Task 1.2.1 done and
   finalised this ExecPlan.
 
 ## Surprises & discoveries
@@ -201,14 +201,14 @@ consistency reveals no remaining drift.
   the roadmap context while making clear what exists today. Date/Author:
   2026-02-22 / Codex.
 
-- Decision: do not update `docs/users-guide.md` for Task 0.2.1. Rationale:
+- Decision: do not update `docs/users-guide.md` for Task 1.2.1. Rationale:
   this task changes build tooling configuration and documentation
   synchronisation, not public Rust API behaviour consumed by library users.
   Date/Author: 2026-02-22 / Codex.
 
 ## Outcomes & retrospective
 
-Task 0.2.1 implementation is complete.
+Task 1.2.1 implementation is complete.
 
 Delivered outcomes:
 
@@ -233,7 +233,7 @@ Delivered outcomes:
   `docs/zamburak-engineering-standards.md`,
 - reconciled `docs/repository-layout.md` Tables 10, 11, 12, 13, and 14 with
   actual repository file inventory, annotating planned items,
-- marked roadmap Task 0.2.1 as done in `docs/roadmap.md`,
+- marked roadmap Task 1.2.1 as done in `docs/roadmap.md`,
 - preserved `docs/users-guide.md` unchanged, as there are no library
   consumer-visible API or behaviour changes.
 
@@ -261,7 +261,7 @@ Retrospective:
 ## Context and orientation
 
 This section describes the current state of the repository files relevant to
-Task 0.2.1 and the specific inconsistencies that must be resolved.
+Task 1.2.1 and the specific inconsistencies that must be resolved.
 
 ### Key files
 
@@ -338,7 +338,7 @@ C. `docs/tech-baseline.md` gaps (docs are incomplete):
 
 C1. Table 1 (canonical version baseline) and Table 2 (required engineering
 tools) do not include the `script-baseline` and `script-test` targets added in
-Task 0.2.3. The baseline usage contract section also omits a script-affecting
+Task 1.2.3. The baseline usage contract section also omits a script-affecting
 scope.
 
 C2. Table 1 references `clippy.toml` as a source of truth for "Clippy warning
@@ -354,7 +354,7 @@ D. `docs/zamburak-engineering-standards.md` gap:
 
 D1. The "Command and gateway standards" section lists three scopes
 (documentation-only, code-affecting, phase-advancement) but omits the
-script-affecting scope added by Task 0.2.3 (`make script-baseline` and
+script-affecting scope added by Task 1.2.3 (`make script-baseline` and
 `make script-test`).
 
 E. `docs/repository-layout.md` gaps:
@@ -497,7 +497,7 @@ Go/no-go for Stage F: all eight commands exit zero.
 
 Stage G: roadmap closure and ExecPlan finalisation.
 
-1. Mark Task 0.2.1 as done in `docs/roadmap.md` by changing `- [ ]` to
+1. Mark Task 1.2.1 as done in `docs/roadmap.md` by changing `- [ ]` to
    `- [x]` on line 81.
 2. Update this ExecPlan: fill in `Progress` timestamps, `Outcomes &
    Retrospective`, and change status from `DRAFT` to `COMPLETE`.
@@ -573,7 +573,7 @@ Run all commands from repository root: `/home/user/project`.
 
 ## Validation and acceptance
 
-Acceptance criteria for Task 0.2.1:
+Acceptance criteria for Task 1.2.1:
 
 - The `Makefile` `lint` target runs `cargo doc --workspace --no-deps` with
   `RUSTDOCFLAGS="-D warnings"` and `cargo clippy --workspace` with warnings
@@ -589,7 +589,7 @@ Acceptance criteria for Task 0.2.1:
   includes a script-affecting command block.
 - `docs/repository-layout.md` Tables 11, 13, and 14 match the actual
   repository file inventory with planned items annotated.
-- `docs/roadmap.md` marks Task 0.2.1 as done.
+- `docs/roadmap.md` marks Task 1.2.1 as done.
 - All eight quality gates exit zero: `make check-fmt`, `make lint`,
   `make test`, `make markdownlint`, `make nixie`, `make fmt`,
   `make script-baseline`, `make script-test`.

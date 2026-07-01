@@ -1,4 +1,4 @@
-# Add `zamburak-monty` adapter crate for governed execution (Task 0.6.1)
+# Add `zamburak-monty` adapter crate for governed execution (Task 1.6.1)
 
 This ExecPlan (execution plan) is a living document. The sections
 `Constraints`, `Tolerances`, `Risks`, `Progress`, `Surprises & discoveries`,
@@ -9,7 +9,7 @@ Status: COMPLETE
 
 ## Purpose / big picture
 
-Implement roadmap Task 0.6.1 from `docs/roadmap.md`: add the
+Implement roadmap Task 1.6.1 from `docs/roadmap.md`: add the
 `crates/zamburak-monty` adapter crate that provides a governed execution path
 around the vendored `full-monty` interpreter substrate.
 
@@ -36,14 +36,14 @@ machinery out of scope for this task.
   `docs/zamburak-design-document.md` sections "Architecture overview" and
   "Policy evaluation semantics", `docs/repository-layout.md` section
   `crates/zamburak-monty`.
-- Dependency constraint: Tasks 0.5.2 (generic observer events) and 0.1.1
+- Dependency constraint: Tasks 1.5.2 (generic observer events) and 1.1.1
   (canonical policy schema v1) are hard preconditions. Confirm both are marked
   done before code changes.
 - In scope: `full-monty` integration, observer installation, and one governed
   run entrypoint with deterministic external-call mediation hooks.
-- Out of scope: full IFC propagation semantics (deferred to Task 0.6.2),
-  IFC-to-observer wiring (deferred to Task 0.6.3), and full policy-gate
-  enforcement at external-call boundaries (deferred to Task 0.6.4).
+- Out of scope: full IFC propagation semantics (deferred to Task 1.6.2),
+  IFC-to-observer wiring (deferred to Task 1.6.3), and full policy-gate
+  enforcement at external-call boundaries (deferred to Task 1.6.4).
 - Track B guardrail: all governance semantics must live in the
   `zamburak-monty` crate (or other Zamburak-owned crates), never in
   `third_party/full-monty/`.
@@ -58,7 +58,7 @@ machinery out of scope for this task.
 - Update `docs/users-guide.md` for consumer-visible behaviour and API.
 - Update `docs/repository-layout.md` if artefact locations differ from the
   planned layout.
-- Mark roadmap Task 0.6.1 done in `docs/roadmap.md` only after all gates are
+- Mark roadmap Task 1.6.1 done in `docs/roadmap.md` only after all gates are
   green.
 - Required completion gates: `make check-fmt`, `make lint`, and `make test`.
 - Use en-GB-oxendict spelling in documentation and comments.
@@ -77,7 +77,7 @@ machinery out of scope for this task.
   stop and escalate. This task must consume the existing Track A API as-is.
 - Policy-depth tolerance: if implementing the governed entrypoint requires
   full IFC propagation or dependency-summary computation (beyond stub
-  placeholders), stop and defer to Tasks 0.6.2 and 0.6.3.
+  placeholders), stop and defer to Tasks 1.6.2 and 1.6.3.
 - Iteration tolerance: if required gates fail after three focused fix loops,
   stop and report failures with root-cause hypotheses.
 
@@ -103,14 +103,14 @@ machinery out of scope for this task.
   suppressions except as a last resort with tightly scoped reasons.
 
 - Risk: the governed entrypoint design may be too tightly coupled to the
-  current `PolicyEngine` shape, making it difficult for Task 0.6.4 to introduce
+  current `PolicyEngine` shape, making it difficult for Task 1.6.4 to introduce
   boundary enforcement cleanly. Severity: medium. Likelihood: low. Mitigation:
   define the mediation hook as a trait or callback rather than hard-wiring
   `PolicyEngine` directly. Keep the hook signature minimal and extensible.
 
 ## Progress
 
-- [x] Reviewed roadmap Task 0.6.1, governing ADR, engineering standards,
+- [x] Reviewed roadmap Task 1.6.1, governing ADR, engineering standards,
   design document, user guide, repository layout, and neighbouring ExecPlans.
 - [x] Initialized `third_party/full-monty/` and verified Track A API
   accessibility from an external crate.
@@ -133,8 +133,8 @@ implementation.
 
 - Decision: define the external-call mediation hook as a trait
   (`ExternalCallMediator` or equivalent) rather than hard-wiring `PolicyEngine`
-  directly. Rationale: Task 0.6.1 scope is "one governed run entrypoint"
-  without full IFC propagation; the trait boundary allows Tasks 0.6.3 and 0.6.4
+  directly. Rationale: Task 1.6.1 scope is "one governed run entrypoint"
+  without full IFC propagation; the trait boundary allows Tasks 1.6.3 and 1.6.4
   to provide progressively richer mediator implementations without changing the
   adapter crate's public run API. The initial implementation will ship with an
   `AllowAllMediator` for testing and a `PolicyMediator` stub that delegates to
@@ -168,9 +168,9 @@ No outcomes recorded yet. This section will be completed after implementation.
 
 ## Context and orientation
 
-Current repository state relevant to Task 0.6.1:
+Current repository state relevant to Task 1.6.1:
 
-- `docs/roadmap.md` marks Tasks 0.5.1, 0.5.2, 0.5.3, 0.5.4, and 0.1.1 as
+- `docs/roadmap.md` marks Tasks 1.5.1, 1.5.2, 1.5.3, 1.5.4, and 1.1.1 as
   complete.
 - The Track A observer substrate lives in:
   - `third_party/full-monty/crates/monty/src/observer.rs`
@@ -217,13 +217,13 @@ Files expected to change or be created:
 - `docs/users-guide.md` (governed execution section)
 - `docs/repository-layout.md` (confirm or update `crates/zamburak-monty`
   entries)
-- `docs/roadmap.md` (mark Task 0.6.1 done)
+- `docs/roadmap.md` (mark Task 1.6.1 done)
 
 ## Plan of work
 
 ### Stage A: preflight and crate scaffold
 
-Confirm that roadmap Tasks 0.5.2 and 0.1.1 are marked done. Initialize the
+Confirm that roadmap Tasks 1.5.2 and 1.1.1 are marked done. Initialize the
 `full-monty` submodule. Verify that `MontyRun`, `RuntimeObserverHandle`,
 `RuntimeObserver`, `RuntimeObserverEvent`, `RunProgress`, and snapshot types
 are accessible from an external crate within the workspace.
@@ -252,7 +252,7 @@ struct that implements the `full-monty` `RuntimeObserver` trait. The observer:
   intercept them,
 - records `ExternalCallReturned` events for post-call auditing hooks,
 - passes through `ValueCreated`, `OpResult`, and `ControlCondition` events
-  to an optional downstream event sink (preparing for Task 0.6.3 IFC wiring
+  to an optional downstream event sink (preparing for Task 1.6.3 IFC wiring
   without implementing it now).
 
 The observer must be constructible with a shared mediator handle
@@ -421,7 +421,7 @@ Update:
   to match the realized file layout.
 
 - `docs/roadmap.md`:
-  Mark Task 0.6.1 done only after all gates pass.
+  Mark Task 1.6.1 done only after all gates pass.
 
 Go or no-go for Stage F: documentation is accurate and internally consistent.
 
@@ -440,7 +440,7 @@ Go or no-go for Stage F: documentation is accurate and internally consistent.
 2. Confirm dependency gates.
 
    ```plaintext
-   rg -n "Task 0.5.2|Task 0.1.1" docs/roadmap.md
+   rg -n "Task 1.5.2|Task 1.1.1" docs/roadmap.md
    ```
 
    Expected outcome: both tasks are marked `[x]` (complete).
@@ -494,7 +494,7 @@ Go or no-go for Stage F: documentation is accurate and internally consistent.
 
    - Update `docs/zamburak-design-document.md`,
      `docs/users-guide.md`, `docs/repository-layout.md`.
-   - Mark Task 0.6.1 done in `docs/roadmap.md`.
+   - Mark Task 1.6.1 done in `docs/roadmap.md`.
 
 10. Run documentation gates.
 
@@ -584,7 +584,7 @@ Go or no-go for Stage F: documentation is accurate and internally consistent.
 - `monty::RuntimeValueId` — opaque runtime value identifier.
 - `monty::ExternalCallKind` — function, OS, or method call kind.
 - `monty::SnapshotExtension` — optional embedder-owned snapshot bytes
-  (consumed but not interpreted by this task; prepared for Task 0.6.5
+  (consumed but not interpreted by this task; prepared for Task 1.6.5
   snapshot-governance suites).
 
 ### Zamburak types consumed
@@ -610,6 +610,6 @@ Go or no-go for Stage F: documentation is accurate and internally consistent.
 
 ## Revision note
 
-- 2026-03-18: Initial plan drafted from roadmap Task 0.6.1 requirements,
+- 2026-03-18: Initial plan drafted from roadmap Task 1.6.1 requirements,
   ADR-001 Track B PR B1 specification, design document architecture overview,
   and repository layout expectations.

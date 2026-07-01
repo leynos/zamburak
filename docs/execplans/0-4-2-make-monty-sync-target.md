@@ -1,4 +1,4 @@
-# Add `make monty-sync` with fork sync and verification gates (Task 0.4.2)
+# Add `make monty-sync` with fork sync and verification gates (Task 1.4.2)
 
 This ExecPlan is a living document. The sections `Constraints`, `Tolerances`,
 `Risks`, `Progress`, `Surprises & Discoveries`, `Decision Log`, and
@@ -11,7 +11,7 @@ the governing execution plan for this task.
 
 ## Purpose / big picture
 
-Implement roadmap Task `0.4.2` from `docs/roadmap.md`: add one maintainer
+Implement roadmap Task `1.4.2` from `docs/roadmap.md`: add one maintainer
 command, `make monty-sync`, that synchronizes the `full-monty` fork with
 upstream Monty and then runs repository verification gates.
 
@@ -27,7 +27,7 @@ observable via deterministic command output and green quality gates.
   `docs/adr-001-monty-ifc-vm-hooks.md` section "Implementation plan",
   `docs/zamburak-engineering-standards.md` section "Command and gateway
   standards", and `docs/tech-baseline.md` section "Baseline usage contract".
-- Respect dependency ordering: Task `0.4.1` is complete and must remain green.
+- Respect dependency ordering: Task `1.4.1` is complete and must remain green.
 - In scope: upstream Monty sync workflow, local `full-monty` branch refresh,
   and post-sync verification command execution from a single `make` target.
 - Out of scope: release automation outside repository-local tooling
@@ -42,7 +42,7 @@ observable via deterministic command output and green quality gates.
 - Update `docs/users-guide.md` if consumer-visible behaviour or workflow changes
   are introduced; if no consumer-visible impact exists, document that
   determination in `Decision Log`.
-- Mark Task `0.4.2` done in `docs/roadmap.md` only after all required gates are
+- Mark Task `1.4.2` done in `docs/roadmap.md` only after all required gates are
   green.
 - Required completion gates for this task:
   `make check-fmt`, `make lint`, and `make test`.
@@ -93,14 +93,14 @@ observable via deterministic command output and green quality gates.
   gate command is invoked.
 
 - Risk: automated sync semantics may conflict with future range-diff controls
-  from Task `0.7.3`. Severity: medium. Likelihood: medium. Mitigation: keep
+  from Task `1.7.3`. Severity: medium. Likelihood: medium. Mitigation: keep
   sync output structured so range-diff integration can be added without
   breaking command interface.
 
 ## Progress
 
-- [x] (2026-02-25 18:39Z) Reviewed roadmap Task `0.4.2`, Architecture Decision
-  Record (ADR) signposts, command/gateway baseline docs, and prior Task `0.4.1`
+- [x] (2026-02-25 18:39Z) Reviewed roadmap Task `1.4.2`, Architecture Decision
+  Record (ADR) signposts, command/gateway baseline docs, and prior Task `1.4.1`
   artefacts.
 - [x] (2026-02-25 18:39Z) Confirmed repository state and current `full-monty`
   mechanics (`.gitmodules` present, submodule currently uninitialized in this
@@ -111,7 +111,7 @@ observable via deterministic command output and green quality gates.
 - [x] (2026-02-25 19:27Z) Added script unit and behavioural tests for happy
   paths, unhappy paths, and edge-case sequencing.
 - [x] (2026-02-25 19:30Z) Updated design and users-guide docs and marked
-  roadmap Task `0.4.2` done.
+  roadmap Task `1.4.2` done.
 - [x] (2026-02-25 19:44Z) Ran required gate suite with `tee` logs:
   `make fmt`, `make markdownlint`, `make nixie`, `make script-baseline`,
   `make script-test`, `make check-fmt`, `make lint`, and `make test`.
@@ -164,7 +164,7 @@ observable via deterministic command output and green quality gates.
 
 ## Outcomes & Retrospective
 
-Task `0.4.2` implementation is complete.
+Task `1.4.2` implementation is complete.
 
 Delivered outcomes:
 
@@ -184,7 +184,7 @@ Delivered outcomes:
 - updated `docs/zamburak-design-document.md` with `monty-sync` governance
   contract behaviour,
 - updated `docs/users-guide.md` with maintainer sync workflow command,
-- marked roadmap Task `0.4.2` done in `docs/roadmap.md`.
+- marked roadmap Task `1.4.2` done in `docs/roadmap.md`.
 
 Gate outcomes:
 
@@ -207,7 +207,7 @@ Retrospective:
 
 ## Context and orientation
 
-Current repository context relevant to Task `0.4.2`:
+Current repository context relevant to Task `1.4.2`:
 
 - `.gitmodules` defines one submodule:
   `third_party/full-monty` at `https://github.com/leynos/full-monty.git`.
@@ -219,7 +219,7 @@ Current repository context relevant to Task `0.4.2`:
   `script-test`) and is the canonical command surface.
 - Existing script testing patterns are in `scripts/tests/`, with unit tests and
   behavioural scenarios (`pytest-bdd`) already established.
-- Task `0.4.2` is marked done in `docs/roadmap.md` after implementation and
+- Task `1.4.2` is marked done in `docs/roadmap.md` after implementation and
   gate validation completion.
 
 Planned primary touchpoints:
@@ -229,7 +229,7 @@ Planned primary touchpoints:
 - `scripts/tests/` for unit and behavioural test coverage of sync workflow.
 - `docs/zamburak-design-document.md` for durable design decisions.
 - `docs/users-guide.md` if behaviour affects source consumers.
-- `docs/roadmap.md` to mark Task `0.4.2` done at completion.
+- `docs/roadmap.md` to mark Task `1.4.2` done at completion.
 - Optional supporting docs (`docs/adr-001-monty-ifc-vm-hooks.md` or
   `docs/monty-fork-policy.md`) only if command contract text needs updates for
   consistency.
@@ -282,7 +282,7 @@ Stage C: wire verification suites and documentation updates.
 - Evaluate whether `docs/users-guide.md` needs updates. If source-consumer
   workflow changes are observable, document them; otherwise record explicit
   no-change rationale in `Decision Log`.
-- Mark roadmap Task `0.4.2` done in `docs/roadmap.md` only after all gates pass.
+- Mark roadmap Task `1.4.2` done in `docs/roadmap.md` only after all gates pass.
 
 Go/no-go for Stage C: documentation is consistent, roadmap state is updated,
 all required gates are green with log evidence.
@@ -393,7 +393,7 @@ Acceptance is behaviour-based and must be demonstrable:
   `make check-fmt`, `make lint`, `make test`, `make script-baseline`,
   `make script-test`, `make markdownlint`, `make nixie`, and `make fmt` all
   pass.
-- `docs/roadmap.md` Task `0.4.2` is marked `[x]` only after all validations are
+- `docs/roadmap.md` Task `1.4.2` is marked `[x]` only after all validations are
   green.
 
 ## Idempotence and recovery
@@ -438,7 +438,7 @@ approved.
 
 ## Revision note
 
-Initial draft created for roadmap Task `0.4.2`.
+Initial draft created for roadmap Task `1.4.2`.
 
 - What changed: added a complete DRAFT ExecPlan for `make monty-sync` delivery,
   including constraints, tolerances, staged work, concrete command steps,
@@ -454,5 +454,5 @@ Implementation completion update:
   concrete evidence, and outcomes were updated with delivered code, tests, docs
   changes, and gate results.
 - Why it changed: requested functionality was implemented and fully validated.
-- Effect on remaining work: Task `0.4.2` is complete; downstream roadmap work
+- Effect on remaining work: Task `1.4.2` is complete; downstream roadmap work
   can build on the new `make monty-sync` contract.

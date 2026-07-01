@@ -1,4 +1,4 @@
-# Establish automation script baseline for roadmap-delivered scripts (Task 0.2.3)
+# Establish automation script baseline for roadmap-delivered scripts (Task 1.2.3)
 
 This ExecPlan is a living document. The sections `Constraints`, `Tolerances`,
 `Risks`, `Progress`, `Surprises & Discoveries`, `Decision Log`, and
@@ -11,7 +11,7 @@ the governing execution plan for this task.
 
 ## Purpose / big picture
 
-Implement roadmap Task 0.2.3 from `docs/roadmap.md`: establish a repository
+Implement roadmap Task 1.2.3 from `docs/roadmap.md`: establish a repository
 baseline so every roadmap-delivered automation script follows the scripting
 standards for runtime metadata, command invocation, and test coverage.
 
@@ -22,7 +22,7 @@ matching tests (unit and behavioural where meaningful).
 
 Task completion is observable when script baseline checks and script tests are
 wired into local and continuous integration (CI) execution paths, the design
-decision record is updated, and roadmap task `0.2.3` is marked done.
+decision record is updated, and roadmap task `1.2.3` is marked done.
 
 ## Constraints
 
@@ -48,7 +48,7 @@ decision record is updated, and roadmap task `0.2.3` is marked done.
   `docs/zamburak-design-document.md`.
 - Update `docs/users-guide.md` if and only if this task changes
   library-consumer-visible behaviour or APIs.
-- Mark roadmap task `0.2.3` done in `docs/roadmap.md` only after all required
+- Mark roadmap task `1.2.3` done in `docs/roadmap.md` only after all required
   checks pass.
 - Required quality gates before completion:
   `make check-fmt`, `make lint`, and `make test`.
@@ -102,7 +102,7 @@ decision record is updated, and roadmap task `0.2.3` is marked done.
 
 ## Progress
 
-- [x] (2026-02-20 17:16Z) Reviewed roadmap task `0.2.3` and signpost docs.
+- [x] (2026-02-20 17:16Z) Reviewed roadmap task `1.2.3` and signpost docs.
 - [x] (2026-02-20 17:16Z) Confirmed repository currently has `scripts/` with
   helper module only and no script-test harness.
 - [x] (2026-02-20 17:16Z) Confirmed `PLANS.md` is absent.
@@ -116,7 +116,7 @@ decision record is updated, and roadmap task `0.2.3` is marked done.
 - [x] (2026-02-20 18:10Z) Updated CI to execute script baseline and script
   tests in `.github/workflows/ci.yml`.
 - [x] (2026-02-20 18:11Z) Updated design and scripting docs, and marked roadmap
-  Task `0.2.3` done.
+  Task `1.2.3` done.
 - [x] (2026-02-20 18:12Z) Determined no `docs/users-guide.md` change is needed
   because this task does not alter Rust library consumer APIs or behaviour.
 - [x] (2026-02-20 18:15Z) Ran all required quality gates and archived logs.
@@ -135,13 +135,13 @@ decision record is updated, and roadmap task `0.2.3` is marked done.
 
 - Observation: `make fmt` modified unrelated wrapping in `docs/users-guide.md`.
   Evidence: post-format diff contained line-wrap-only edits with no behavioural
-  relevance to Task 0.2.3. Impact: those changes were reverted to keep this
+  relevance to Task 1.2.3. Impact: those changes were reverted to keep this
   change set atomic to script-baseline scope.
 
 ## Decision Log
 
 - Decision: treat this change as baseline-contract establishment rather than
-  adding a large script portfolio. Rationale: roadmap scope for Task 0.2.3 is
+  adding a large script portfolio. Rationale: roadmap scope for Task 1.2.3 is
   standards and conventions, not feature script rollout. Date/Author:
   2026-02-20 / Codex.
 
@@ -162,14 +162,14 @@ decision record is updated, and roadmap task `0.2.3` is marked done.
   `_cuprum_helpers.py` are implementation support files, not script entrypoint
   deliveries. Date/Author: 2026-02-20 / Codex.
 
-- Decision: do not update `docs/users-guide.md` for Task 0.2.3. Rationale:
+- Decision: do not update `docs/users-guide.md` for Task 1.2.3. Rationale:
   this task changes contributor workflows and CI/documentation enforcement, not
   public Rust API behaviour consumed by library users. Date/Author: 2026-02-20
   / Codex.
 
 ## Outcomes & Retrospective
 
-Task 0.2.3 implementation is complete.
+Task 1.2.3 implementation is complete.
 
 Delivered outcomes:
 
@@ -186,7 +186,7 @@ Delivered outcomes:
   baseline semantics,
 - updated `docs/scripting-standards.md` with repository baseline enforcement
   commands,
-- marked roadmap Task `0.2.3` as done in `docs/roadmap.md`,
+- marked roadmap Task `1.2.3` as done in `docs/roadmap.md`,
 - preserved `docs/users-guide.md` unchanged, as there are no library
   consumer-visible API or behaviour changes.
 
@@ -210,7 +210,7 @@ Retrospective:
 
 ## Context and orientation
 
-Current repository state relevant to Task 0.2.3:
+Current repository state relevant to Task 1.2.3:
 
 - `docs/scripting-standards.md` defines Python 3.13 + `uv` metadata, Cuprum
   command patterns, testing expectations, and Cyclopts-first CI wiring.
@@ -220,15 +220,15 @@ Current repository state relevant to Task 0.2.3:
 - `.github/workflows/ci.yml` currently runs Rust and docs gates but has no
   script-specific baseline/test stage.
 - `scripts/` contains only helper module `scripts/_cuprum_helpers.py`.
-- `docs/roadmap.md` marks Task 0.2.3 as not done.
+- `docs/roadmap.md` marks Task 1.2.3 as not done.
 
-Target state for Task 0.2.3:
+Target state for Task 1.2.3:
 
 - baseline contract enforcement exists for roadmap-delivered scripts,
 - script test conventions are implemented and runnable,
 - CI wiring includes script checks,
 - design-document decisions are recorded,
-- roadmap Task 0.2.3 is marked `[x]`,
+- roadmap Task 1.2.3 is marked `[x]`,
 - `docs/users-guide.md` is updated only if library-consumer behaviour changes.
 
 ## Plan of work
@@ -281,7 +281,7 @@ Stage D: docs, roadmap closure, and full validation.
 - Update `docs/users-guide.md` only if any library-consumer-visible behaviour
   or API changed; otherwise record explicit no-change rationale in
   `Decision Log`.
-- Mark Task 0.2.3 done in `docs/roadmap.md`.
+- Mark Task 1.2.3 done in `docs/roadmap.md`.
 - Run full required quality gates and capture logs per `AGENTS.md`.
 
 Go/no-go for Stage D: all required gates pass and documentation remains
@@ -328,7 +328,7 @@ Run all commands from repository root: `/home/user/project`.
 
 7. Final closure edits.
 
-       # Update docs/roadmap.md task checkbox for 0.2.3 to [x]
+       # Update docs/roadmap.md task checkbox for 1.2.3 to [x]
        # Update docs/users-guide.md only if consumer-visible behaviour changed
 
 ## Validation and acceptance
@@ -350,7 +350,7 @@ Acceptance is met only when all criteria below are true.
   `docs/zamburak-design-document.md` records baseline design decisions;
   `docs/users-guide.md` is updated when consumer-visible changes exist.
 - Roadmap state:
-  `docs/roadmap.md` marks Task 0.2.3 as done.
+  `docs/roadmap.md` marks Task 1.2.3 as done.
 - Quality gates:
   `make check-fmt`, `make lint`, and `make test` pass; docs gates pass for this
   docs-heavy change.

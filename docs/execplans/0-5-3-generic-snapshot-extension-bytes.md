@@ -1,4 +1,4 @@
-# Add generic snapshot extension bytes in `full-monty` (Task 0.5.3)
+# Add generic snapshot extension bytes in `full-monty` (Task 1.5.3)
 
 This ExecPlan (execution plan) is a living document. The sections
 `Constraints`, `Tolerances`, `Risks`, `Progress`, `Surprises & discoveries`,
@@ -9,7 +9,7 @@ Status: COMPLETE
 
 ## Purpose / big picture
 
-Implement roadmap Task 0.5.3 from `docs/roadmap.md`: add a generic, embedder-
+Implement roadmap Task 1.5.3 from `docs/roadmap.md`: add a generic, embedder-
 owned snapshot-extension byte payload in `third_party/full-monty/` so snapshot
 persistence can carry opaque host state without Monty interpretation.
 
@@ -27,7 +27,7 @@ missing extensions preserve baseline semantics.
   (optional but preferred)", `docs/zamburak-design-document.md` sections
   "Two-track execution model" and "Snapshot and resume semantics", and
   `docs/verification-targets.md` row "Control context".
-- Dependency constraint: Task 0.5.2 is a hard precondition for 0.5.3. Confirm
+- Dependency constraint: Task 1.5.2 is a hard precondition for 1.5.3. Confirm
   it is marked done before code changes.
 - In scope: embedder-owned opaque bytes attached to snapshot persistence with
   no Monty semantic interpretation.
@@ -39,7 +39,7 @@ missing extensions preserve baseline semantics.
 - Add behavioural tests using `rstest-bdd` v0.5.0 where applicable.
 - Record design decisions in `docs/zamburak-design-document.md`.
 - Update `docs/users-guide.md` for consumer-visible API or behaviour changes.
-- Mark roadmap Task 0.5.3 done in `docs/roadmap.md` only after all gates are
+- Mark roadmap Task 1.5.3 done in `docs/roadmap.md` only after all gates are
   green.
 - Required completion gates: `make check-fmt`, `make lint`, and `make test`.
 
@@ -82,7 +82,7 @@ missing extensions preserve baseline semantics.
 
 ## Progress
 
-- [x] (2026-03-04 00:10Z) Reviewed roadmap Task 0.5.3 requirements and signpost
+- [x] (2026-03-04 00:10Z) Reviewed roadmap Task 1.5.3 requirements and signpost
   documents.
 - [x] (2026-03-04 00:12Z) Inspected current snapshot and progress structures in
   `third_party/full-monty/crates/monty/src/run.rs` and
@@ -102,7 +102,7 @@ missing extensions preserve baseline semantics.
   `make lint-rs`, `make test`) and queued superproject gates.
 - [x] (2026-03-04 04:30Z) Ran superproject gates (`make fmt`,
   `make markdownlint`, `make nixie`, `make check-fmt`, `make lint`,
-  `make test`) and marked roadmap Task 0.5.3 done.
+  `make test`) and marked roadmap Task 1.5.3 done.
 
 ## Surprises & discoveries
 
@@ -167,7 +167,7 @@ bytes beyond basic serialization.
 ## Plan of work
 
 1. Stage A: confirm prerequisites and shape the API.
-   Review Task 0.5.2 completion state in `docs/roadmap.md`. Read the
+   Review Task 1.5.2 completion state in `docs/roadmap.md`. Read the
    Architecture Decision Record (ADR) and design doc sections to clarify the
    expected seam, then inspect `Snapshot`, `FutureSnapshot`, `ReplSnapshot`,
    and `ReplFutureSnapshot` definitions to decide on field names and method
@@ -202,7 +202,7 @@ bytes beyond basic serialization.
    decision in the snapshot/resume section describing the generic extension
    seam. Update `docs/users-guide.md` to explain how consumers attach and read
    extension bytes when persisting `RunProgress` or `ReplProgress`. Mark Task
-   0.5.3 done in `docs/roadmap.md` only after all gates pass. Run required
+   1.5.3 done in `docs/roadmap.md` only after all gates pass. Run required
    format, lint, and test gates and capture evidence.
 
 ## Concrete steps
@@ -244,7 +244,7 @@ bytes beyond basic serialization.
      decision in "Snapshot and resume semantics".
    - Add a description to `docs/users-guide.md` covering the snapshot
      extension bytes API.
-   - Mark Task 0.5.3 as complete in `docs/roadmap.md` after gates pass.
+   - Mark Task 1.5.3 as complete in `docs/roadmap.md` after gates pass.
 
 5. Run formatting and lint gates (superproject).
 
@@ -370,7 +370,7 @@ extension_bytes: Option<Vec<u8>>,
 
 ## Revision note
 
-- Initial draft created for roadmap Task 0.5.3 with dependency gate, test-first
+- Initial draft created for roadmap Task 1.5.3 with dependency gate, test-first
   sequencing, and completion gates.
 - Updated after implementation to record the `postcard` serialization constraint
   (no `skip_serializing_if`) and the `extension_bytes` internal field name with

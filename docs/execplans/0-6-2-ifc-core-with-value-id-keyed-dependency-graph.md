@@ -1,4 +1,4 @@
-# Add IFC core with `ValueId`-keyed dependency graph (Task 0.6.2)
+# Add IFC core with `ValueId`-keyed dependency graph (Task 1.6.2)
 
 This ExecPlan (execution plan) is a living document. The sections
 `Constraints`, `Tolerances`, `Risks`, `Progress`, `Surprises & Discoveries`,
@@ -9,7 +9,7 @@ Status: COMPLETED
 
 ## Purpose / big picture
 
-Implement roadmap Task 0.6.2: add information-flow control (IFC) foundation
+Implement roadmap Task 1.6.2: add information-flow control (IFC) foundation
 types and a `ValueId`-keyed directed acyclic graph (DAG) of dependencies to
 `crates/zamburak-core`. After this change, a consumer of the Zamburak library
 can:
@@ -44,7 +44,7 @@ tests plus the new IFC unit, property, and behavioural tests. Running
 - Workspace Clippy lints must pass: `unwrap_used`, `expect_used`,
   `indexing_slicing`, `cognitive_complexity`, `shadow_*`, etc. are all denied.
 - Use en-GB-oxendict spelling in documentation and comments.
-- Dependency on Task 0.6.1: confirmed complete (marked `[x]` in roadmap).
+- Dependency on Task 1.6.1: confirmed complete (marked `[x]` in roadmap).
 
 ## Tolerances (exception triggers)
 
@@ -122,14 +122,14 @@ tests plus the new IFC unit, property, and behavioural tests. Running
 
 - Decision: `IntegrityLabel::Verified` is a simple variant without a
   `VerificationKind` parameter. Rationale: extending `Verified` with
-  verification kinds is Task 1.1.1 scope per the roadmap. A simple variant
+  verification kinds is Task 2.1.1 scope per the roadmap. A simple variant
   establishes the lattice semantics without premature complexity. Date/Author:
   2026-03-22 / DevBoxer.
 
 - Decision: `GraphBudgets` is defined in `zamburak-core` with the same field
   semantics as `PolicyBudgets` in `zamburak-policy`, but without a dependency
   on the policy crate. Rationale: the IFC substrate must not depend on the
-  policy layer. The caller (Task 0.6.3 observer wiring) constructs
+  policy layer. The caller (Task 1.6.3 observer wiring) constructs
   `GraphBudgets` from `PolicyBudgets`. Date/Author: 2026-03-22 / DevBoxer.
 
 - Decision: budget overflow in `compute_summary` returns
@@ -210,7 +210,7 @@ Files modified (5):
   `rstest-bdd-macros` dev-dependencies
 - `docs/users-guide.md` — IFC core section
 - `docs/zamburak-design-document.md` — implementation decisions
-- `docs/roadmap.md` — Task 0.6.2 marked done
+- `docs/roadmap.md` — Task 1.6.2 marked done
 
 Key decisions validated by implementation:
 
@@ -447,7 +447,7 @@ public API: `ValueId`, `IntegrityLabel`, `DataLabel`, `DataLabels`,
 Update `docs/zamburak-design-document.md` with implementation decisions from
 the decision log.
 
-Mark Task 0.6.2 as done (`[x]`) in `docs/roadmap.md`.
+Mark Task 1.6.2 as done (`[x]`) in `docs/roadmap.md`.
 
 Run all gates:
 
@@ -470,7 +470,7 @@ set -o pipefail; make test 2>&1 | tee /tmp/make-test-0-6-2.log
 
 2. Confirm dependency gates.
 
-   Verify that Task 0.6.1 is marked `[x]` in `docs/roadmap.md`.
+   Verify that Task 1.6.1 is marked `[x]` in `docs/roadmap.md`.
 
 3. Create `crates/zamburak-core/src/value_id.rs` with `ValueId` newtype.
 
@@ -655,7 +655,7 @@ pub struct ExecutionContextSummary { /* pc_integrity, pc_confidentiality, ... */
 
 ## Revision note
 
-- 2026-03-22: Initial plan drafted from roadmap Task 0.6.2 requirements,
+- 2026-03-22: Initial plan drafted from roadmap Task 1.6.2 requirements,
   ADR-001 section B1, design document sections on dependency representation and
   strict-mode semantics, verification targets row for IFC propagation, and
   repository layout Table 2.

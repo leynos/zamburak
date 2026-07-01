@@ -421,7 +421,7 @@ decision order:
    parameters as keyword arguments.
 6. **Default decision** — when no earlier rule fires, the tool's
    `default_decision` is returned. `RequireDraft` is conservatively mapped to
-   `RequireConfirmation` for Task 0.6.4.
+   `RequireConfirmation` for Task 1.6.4.
 
 ### Policy evaluation types
 

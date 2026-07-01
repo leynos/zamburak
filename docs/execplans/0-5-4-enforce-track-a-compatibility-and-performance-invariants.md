@@ -1,4 +1,4 @@
-# Enforce Track A compatibility and performance invariants (Task 0.5.4)
+# Enforce Track A compatibility and performance invariants (Task 1.5.4)
 
 This ExecPlan (execution plan) is a living document. The sections
 `Constraints`, `Tolerances`, `Risks`, `Progress`, `Surprises & discoveries`,
@@ -11,7 +11,7 @@ Approval gate: satisfied. Implementation began after explicit user approval.
 
 ## Purpose / big picture
 
-Implement roadmap Task 0.5.4 from `docs/roadmap.md`: enforce the Track A
+Implement roadmap Task 1.5.4 from `docs/roadmap.md`: enforce the Track A
 substrate contract that the vendored `full-monty` fork remains behaviourally
 compatible with baseline Monty execution, and that the observer substrate adds
 only bounded overhead in hook-disabled and explicit no-op modes.
@@ -42,7 +42,7 @@ that Track A additions do not change baseline runtime behaviour.
   upstreamability invariants", `docs/zamburak-engineering-standards.md` section
   "Testing and verification evidence standards", and
   `docs/verification-targets.md` row "IFC propagation".
-- Dependency constraint: Task 0.5.3 is a hard precondition for 0.5.4. Confirm
+- Dependency constraint: Task 1.5.3 is a hard precondition for 1.5.4. Confirm
   it is marked done before code changes.
 - In scope: differential behaviour checks versus baseline Monty entrypoints,
   plus measurement and enforcement of hook-disabled and no-op-observer overhead.
@@ -61,7 +61,7 @@ that Track A additions do not change baseline runtime behaviour.
   change.
 - Update `docs/repository-layout.md` if `tests/benchmarks/` becomes a realized
   suite rather than a planned placeholder.
-- Mark roadmap Task 0.5.4 done in `docs/roadmap.md` only after all gates are
+- Mark roadmap Task 1.5.4 done in `docs/roadmap.md` only after all gates are
   green.
 - Required completion gates: `make check-fmt`, `make lint`, and `make test`.
 
@@ -97,7 +97,7 @@ that Track A additions do not change baseline runtime behaviour.
   `third_party/full-monty/crates/monty/tests/support/` and reuse them through
   `rstest` parameterized cases.
 
-- Risk: the existing no-op parity coverage is narrower than Task 0.5.4
+- Risk: the existing no-op parity coverage is narrower than Task 1.5.4
   requires, so regressions could still hide in error or snapshot-resume paths.
   Severity: high Likelihood: medium Mitigation: extend coverage to suspend,
   resume, error-return, REPL, and snapshot-extension cases before wiring the
@@ -122,7 +122,7 @@ that Track A additions do not change baseline runtime behaviour.
 
 ## Progress
 
-- [x] (2026-03-07 23:01Z) Reviewed roadmap Task 0.5.4 and the governing
+- [x] (2026-03-07 23:01Z) Reviewed roadmap Task 1.5.4 and the governing
   Architecture Decision Record (ADR), engineering standards, verification
   targets, design doc, user guide, and neighbouring Track A ExecPlans.
 - [x] (2026-03-07 23:01Z) Initialized `third_party/full-monty/` and inspected
@@ -160,7 +160,7 @@ that Track A additions do not change baseline runtime behaviour.
 
 - Observation: `full-monty` already contains observer parity tests in
   `third_party/full-monty/crates/monty/tests/runtime_observer_events.rs`, but
-  they cover only a subset of the Task 0.5.4 contract. Impact: extend existing
+  they cover only a subset of the Task 1.5.4 contract. Impact: extend existing
   support helpers rather than inventing a second comparison style.
 
 - Observation: `full-monty` already has a Criterion benchmark harness in
@@ -229,9 +229,9 @@ this plan.
 
 ## Context and orientation
 
-Current repository state relevant to Task 0.5.4:
+Current repository state relevant to Task 1.5.4:
 
-- `docs/roadmap.md` marks Tasks 0.5.1, 0.5.2, 0.5.3, and 0.5.4 complete.
+- `docs/roadmap.md` marks Tasks 1.5.1, 1.5.2, 1.5.3, and 1.5.4 complete.
 - The current observer substrate lives in:
   - `third_party/full-monty/crates/monty/src/observer.rs`,
   - `third_party/full-monty/crates/monty/src/bytecode/vm/observer_hooks.rs`,
@@ -288,7 +288,7 @@ Files expected to change:
 
 1. Stage A: preflight and compatibility-contract definition.
 
-   Confirm that roadmap Task 0.5.3 is marked done. Re-read the Track A observer
+   Confirm that roadmap Task 1.5.3 is marked done. Re-read the Track A observer
    contract, observer/no-op language in the user guide, and verification-target
    requirements. Define the baseline contract explicitly in the design
    document: observer-free public entrypoints are the semantic baseline; the
@@ -313,7 +313,7 @@ Files expected to change:
    - REPL path: observer-aware `start_with_observer(...)` and
      `start_no_print_with_observer(...)`,
    - edge case: snapshot dump/load resume path with extension bytes already
-     attached from Task 0.5.3.
+     attached from Task 1.5.3.
 
    For each case, assert parity for observable outputs and for the relevant
    progress payloads. Reuse or extend the existing deep-equality helpers in
@@ -384,7 +384,7 @@ Files expected to change:
      names the new compatibility and overhead evidence that must stay green
      before Track B propagation work can rely on Track A,
    - `docs/repository-layout.md` if `tests/benchmarks/` is now a real suite,
-   - `docs/roadmap.md` to mark Task 0.5.4 done only after all gates pass.
+   - `docs/roadmap.md` to mark Task 1.5.4 done only after all gates pass.
 
 ## Concrete steps
 
@@ -401,13 +401,13 @@ Files expected to change:
 2. Confirm the dependency gate and inspect the current observer parity surface.
 
    ```plaintext
-   rg -n "Task 0.5.3|Task 0.5.4" docs/roadmap.md
+   rg -n "Task 1.5.3|Task 1.5.4" docs/roadmap.md
    rg -n "NoopRuntimeObserver|start_with_observer|runtime_observer" \
      third_party/full-monty/crates/monty/src \
      third_party/full-monty/crates/monty/tests
    ```
 
-   Expected outcome: Task 0.5.3 is marked complete and the current observer
+   Expected outcome: Task 1.5.3 is marked complete and the current observer
    files are explicitly identified before new tests are added.
 
 3. Add failing `full-monty` tests first.
@@ -499,7 +499,7 @@ Files expected to change:
    - Update the observer section in `docs/users-guide.md`.
    - Adjust `docs/verification-targets.md` and `docs/repository-layout.md` if
      the evidence artefacts or realized suite layout changed.
-   - Mark Task 0.5.4 complete in `docs/roadmap.md` only after all gates pass.
+   - Mark Task 1.5.4 complete in `docs/roadmap.md` only after all gates pass.
 
 10. Run documentation gates.
 
@@ -536,7 +536,7 @@ Files expected to change:
    ```
 
    Expected outcome: all required repository gates are green, the plan's
-   evidence logs exist under `/tmp/`, and Task 0.5.4 can be marked complete.
+   evidence logs exist under `/tmp/`, and Task 1.5.4 can be marked complete.
 <!-- markdownlint-enable MD029 -->
 
 ## Acceptance criteria

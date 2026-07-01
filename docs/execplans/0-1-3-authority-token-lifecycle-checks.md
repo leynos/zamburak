@@ -1,4 +1,4 @@
-# Implement authority token lifecycle conformance checks (Task 0.1.3)
+# Implement authority token lifecycle conformance checks (Task 1.1.3)
 
 This ExecPlan is a living document. The sections `Constraints`, `Tolerances`,
 `Risks`, `Progress`, `Surprises & Discoveries`, `Decision Log`, and
@@ -11,7 +11,7 @@ the governing execution plan for this task.
 
 ## Purpose / big picture
 
-Implement roadmap Task 0.1.3 from `docs/roadmap.md`: authority token lifecycle
+Implement roadmap Task 1.1.3 from `docs/roadmap.md`: authority token lifecycle
 semantics must be enforced and verified for mint scope, delegation narrowing,
 revocation, expiry, and snapshot-restore revalidation.
 
@@ -22,7 +22,7 @@ revalidated against current revocation and expiry facts.
 
 Task completion is observable when unit and behavioural lifecycle transition
 suites pass for both valid and invalid transition paths, design decisions are
-documented, user-facing API guidance is updated, and roadmap Task 0.1.3 is
+documented, user-facing API guidance is updated, and roadmap Task 1.1.3 is
 marked done.
 
 ## Constraints
@@ -49,7 +49,7 @@ marked done.
   `docs/zamburak-design-document.md`.
 - Update `docs/users-guide.md` with any new authority lifecycle API or
   behaviour visible to library consumers.
-- Mark roadmap Task 0.1.3 done in `docs/roadmap.md` when implementation and
+- Mark roadmap Task 1.1.3 done in `docs/roadmap.md` when implementation and
   verification are complete.
 - Required completion gates: `make check-fmt`, `make lint`, and `make test`.
 - Because Markdown documentation is changed, run docs gates too:
@@ -107,7 +107,7 @@ marked done.
 ## Progress
 
 - [x] (2026-02-13 18:53Z) Reviewed roadmap, design, verification, standards,
-  and repository-layout signposts for Task 0.1.3.
+  and repository-layout signposts for Task 1.1.3.
 - [x] (2026-02-13 18:53Z) Inspected current code baseline and confirmed the
   repository presently contains `zamburak-policy` only.
 - [x] (2026-02-13 18:53Z) Drafted this ExecPlan with lifecycle scope,
@@ -131,7 +131,7 @@ marked done.
   and error handling.
 - [x] (2026-02-13) Updated `docs/repository-layout.md` with `authority.rs`
   entry and refined crate responsibility description.
-- [x] (2026-02-13) Marked roadmap Task 0.1.3 as done.
+- [x] (2026-02-13) Marked roadmap Task 1.1.3 as done.
 - [x] (2026-02-13) All required quality gates pass (`make check-fmt`,
   `make lint`, `make test`).
 
@@ -149,7 +149,7 @@ marked done.
 
 - Observation: task traceability and repository-layout currently differ on the
   likely authority module filename (`authority.rs` vs `capability.rs`).
-  Evidence: `docs/roadmap.md` table row `0.1.3` vs `docs/repository-layout.md`
+  Evidence: `docs/roadmap.md` table row `1.1.3` vs `docs/repository-layout.md`
   `crates/zamburak-core` mapping. Impact: implementation should normalize this
   path decision and update docs in the same change set to avoid follow-up
   ambiguity.
@@ -220,7 +220,7 @@ All expected outcomes are met:
 - Design document updated with implementation decision block.
 - User's guide updated with authority lifecycle API section.
 - Repository layout updated with `authority.rs` entry.
-- Roadmap Task 0.1.3 marked `[x]`.
+- Roadmap Task 1.1.3 marked `[x]`.
 - 46 total tests pass across workspace: 8 core + 17 policy + 4 compatibility +
   17 security.
 - `make check-fmt`, `make lint`, `make test` all pass.
@@ -241,7 +241,7 @@ Retrospective notes:
 
 ## Context and orientation
 
-Repository state at the start of Task 0.1.3:
+Repository state at the start of Task 1.1.3:
 
 - Workspace contained `crates/zamburak-policy` only; `crates/zamburak-core` was
   added as part of this task.
@@ -254,7 +254,7 @@ Repository state at the start of Task 0.1.3:
 - Root dev dependencies already include `rstest-bdd = "0.5.0"` and
   `rstest-bdd-macros = "0.5.0"`.
 
-Target state for Task 0.1.3:
+Target state for Task 1.1.3:
 
 - `crates/zamburak-core` exists with authority lifecycle module(s),
 - lifecycle checks enforce mint, delegation, revocation, expiry, and
@@ -264,7 +264,7 @@ Target state for Task 0.1.3:
 - lifecycle transition conformance suites exist in unit and security-level
   behavioural tests,
 - design and user docs reflect shipped behaviour and API,
-- roadmap Task 0.1.3 is marked done.
+- roadmap Task 1.1.3 is marked done.
 
 ## Plan of work
 
@@ -321,7 +321,7 @@ Stage D: documentation and roadmap closure.
   revocation semantics, restore revalidation contract).
 - Update `docs/users-guide.md` with authority lifecycle API usage and observable
   fail-closed outcomes.
-- Update `docs/roadmap.md` by marking Task 0.1.3 as `[x]` once all completion
+- Update `docs/roadmap.md` by marking Task 1.1.3 as `[x]` once all completion
   criteria and gates are satisfied.
 - If module-path decisions changed ownership mapping, update
   `docs/repository-layout.md` in the same change set.
@@ -417,7 +417,7 @@ Run commands from repository root: `/home/user/project`.
 
 ## Validation and acceptance
 
-Task 0.1.3 acceptance is satisfied only when all conditions below hold:
+Task 1.1.3 acceptance is satisfied only when all conditions below hold:
 
 - Lifecycle behaviour:
   mint scope, delegation narrowing, revocation, expiry, and snapshot-restore
@@ -434,7 +434,7 @@ Task 0.1.3 acceptance is satisfied only when all conditions below hold:
 - Documentation:
   design and user guide updates describe shipped lifecycle semantics and API.
 - Roadmap state:
-  Task 0.1.3 in `docs/roadmap.md` is marked `[x]`.
+  Task 1.1.3 in `docs/roadmap.md` is marked `[x]`.
 - Required gates:
   `make check-fmt`, `make lint`, and `make test` succeed.
 
@@ -466,7 +466,7 @@ Keep these artefacts for review and traceability:
 
 ## Interfaces and dependencies
 
-Planned interface surface after Task 0.1.3:
+Planned interface surface after Task 1.1.3:
 
 - `zamburak-core` exposes authority lifecycle domain types and validators for:
   token minting, delegation checks, revocation checks, expiry checks, and
@@ -484,6 +484,6 @@ Dependency posture:
 
 ## Revision note
 
-Initial draft created for roadmap Task 0.1.3 with explicit lifecycle scope,
+Initial draft created for roadmap Task 1.1.3 with explicit lifecycle scope,
 unit and behavioural/security verification strategy, documentation obligations,
 and completion gates.

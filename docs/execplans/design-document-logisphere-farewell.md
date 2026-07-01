@@ -167,8 +167,8 @@ escalate with options.
       glossary naming rules.
       Date/Author: 2026-02-08 / Codex
 
-    - Decision: Add a Phase 0 contract-freeze section to the roadmap.
-      Rationale: design-level conformance requirements now gate phase-1 build
+    - Decision: Add a Phase 1 contract-freeze section to the roadmap.
+      Rationale: design-level conformance requirements now gate phase-2 build
       start and must appear explicitly in implementation sequencing.
       Date/Author: 2026-02-08 / Codex
 
@@ -217,7 +217,7 @@ The Logisphere review prioritized six additions:
 - authority token lifecycle semantics,
 - workload assumptions with SLO/SLI capacity envelopes,
 - naming glossary and token-name consistency,
-- acceptance criteria requiring contract conformance tests before Phase 1
+- acceptance criteria requiring contract conformance tests before Phase 2
   build-out.
 
 Final-farewell recommendations added three documentation artefacts:
@@ -241,7 +241,7 @@ semantics and contracts:
   realistic operating assumptions,
 - add glossary entries and resolve naming inconsistency for
   `LlmRemotePromptCap`,
-- add design-level acceptance criteria that gate Phase 1 on contract
+- add design-level acceptance criteria that gate Phase 2 on contract
   conformance tests.
 
 Stage B creates supporting reference docs:
@@ -298,7 +298,7 @@ Acceptance is met only when all criteria below pass:
   - glossary resolves token-name inconsistency, including
     `LlmRemotePromptCap`.
   - design-level acceptance criteria require contract conformance tests before
-    Phase 1 build-out.
+    Phase 2 build-out.
 - Farewell artefacts:
   - `docs/tech-baseline.md` exists and is cross-linked.
   - `docs/verification-targets.md` exists and is cross-linked.
