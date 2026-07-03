@@ -47,7 +47,7 @@ observable via deterministic command output and green quality gates.
 - Required completion gates for this task:
   `make check-fmt`, `make lint`, and `make test`.
 - Because this task introduces script changes, also run:
-  `make script-baseline` and `make script-test`.
+  `make script-baseline`, `make script-typecheck`, and `make script-test`.
 - Because this task updates Markdown documentation, also run:
   `make markdownlint`, `make nixie`, and `make fmt`.
 - Run all gate commands using `set -o pipefail` and `tee` log capture per

@@ -220,7 +220,9 @@ Current repository state relevant to Task 1.2.3:
 - `.github/workflows/ci.yml` currently runs Rust and docs gates but has no
   script-specific baseline/test stage.
 - `scripts/` contains only helper module `scripts/_cuprum_helpers.py`.
-- `docs/roadmap.md` marks Task 1.2.3 as not done.
+- `docs/roadmap.md` marks Task 1.2.3 as done after baseline contract
+  enforcement, script test conventions, CI wiring, and design-document
+  decisions were completed.
 
 Target state for Task 1.2.3:
 
