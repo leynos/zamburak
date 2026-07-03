@@ -497,8 +497,8 @@ Go/no-go for Stage F: all eight commands exit zero.
 
 Stage G: roadmap closure and ExecPlan finalisation.
 
-1. Mark Task 1.2.1 as done in `docs/roadmap.md` by changing `- [ ]` to
-   `- [x]` on line 81.
+1. Mark Task 1.2.1, "Align toolchain and quality-gate baseline", as done in
+   `docs/roadmap.md` by changing its checkbox from `- [ ]` to `- [x]`.
 2. Update this ExecPlan: fill in `Progress` timestamps, `Outcomes &
    Retrospective`, and change status from `DRAFT` to `COMPLETE`.
 

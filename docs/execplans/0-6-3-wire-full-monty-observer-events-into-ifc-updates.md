@@ -32,8 +32,8 @@ library must be able to observe that:
 This is Track B PR B3 in
 [docs/adr-001-monty-ifc-vm-hooks.md](/docs/adr-001-monty-ifc-vm-hooks.md). It
 builds directly on Task 1.6.2 (IFC core) and consumes Track A event and
-snapshot seams from Task 1.5.3 without adding Zamburak semantics to the
-vendored interpreter.
+observer stream seams from Task 1.5.2 and snapshot seams from Task 1.5.3
+without adding Zamburak semantics to the vendored interpreter.
 
 ## Constraints
 
@@ -44,7 +44,7 @@ vendored interpreter.
   sections "Component responsibilities" and "Strict-mode effect semantics", and
   [docs/verification-targets.md](/docs/verification-targets.md) rows "IFC
   propagation" and "Control context".
-- Dependency precondition: Tasks 1.6.2 and 1.5.3 must remain completed in
+- Dependency precondition: Tasks 1.6.2, 1.5.2, and 1.5.3 must remain completed in
   [docs/roadmap.md](/docs/roadmap.md) before implementation starts.
 - In scope: event-to-IFC graph updates, external-call summary construction from
   observer state, strict-mode control dependency tracking, and additive

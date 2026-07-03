@@ -808,7 +808,7 @@ choices:
   consistent across Track A and Track B boundaries.
 - `IntegrityLabel::Verified` is a simple variant without a
   `VerificationKind` parameter. Extension to parameterized verification is Task
-  2.1.1 scope.
+  2.1.2 scope.
 - `GraphBudgets` is defined in `zamburak-core` and decoupled from
   `PolicyBudgets` in `zamburak-policy`. The caller (Task 1.6.3) constructs
   `GraphBudgets` from `PolicyBudgets`.
@@ -1238,7 +1238,7 @@ The class diagram above shows `LocalizationArgs` as a parameter to `lookup()`
 and `message()`. ADR-002 sketches this as `HashMap<&str, FluentValue<'a>>`,
 which would couple `zamburak-core` to the `fluent-bundle` crate at the
 design-contract phase. To avoid this coupling, the design-contract
-implementation (Task 1.3.1) defines `LocalizationArgs<'a>` as
+implementation (Task 7.1.1) defines `LocalizationArgs<'a>` as
 `HashMap<&'a str, String>`. The `FluentLocalizerAdapter` introduced in Phase 7
 (Task 7.1.2) will convert `String` values to `FluentValue` internally, so
 downstream consumers of the `Localizer` trait are unaffected by this
@@ -1803,7 +1803,7 @@ for governed external-call boundaries. Key design choices:
 - All label-string parsing uses `FromStr` implementations in
   `zamburak-core` (`IntegrityLabel`, `DataLabel`). Unrecognized label strings
   fail closed: deny for integrity checks, treat-as-present for confidentiality
-  checks. Verification requirements remain a placeholder until Task 2.1.1.
+  checks. Verification requirements remain a placeholder until Task 2.1.2.
 - Keyword argument rules prevent bypass of guarded parameters: each keyword
   value summary is checked against every `arg_rule` whose `arg` name matches.
 

@@ -39,7 +39,7 @@ adapter dispatch) comes later in Phase 2, Phase 5, and Phase 7.
 - Implement to these requirement signposts: `docs/zamburak-design-document.md`
   section "Design-level acceptance criteria before phase 2 build-out",
   `docs/verification-targets.md` rows "Policy schema loader", "LLM sink
-  enforcement", and "Authority lifecycle",
+  enforcement", "Authority lifecycle", and "Localization contract",
   `docs/zamburak-engineering-standards.md` section "Review and
   change-management standards".
 - Respect dependency ordering: Tasks 1.1.1, 1.1.3, and 1.2.2 are complete; do

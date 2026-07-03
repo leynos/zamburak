@@ -122,7 +122,7 @@ tests plus the new IFC unit, property, and behavioural tests. Running
 
 - Decision: `IntegrityLabel::Verified` is a simple variant without a
   `VerificationKind` parameter. Rationale: extending `Verified` with
-  verification kinds is Task 2.1.1 scope per the roadmap. A simple variant
+  verification kinds is Task 1.1.2 scope per the roadmap. A simple variant
   establishes the lattice semantics without premature complexity. Date/Author:
   2026-03-22 / DevBoxer.
 
