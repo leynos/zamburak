@@ -1,4 +1,4 @@
-# Enforce design-level conformance suites before Phase 1 (Task 0.3.1)
+# Enforce design-level conformance suites before Phase 2 (Task 1.3.1)
 
 This ExecPlan is a living document. The sections `Constraints`, `Tolerances`,
 `Risks`, `Progress`, `Surprises & Discoveries`, `Decision Log`, and
@@ -11,11 +11,11 @@ the governing execution plan for this task.
 
 ## Purpose / big picture
 
-Implement roadmap Task 0.3.1 from `docs/roadmap.md`: enforce design-level
-conformance suites before Phase 1 build work begins.
+Implement roadmap Task 1.3.1 from `docs/roadmap.md`: enforce design-level
+conformance suites before Phase 2 build work begins.
 
-Phase 0 of the Zamburak roadmap requires all four Phase 1 conformance suites to
-pass before Phase 1 build work starts. Two of the four suites already exist and
+Phase 1 of the Zamburak roadmap requires all four Phase 2 conformance suites to
+pass before Phase 2 build work starts. Two of the four suites already exist and
 pass: policy-schema-contract (test filter `policy_schema_bdd::`) and
 authority-lifecycle (test filter `authority_lifecycle_bdd::`). Two are missing:
 large language model (LLM) sink enforcement (test filter
@@ -24,7 +24,7 @@ large language model (LLM) sink enforcement (test filter
 `.github/phase-gate-target.txt` currently reads `phase0`.
 
 After this change a user can observe success by running `make phase-gate` and
-seeing all four Phase 1 suites listed, executed, and passing. Running
+seeing all four Phase 2 suites listed, executed, and passing. Running
 `make test` confirms the new BDD suites exercise both the LLM sink enforcement
 and localization contract types.
 
@@ -32,21 +32,21 @@ This task introduces the *design-contract types* (traits, structs, enums, and
 contract functions) that express the design-document API shapes and writes
 behaviour-driven development (BDD) tests proving those shapes exist and behave
 correctly. Actual runtime logic (policy evaluation, Fluent loading, real LLM
-adapter dispatch) comes later in Phase 1, Phase 4, and Phase 6.
+adapter dispatch) comes later in Phase 2, Phase 5, and Phase 7.
 
 ## Constraints
 
 - Implement to these requirement signposts: `docs/zamburak-design-document.md`
-  section "Design-level acceptance criteria before phase 1 build-out",
+  section "Design-level acceptance criteria before phase 2 build-out",
   `docs/verification-targets.md` rows "Policy schema loader", "LLM sink
-  enforcement", and "Authority lifecycle",
+  enforcement", "Authority lifecycle", and "Localization contract",
   `docs/zamburak-engineering-standards.md` section "Review and
   change-management standards".
-- Respect dependency ordering: Tasks 0.1.1, 0.1.3, and 0.2.2 are complete; do
+- Respect dependency ordering: Tasks 1.1.1, 1.1.3, and 1.2.2 are complete; do
   not regress their coverage paths.
 - In scope: schema, sink enforcement, authority lifecycle, and localization
   contract conformance test gating.
-- Out of scope: Phase 1 feature implementation. Do not implement runtime policy
+- Out of scope: Phase 2 feature implementation. Do not implement runtime policy
   evaluation, real LLM adapter dispatch, or Fluent integration. Only introduce
   *contract types* (traits, structs, enums, and contract functions) that
   express the documented API shapes.
@@ -63,7 +63,7 @@ adapter dispatch) comes later in Phase 1, Phase 4, and Phase 6.
   changes; the localization section already documents the planned API shape, so
   no changes are expected unless the contract types deviate from what is
   documented.
-- Mark roadmap Task 0.3.1 as done in `docs/roadmap.md` only after all quality
+- Mark roadmap Task 1.3.1 as done in `docs/roadmap.md` only after all quality
   and documentation gates pass.
 - Required completion gates: `make check-fmt`, `make lint`, `make test`.
 - Because this task updates Markdown documentation, also run:
@@ -101,7 +101,7 @@ adapter dispatch) comes later in Phase 1, Phase 4, and Phase 6.
   dependency to `zamburak-core` at design-contract phase. Severity: medium.
   Likelihood: high (certain if ADR-002 is followed literally). Mitigation: use
   `HashMap<&str, String>` at design-contract phase, deferring Fluent coupling
-  to Phase 6 Task 6.1.2 when `FluentLocalizerAdapter` is implemented. Record
+  to Phase 7 Task 7.1.2 when `FluentLocalizerAdapter` is implemented. Record
   this decision in the design document.
 
 - Risk: phase-gate filter mismatch. The filters `llm_sink_enforcement::` and
@@ -130,7 +130,7 @@ adapter dispatch) comes later in Phase 1, Phase 4, and Phase 6.
 - [x] (2026-02-21) Advanced phase-gate target to `phase1`; `make phase-gate`
   passes with 4 suite(s) checked.
 - [x] (2026-02-21) Recorded `LocalizationArgs` type decision in design
-  document. Marked Task 0.3.1 done in roadmap.
+  document. Marked Task 1.3.1 done in roadmap.
 - [x] (2026-02-21) Run all documentation quality gates (`markdownlint`,
   `nixie`, `fmt`).
 
@@ -148,8 +148,8 @@ adapter dispatch) comes later in Phase 1, Phase 4, and Phase 6.
 - Decision: use `HashMap<&'a str, String>` for `LocalizationArgs` instead of
   `HashMap<&'a str, FluentValue<'a>>`. Rationale: avoids adding `fluent-bundle`
   as a dependency to `zamburak-core` at the design-contract phase, which is
-  consistent with the constraint that Phase 1 feature implementation is out of
-  scope. The `FluentLocalizerAdapter` in Phase 6 (Task 6.1.2) converts `String`
+  consistent with the constraint that Phase 2 feature implementation is out of
+  scope. The `FluentLocalizerAdapter` in Phase 7 (Task 7.1.2) converts `String`
   values to `FluentValue` internally. Date/Author: 2026-02-21 / ExecPlan draft.
 
 - Decision: name test modules `llm_sink_enforcement` and
@@ -162,14 +162,14 @@ adapter dispatch) comes later in Phase 1, Phase 4, and Phase 6.
 
 ## Outcomes & retrospective
 
-All four Phase 1 conformance suites pass and phase-gate target is advanced to
+All four Phase 2 conformance suites pass and phase-gate target is advanced to
 `phase1`. The two new suites (localization contract: 5 BDD scenarios + 4 unit
 tests; LLM sink enforcement: 6 BDD scenarios + 6 unit tests) exercise
 design-contract types without introducing runtime implementation, consistent
-with the "out of scope: Phase 1 feature implementation" constraint.
+with the "out of scope: Phase 2 feature implementation" constraint.
 
 The `LocalizationArgs` type decision (`HashMap<&str, String>` instead of
-`FluentValue`) is recorded in the design document for Phase 6 reference.
+`FluentValue`) is recorded in the design document for Phase 7 reference.
 
 Lesson learned: Clippy pedantic lints (`option_option`) apply even to test-only
 structs; use dedicated enums for type-safe state tracking in BDD worlds.
@@ -189,7 +189,7 @@ Rust workspace with two member crates and one root crate:
   `sink_enforcement` module exists yet.
 - Root `zamburak` crate (`src/lib.rs`) — re-exports from `zamburak-policy` and
   exposes `pub mod phase_gate_contract`. The phase-gate contract in
-  `src/phase_gate_contract.rs` defines Phase 1 required suites as
+  `src/phase_gate_contract.rs` defines Phase 2 required suites as
   `PHASE1_SUITES` (lines 100–121) with four verification suites and their test
   filters.
 
@@ -236,7 +236,7 @@ creates the three-point enforcement contract types (`LlmCallPath`,
 (`evaluate_pre_dispatch`, `evaluate_transport_guard`, `emit_audit_record`) in
 `crates/zamburak-policy/src/sink_enforcement.rs`. The contract functions encode
 the design-contract minimum: calls without redaction are denied; full budget
-and context evaluation is Phase 4. BDD tests go in
+and context evaluation is Phase 5. BDD tests go in
 `tests/security/llm_sink_enforcement/`.
 
 Go/no-go for Stage B: `make test` passes with new sink enforcement scenarios
@@ -251,7 +251,7 @@ present and passing.
 
 Stage D: documentation, roadmap closure, and full validation. Record the
 `LocalizationArgs` type decision in `docs/zamburak-design-document.md`. Mark
-Task 0.3.1 as done in `docs/roadmap.md`. Run all code and documentation gates.
+Task 1.3.1 as done in `docs/roadmap.md`. Run all code and documentation gates.
 
 Go/no-go for Stage D: all required gates pass, documentation is synchronized,
 and roadmap status is updated.
@@ -367,8 +367,8 @@ Stage D: documentation and roadmap closure.
 1. Edit `docs/zamburak-design-document.md` to record the `LocalizationArgs`
    type decision in the localization section.
 
-2. Edit `docs/roadmap.md` line 129 to change `- [ ] Task 0.3.1:` to
-   `- [x] Task 0.3.1:`.
+2. Edit `docs/roadmap.md` line 129 to change `- [ ] Task 1.3.1:` to
+   `- [x] Task 1.3.1:`.
 
 3. Run all documentation and code quality gates:
 
@@ -381,7 +381,7 @@ Stage D: documentation and roadmap closure.
 
 ## Validation and acceptance
 
-Acceptance criteria for Task 0.3.1:
+Acceptance criteria for Task 1.3.1:
 
 - LLM sink enforcement conformance suite exists and passes, with BDD scenarios
   covering pre-dispatch allow/deny, transport guard pass/block, and audit
@@ -391,8 +391,8 @@ Acceptance criteria for Task 0.3.1:
   safety, `LocalizedDiagnostic` rendering, and no-global-state proof.
 - Phase-gate target reads `phase1` and `make phase-gate` passes with all four
   mandated suites present and green.
-- Phase 1 implementation is blocked until all required conformance suites pass.
-- Roadmap Task 0.3.1 is marked done.
+- Phase 2 implementation is blocked until all required conformance suites pass.
+- Roadmap Task 1.3.1 is marked done.
 
 Required gates:
 
@@ -418,7 +418,7 @@ Evidence to capture during implementation:
 - test list output from `cargo test --workspace --all-targets --all-features
   -- --list` showing `llm_sink_enforcement::` and `localization_contract::`.
 - gate logs in `/tmp/*-zamburak-<branch>.out`.
-- `make phase-gate` output showing all four Phase 1 suites passing.
+- `make phase-gate` output showing all four Phase 2 suites passing.
 
 ## Interfaces and dependencies
 

@@ -1,4 +1,4 @@
-# Implement explicit schema migration transforms and conformance evidence (Task 0.1.2)
+# Implement explicit schema migration transforms and conformance evidence (Task 1.1.2)
 
 This execution plan (ExecPlan) is a living document. The sections
 `Constraints`, `Tolerances`, `Risks`, `Progress`, `Surprises & Discoveries`,
@@ -12,7 +12,7 @@ authoritative execution plan for this task.
 
 ## Purpose / big picture
 
-Implement roadmap Task 0.1.2 from `docs/roadmap.md`: policy loading must
+Implement roadmap Task 1.1.2 from `docs/roadmap.md`: policy loading must
 support explicit version-to-version migration transforms and produce audit
 metadata proving what changed during migration.
 
@@ -31,7 +31,7 @@ and all required quality gates pass.
   `docs/zamburak-design-document.md` ("Schema compatibility and migration
   semantics"), `docs/verification-targets.md` (row "Policy schema loader"), and
   `docs/repository-layout.md` (`crates/zamburak-policy`,
-  `tests/compatibility/`, and roadmap traceability row `0.1.2` including
+  `tests/compatibility/`, and roadmap traceability row `1.1.2` including
   `tests/security/`).
 - Respect roadmap scope boundaries:
   in scope is version-to-version migration execution and migration audit
@@ -49,7 +49,7 @@ and all required quality gates pass.
 - Record migration design decisions in `docs/zamburak-design-document.md`.
 - Update `docs/users-guide.md` with consumer-visible migration behaviour and
   audit APIs.
-- Mark Task 0.1.2 done in `docs/roadmap.md` once implementation is complete.
+- Mark Task 1.1.2 done in `docs/roadmap.md` once implementation is complete.
 - Required quality gates for completion:
   `make check-fmt`, `make lint`, and `make test`.
 - Because this task updates Markdown documentation, run docs gates as well:
@@ -105,7 +105,7 @@ and all required quality gates pass.
 ## Progress
 
 - [x] (2026-02-10 19:32Z) Reviewed roadmap, design, verification, repository
-  layout, and testing guidance documents for Task 0.1.2.
+  layout, and testing guidance documents for Task 1.1.2.
 - [x] (2026-02-10 19:32Z) Inspected current loader and compatibility test
   implementation baseline in `crates/zamburak-policy` and `tests/`.
 - [x] (2026-02-10 19:32Z) Drafted this ExecPlan with explicit tolerances,
@@ -115,7 +115,7 @@ and all required quality gates pass.
 - [x] (2026-02-10 20:17Z) Added migration conformance suites for unit,
   compatibility (`rstest-bdd`), and security coverage.
 - [x] (2026-02-10 20:17Z) Updated design and user documentation and marked
-  roadmap Task 0.1.2 as done.
+  roadmap Task 1.1.2 as done.
 - [x] (2026-02-10 20:20Z) Ran full quality and documentation gates with logs
   and fixed one Clippy regression (`manual_let_else`) discovered during lint.
 
@@ -129,12 +129,12 @@ and all required quality gates pass.
 
 - Observation: `tests/security/` does not yet exist in the repository.
   Evidence: `find tests -maxdepth 3 -type f` lists compatibility fixtures only.
-  Impact: Task 0.1.2 should introduce the initial `tests/security/` harness for
+  Impact: Task 1.1.2 should introduce the initial `tests/security/` harness for
   migration-audit evidence and failure-path checks.
 
 - Observation: roadmap traceability names
   `crates/zamburak-policy/src/migration.rs` as a primary artefact for Task
-  0.1.2. Evidence: `docs/roadmap.md` table row `0.1.2`. Impact: plan must
+  1.1.2. Evidence: `docs/roadmap.md` table row `1.1.2`. Impact: plan must
   include a dedicated migration module rather than embedding transform logic
   only inside `policy_def.rs`.
 
@@ -148,8 +148,8 @@ and all required quality gates pass.
 
 - Decision: keep canonical runtime target as schema v1 and treat migration as a
   pre-validation step into canonical v1, not an alternative runtime schema.
-  Rationale: preserves Task 0.1.1 guarantees while adding explicit migration
-  behaviour required by Task 0.1.2. Date/Author: 2026-02-10 / Codex.
+  Rationale: preserves Task 1.1.1 guarantees while adding explicit migration
+  behaviour required by Task 1.1.2. Date/Author: 2026-02-10 / Codex.
 
 - Decision: add audit-carrying loader entrypoints while preserving existing
   loader method signatures for compatibility. Rationale: migration evidence
@@ -192,7 +192,7 @@ Delivered outcomes:
   `tests/test_utils/policy-v0.yaml` and `tests/test_utils/policy-v0.json`.
 - Updated documentation:
   `docs/zamburak-design-document.md`, `docs/users-guide.md`, and
-  `docs/roadmap.md` (Task 0.1.2 marked as done).
+  `docs/roadmap.md` (Task 1.1.2 marked as done).
 
 Gate results:
 
@@ -211,7 +211,7 @@ Notable lesson:
 
 ## Context and orientation
 
-Current state after Task 0.1.1:
+Current state after Task 1.1.1:
 
 - `crates/zamburak-policy/src/policy_def.rs` parses YAML/JSON directly into
   `PolicyDefinition` and accepts only `schema_version: 1`.
@@ -224,7 +224,7 @@ Current state after Task 0.1.1:
 - `docs/users-guide.md` currently states unknown versions are rejected with no
   migration.
 
-Target state for Task 0.1.2:
+Target state for Task 1.1.2:
 
 - explicit migration logic in `crates/zamburak-policy/src/migration.rs`,
 - loader paths that can return migration audit records for supported transforms,
@@ -288,7 +288,7 @@ Stage D: documentation, roadmap closure, and quality gates.
   decisions taken during implementation.
 - Update `docs/users-guide.md` with migration behaviour, supported source
   versions, and how consumers can access migration audit metadata.
-- Mark Task 0.1.2 as done in `docs/roadmap.md`.
+- Mark Task 1.1.2 as done in `docs/roadmap.md`.
 - Run all required gates and capture logs for traceability.
 
 Go/no-go for Stage D: all required gates pass and documentation matches shipped
@@ -349,7 +349,7 @@ Run all commands from repository root: `/home/user/project`.
 
 ## Validation and acceptance
 
-Acceptance criteria for Task 0.1.2:
+Acceptance criteria for Task 1.1.2:
 
 - Behaviour:
   supported legacy policy schema input is migrated explicitly to canonical v1;
@@ -369,7 +369,7 @@ Acceptance criteria for Task 0.1.2:
   `docs/zamburak-design-document.md` and `docs/users-guide.md` reflect final
   migration semantics and APIs.
 - Roadmap state:
-  Task 0.1.2 in `docs/roadmap.md` is marked `[x]`.
+  Task 1.1.2 in `docs/roadmap.md` is marked `[x]`.
 - Quality gates:
   `make check-fmt`, `make lint`, and `make test` succeed.
 
@@ -418,10 +418,10 @@ Planned dependency posture:
 
 ## Revision note
 
-Initial draft created for roadmap Task 0.1.2 with explicit migration strategy,
+Initial draft created for roadmap Task 1.1.2 with explicit migration strategy,
 test plan (unit + compatibility + security), documentation obligations, and
 quality-gate requirements.
 
-Revision (2026-02-10): completed implementation and validation for Task 0.1.2,
+Revision (2026-02-10): completed implementation and validation for Task 1.1.2,
 updated status to `COMPLETE`, recorded delivery outcomes and gate evidence, and
 captured the fixture-warning discovery plus final mitigation.

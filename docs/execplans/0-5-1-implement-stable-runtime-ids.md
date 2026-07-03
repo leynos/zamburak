@@ -1,4 +1,4 @@
-# Implement stable runtime IDs in `full-monty` (Task 0.5.1)
+# Implement stable runtime IDs in `full-monty` (Task 1.5.1)
 
 This ExecPlan is a living document. The sections `Constraints`, `Tolerances`,
 `Risks`, `Progress`, `Surprises & discoveries`, `Decision log`, and
@@ -8,7 +8,7 @@ Status: COMPLETE
 
 ## Purpose / big picture
 
-Implement roadmap Task 0.5.1 from `docs/roadmap.md`: add stable, host-only
+Implement roadmap Task 1.5.1 from `docs/roadmap.md`: add stable, host-only
 runtime IDs in `third_party/full-monty/` with continuity across `start()` or
 `resume()` and `dump()` or `load()`.
 
@@ -29,8 +29,8 @@ unit-level and behavioural tests proving:
   IDs", `docs/zamburak-design-document.md` section "Snapshot and resume
   semantics", and `docs/verification-targets.md` row "IFC (information-flow
   control) propagation".
-- Dependency constraint: Task 0.4.2 is a hard precondition for 0.5.1.
-  If it is not complete, stop and complete 0.4.2 first.
+- Dependency constraint: Task 1.4.2 is a hard precondition for 1.5.1.
+  If it is not complete, stop and complete 1.4.2 first.
 - In scope: unique host-facing IDs with continuity across `start()` or
   `resume()` and `dump()` or `load()`.
 - Out of scope: encoding policy meaning into runtime IDs.
@@ -43,7 +43,7 @@ unit-level and behavioural tests proving:
   applicable.
 - Record any design decisions in `docs/zamburak-design-document.md`.
 - Update `docs/users-guide.md` for consumer-visible API or behaviour changes.
-- Mark roadmap Task 0.5.1 as done in `docs/roadmap.md` only after all gates
+- Mark roadmap Task 1.5.1 as done in `docs/roadmap.md` only after all gates
   are green.
 - Required completion gates: `make check-fmt`, `make lint`, and `make test`.
 
@@ -94,7 +94,7 @@ unit-level and behavioural tests proving:
 - [x] Added unit and behavioural tests (including `rstest-bdd` coverage where
   applicable) for uniqueness and continuity.
 - [x] Updated `docs/zamburak-design-document.md` and `docs/users-guide.md`.
-- [x] Ran required gates and marked Task 0.5.1 done in `docs/roadmap.md`.
+- [x] Ran required gates and marked Task 1.5.1 done in `docs/roadmap.md`.
 
 ## Surprises & discoveries
 
@@ -114,8 +114,8 @@ unit-level and behavioural tests proving:
 
 ## Decision log
 
-- Decision: enforce a hard go/no-go dependency gate on Task 0.4.2 before
-  implementing 0.5.1 changes. Rationale: roadmap dependency order is normative
+- Decision: enforce a hard go/no-go dependency gate on Task 1.4.2 before
+  implementing 1.5.1 changes. Rationale: roadmap dependency order is normative
   and avoids overlapping unresolved repository-mechanics work with Track A
   substrate work. Date/Author: 2026-02-26 / Codex.
 
@@ -147,11 +147,11 @@ Completed.
 - Documentation and roadmap synchronized:
   - snapshot semantics design decision recorded,
   - user-facing behaviour documented,
-  - roadmap task 0.5.1 marked done.
+  - roadmap task 1.5.1 marked done.
 
 ## Context and orientation
 
-Current repository state relevant to Task 0.5.1:
+Current repository state relevant to Task 1.5.1:
 
 - `third_party/full-monty/` is present as a git submodule at the repository's
   currently pinned revision.
@@ -165,7 +165,7 @@ Current repository state relevant to Task 0.5.1:
   conversion paths).
 - Current value identity helper logic is in
   `third_party/full-monty/crates/monty/src/value.rs` (`Value::id()`), but this
-  is not yet a documented 0.5.1 host-runtime-ID contract.
+  is not yet a documented 1.5.1 host-runtime-ID contract.
 - Behavioural coverage for this task now lives directly in
   `third_party/full-monty/crates/monty/tests/runtime_ids_bdd.rs`.
 
@@ -192,10 +192,10 @@ Files expected to change:
 
 Stage A: dependency and baseline preflight.
 
-- Verify Task 0.4.2 completion and ensure `make monty-sync` plus sync policy
-  are present and green. If not, stop this task and complete 0.4.2 first.
+- Verify Task 1.4.2 completion and ensure `make monty-sync` plus sync policy
+  are present and green. If not, stop this task and complete 1.4.2 first.
 - Initialize and sync `third_party/full-monty/` to the pinned revision.
-- Capture baseline test evidence that currently does not prove the 0.5.1
+- Capture baseline test evidence that currently does not prove the 1.5.1
   acceptance criteria.
 
 Go/no-go for Stage A: dependency gate is satisfied and submodule is ready.
@@ -246,7 +246,7 @@ Stage E: documentation sync, roadmap closure, and quality gates.
   API usage.
 - Update `docs/zamburak-design-document.md` with final runtime-ID design
   decisions and continuity invariants.
-- Mark Task 0.5.1 done in `docs/roadmap.md`.
+- Mark Task 1.5.1 done in `docs/roadmap.md`.
 - Run all required gates and archive logs as implementation evidence.
 
 Go/no-go for Stage E: all gates are green and docs plus roadmap are aligned.
@@ -261,7 +261,7 @@ Run from repository root (`/home/user/project`). Use `set -o pipefail` and
 ```sh
 git submodule update --init --recursive
 git submodule status
-rg -n "Task 0.4.2|monty-sync" docs/roadmap.md Makefile
+rg -n "Task 1.4.2|monty-sync" docs/roadmap.md Makefile
 ```
 
 Expected evidence:
@@ -306,7 +306,7 @@ make fmt | tee /tmp/fmt-zamburak-runtime-ids.out
 - Step 6: Mark roadmap completion after all gates pass.
 
 ```sh
-# edit docs/roadmap.md: change Task 0.5.1 checkbox from [ ] to [x]
+# edit docs/roadmap.md: change Task 1.5.1 checkbox from [ ] to [x]
 ```
 
 ## Validation and acceptance
@@ -322,7 +322,7 @@ Acceptance behaviours:
 - Behavioural tests in `crates/monty/tests/runtime_ids_bdd.rs` cover happy and
   unhappy scenarios using `rstest-bdd` v0.5.0.
 - `make check-fmt`, `make lint`, and `make test` pass in the superproject.
-- Roadmap Task 0.5.1 is marked done only after all evidence is green.
+- Roadmap Task 1.5.1 is marked done only after all evidence is green.
 
 Quality criteria:
 
@@ -354,8 +354,8 @@ $ make test
 ...
 test result: ok.
 
-$ rg -n "Task 0.5.1" docs/roadmap.md
-... [x] Task 0.5.1: Implement stable runtime IDs in `full-monty`.
+$ rg -n "Task 1.5.1" docs/roadmap.md
+... [x] Task 1.5.1: Implement stable runtime IDs in `full-monty`.
 ```
 
 ## Interfaces and dependencies
@@ -379,5 +379,5 @@ Dependencies:
 
 ## Revision note
 
-- Initial draft created for roadmap Task 0.5.1 with explicit dependency gate,
+- Initial draft created for roadmap Task 1.5.1 with explicit dependency gate,
   implementation stages, test strategy, and completion gates.

@@ -18,7 +18,7 @@
   - Execution plan and completion record for finalizing the Zamburak
   design-doc set.
 - [Schema migration transforms ExecPlan](execplans/0-1-2-schema-migration-transforms.md)
-  - Execution plan for Task 0.1.2 covering explicit policy-schema migration
+  - Execution plan for Task 1.1.2 covering explicit policy-schema migration
   transforms, migration conformance tests, and audit evidence delivery.
 - [Policy examples](policy-examples.md) - Worked examples of simple and
   complex Zamburak policy configurations with Mermaid diagrams.

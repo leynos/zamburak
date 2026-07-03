@@ -1,4 +1,4 @@
-# Gate external calls through policy decisions at runtime (Task 0.6.4)
+# Gate external calls through policy decisions at runtime (Task 1.6.4)
 
 This ExecPlan (execution plan) is a living document. The sections
 `Constraints`, `Tolerances`, `Risks`, `Progress`, `Surprises & Discoveries`,
@@ -9,7 +9,7 @@ Status: COMPLETE
 
 ## Purpose / big picture
 
-Implement roadmap Task 0.6.4 from `docs/roadmap.md`: every governed external
+Implement roadmap Task 1.6.4 from `docs/roadmap.md`: every governed external
 call in `zamburak-monty` must request a runtime policy decision before any
 side-effect execution is allowed to proceed.
 
@@ -26,9 +26,9 @@ that:
   one policy-gated decision point.
 
 This is Track B PR B4 from `docs/adr-001-monty-ifc-vm-hooks.md` section "Track
-B staged pull requests". It builds directly on Task 0.6.3, which already
+B staged pull requests". It builds directly on Task 1.6.3, which already
 derives observer-backed information-flow control (IFC) summaries, and on Task
-0.1.2, which already provides migrated, auditable policy loading.
+1.1.2, which already provides migrated, auditable policy loading.
 
 ## Constraints
 
@@ -37,7 +37,7 @@ derives observer-backed information-flow control (IFC) summaries, and on Task
   external calls", `docs/zamburak-design-document.md` section "Policy
   evaluation semantics", and `docs/verification-targets.md` rows "Policy
   engine" and "LLM sink enforcement".
-- Dependency precondition: Tasks 0.6.3 and 0.1.2 must remain marked complete in
+- Dependency precondition: Tasks 1.6.3 and 1.1.2 must remain marked complete in
   `docs/roadmap.md` before implementation starts.
 - In scope: allow, deny, and confirmation decision wiring for governed
   external-function boundaries; deterministic policy evaluation order;
@@ -70,7 +70,7 @@ derives observer-backed information-flow control (IFC) summaries, and on Task
   `docs/zamburak-design-document.md`.
 - Update `docs/users-guide.md` for any library-consumer-visible behaviour or
   API additions.
-- Mark roadmap Task 0.6.4 done only after all implementation gates are green.
+- Mark roadmap Task 1.6.4 done only after all implementation gates are green.
 - Required implementation gates: `make check-fmt`, `make lint`, and
   `make test`. Because the task also changes Markdown, run `make fmt`,
   `make markdownlint`, and `make nixie` before finishing.
@@ -85,7 +85,7 @@ derives observer-backed information-flow control (IFC) summaries, and on Task
   policy contract requires breaking changes to `GovernedRunProgress`,
   `ConfirmationContext`, `CallContext`, or `ExternalCallMediator`, stop and
   escalate with explicit compatibility options.
-- Schema tolerance: Task 0.6.4 should consume the existing policy schema. If a
+- Schema tolerance: Task 1.6.4 should consume the existing policy schema. If a
   new schema version or migration path is required, stop and escalate before
   editing `crates/zamburak-policy/src/policy_def.rs`.
 - Dependency tolerance: if a new production dependency is required, stop and
@@ -117,7 +117,7 @@ derives observer-backed information-flow control (IFC) summaries, and on Task
   and `RequireConfirmation { request }`) is intentionally simple, while the
   design document's explanation contract expects rule identifiers, redacted
   witnesses, and remediation guidance. Severity: medium. Likelihood: medium.
-  Mitigation: keep Task 0.6.4 focused on runtime gating and deterministic
+  Mitigation: keep Task 1.6.4 focused on runtime gating and deterministic
   decisions, expose richer explanation data additively if it fits cleanly, and
   escalate rather than introducing a breaking surface.
 
@@ -154,8 +154,8 @@ derives observer-backed information-flow control (IFC) summaries, and on Task
   `CallContext` to policy evaluation and converts decisions to
   `MediationDecision`. All 8 policy mediator unit tests now pass.
 - [x] (2026-04-04) Stage D skipped: unit tests provide sufficient coverage for
-  this milestone; BDD scenarios deferred to Task 0.6.5.
-- [x] (2026-04-04) Stage E complete: marked Task 0.6.4 done in roadmap.
+  this milestone; BDD scenarios deferred to Task 1.6.5.
+- [x] (2026-04-04) Stage E complete: marked Task 1.6.4 done in roadmap.
 - [x] (2026-04-04) Stage F complete: all gates pass (`make fmt`,
   `make check-fmt`, `make lint`, `make test`).
 
@@ -169,7 +169,7 @@ derives observer-backed information-flow control (IFC) summaries, and on Task
 
 - Discovery: `crates/zamburak-policy/src/engine.rs` currently stops at
   construction and authority-boundary validation. There is no existing
-  `evaluate_*` function to reuse for governed external calls, so Task 0.6.4
+  `evaluate_*` function to reuse for governed external calls, so Task 1.6.4
   must add one.
 
 - Discovery: `docs/rstest-bdd-users-guide.md` is present and aligns with the
@@ -209,7 +209,7 @@ derives observer-backed information-flow control (IFC) summaries, and on Task
 
 ## Outcomes & Retrospective
 
-Task 0.6.4 complete on 2026-04-04.
+Task 1.6.4 complete on 2026-04-04.
 
 ### Files changed
 
@@ -230,7 +230,7 @@ Task 0.6.4 complete on 2026-04-04.
   - `crates/zamburak-monty/src/lib.rs`: exported `PolicyMediator`.
   - `crates/zamburak-monty/src/external_call_tests.rs`: added and expanded the
     policy mediator unit tests (8 in the current suite).
-  - `docs/roadmap.md`: marked Task 0.6.4 complete.
+  - `docs/roadmap.md`: marked Task 1.6.4 complete.
   - `docs/execplans/0-6-4-gate-external-calls-through-policy-decisions-at-runtime.md`:
     updated Progress, Decision Log, and this Outcomes section.
 
@@ -243,7 +243,7 @@ Task 0.6.4 complete on 2026-04-04.
 ### Key decisions
 
 - Tool lookup uses `CallContext.function_name` as the policy tool key.
-- `RequireDraft` maps conservatively to `RequireConfirmation` for Task 0.6.4.
+- `RequireDraft` maps conservatively to `RequireConfirmation` for Task 1.6.4.
 - Policy evaluation follows the canonical policy-order contract: tool lookup,
   context rules, authority token requirements, positional-argument rules,
   keyword-argument rules, then default action.
@@ -252,7 +252,7 @@ Task 0.6.4 complete on 2026-04-04.
 
 ### Deferred work
 
-- BDD scenarios deferred to Task 0.6.5.
+- BDD scenarios deferred to Task 1.6.5.
 - Authority token requirement checking is placeholder (not yet exposed in
   external-call input).
 - Richer `PolicyDecisionExplanation` metadata (rule IDs, redacted witnesses)
@@ -296,7 +296,7 @@ Current relevant repository state:
   style for security-oriented `rstest-bdd` tests and for validating allow or
   deny decisions.
 
-The gap for Task 0.6.4 is therefore precise:
+The gap for Task 1.6.4 is therefore precise:
 
 1. define a typed policy-evaluation request and response in `zamburak-policy`,
 2. implement deterministic, fail-closed external-call evaluation against the
@@ -390,7 +390,7 @@ the documented decision order:
 5. confirmation and draft requirements,
 6. default action.
 
-Task 0.6.4 should consume the current schema surface conservatively:
+Task 1.6.4 should consume the current schema surface conservatively:
 
 - missing tool policy for a governed external call must fail closed,
 - missing or unavailable information required by a rule must fail closed,
@@ -542,7 +542,7 @@ Update `docs/users-guide.md` with:
 - any new public policy-evaluation types that matter to consumers,
 - any conservative mappings or fail-closed behaviours they need to know.
 
-After all tests and docs are complete, mark roadmap Task 0.6.4 done in
+After all tests and docs are complete, mark roadmap Task 1.6.4 done in
 `docs/roadmap.md`.
 
 ### Stage F: final gates and evidence capture
@@ -570,10 +570,10 @@ The task is complete only when all of the following are true:
 2. `GovernedRunner` requests a policy decision for every function and OS call
    before exposing a resumable side-effect path.
 3. Allow, deny, and confirmation flows are all covered by unit tests.
-   (Behavioural BDD and security-style tests deferred to Task 0.6.5 as per
+   (Behavioural BDD and security-style tests deferred to Task 1.6.5 as per
    Stage D decision.)
 4. `docs/zamburak-design-document.md` and `docs/users-guide.md` describe the
    shipped runtime behaviour.
-5. `docs/roadmap.md` marks Task 0.6.4 done.
+5. `docs/roadmap.md` marks Task 1.6.4 done.
 6. `make fmt`, `make markdownlint`, `make nixie`, `make check-fmt`,
    `make lint`, and `make test` all pass.

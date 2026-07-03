@@ -1,4 +1,4 @@
-# Wire phase-gate checks into CI from verification targets (Task 0.2.2)
+# Wire phase-gate checks into CI from verification targets (Task 1.2.2)
 
 This ExecPlan is a living document. The sections `Constraints`, `Tolerances`,
 `Risks`, `Progress`, `Surprises & Discoveries`, `Decision Log`, and
@@ -11,7 +11,7 @@ the governing execution plan for this task.
 
 ## Purpose / big picture
 
-Implement roadmap Task 0.2.2 from `docs/roadmap.md`: wire merge-blocking phase
+Implement roadmap Task 1.2.2 from `docs/roadmap.md`: wire merge-blocking phase
 verification gates in repository continuous integration (CI) using the required
 suites defined in `docs/verification-targets.md`.
 
@@ -21,7 +21,7 @@ surface escalation actions from the failure policy.
 
 Task completion is observable when CI gate jobs fail closed for missing or
 failing mandated suites, pass when mandated suites are green, and roadmap Task
-0.2.2 is marked done with supporting test evidence.
+1.2.2 is marked done with supporting test evidence.
 
 ## Constraints
 
@@ -30,7 +30,7 @@ failing mandated suites, pass when mandated suites are green, and roadmap Task
   phases" and "Failure and escalation policy",
   `docs/zamburak-engineering-standards.md` section "Testing and verification
   evidence standards", `docs/repository-layout.md` section `.github/workflows/`.
-- Respect dependency ordering: Task 0.1.1 and Task 0.1.3 are prerequisites and
+- Respect dependency ordering: Task 1.1.1 and Task 1.1.3 are prerequisites and
   are already complete; do not regress their coverage paths.
 - In scope: merge-blocking CI wiring for phase-gate checks and explicit
   gate-failure escalation behaviour in CI output.
@@ -45,7 +45,7 @@ failing mandated suites, pass when mandated suites are green, and roadmap Task
 - Update `docs/users-guide.md` if any library-consumer-visible behaviour or API
   changes; if there is no such change, document that determination in this
   ExecPlan and avoid speculative user-guide churn.
-- Mark roadmap Task 0.2.2 as done in `docs/roadmap.md` only after all quality
+- Mark roadmap Task 1.2.2 as done in `docs/roadmap.md` only after all quality
   and documentation gates pass.
 - Required completion gates: `make check-fmt`, `make lint`, `make test`.
 - Because this task updates Markdown documentation, also run:
@@ -74,7 +74,7 @@ failing mandated suites, pass when mandated suites are green, and roadmap Task
 
 ## Risks
 
-- Risk: mandated pre-Phase-1 suites include subsystems not yet implemented,
+- Risk: mandated pre-Phase-2 suites include subsystems not yet implemented,
   which could unintentionally block all routine merges instead of only blocking
   phase advancement. Severity: high Likelihood: medium Mitigation: enforce
   gates through an explicit phase-advancement check path that is merge-blocking
@@ -96,7 +96,7 @@ failing mandated suites, pass when mandated suites are green, and roadmap Task
 
 ## Progress
 
-- [x] (2026-02-18 22:56Z) Reviewed roadmap Task 0.2.2 requirements, scope, and
+- [x] (2026-02-18 22:56Z) Reviewed roadmap Task 1.2.2 requirements, scope, and
   traceability row.
 - [x] (2026-02-18 22:57Z) Reviewed verification-target acceptance gates and
   failure escalation policy.
@@ -176,7 +176,7 @@ Delivered outcomes:
 - Updated documentation and roadmap traceability:
   `docs/verification-targets.md`, `docs/zamburak-design-document.md`,
   `docs/tech-baseline.md`, `docs/zamburak-engineering-standards.md`,
-  `docs/repository-layout.md`, and `docs/roadmap.md` (Task 0.2.2 marked done).
+  `docs/repository-layout.md`, and `docs/roadmap.md` (Task 1.2.2 marked done).
 - No library-consumer API or runtime behaviour changed, so
   `docs/users-guide.md` required no update for this task.
 
@@ -205,7 +205,7 @@ Current baseline relevant to this task:
   CodeScene upload.
 - `docs/verification-targets.md` defines phase-specific gate expectations and a
   three-step failure escalation policy.
-- `docs/roadmap.md` Task 0.2.2 expects phase-gate suites to be wired as
+- `docs/roadmap.md` Task 1.2.2 expects phase-gate suites to be wired as
   merge-blocking checks and lists primary artefacts: `.github/workflows/`,
   `Makefile`, and `docs/verification-targets.md`.
 - Existing behavioural suites already use `rstest-bdd` v0.5.0 in
@@ -270,7 +270,7 @@ Stage D: documentation, roadmap closure, and full validation.
 - Update `docs/users-guide.md` only if this change introduces consumer-visible
   behaviour/API changes; otherwise record "no consumer API change" in this
   ExecPlan outcomes.
-- Mark roadmap Task 0.2.2 as done in `docs/roadmap.md` after successful
+- Mark roadmap Task 1.2.2 as done in `docs/roadmap.md` after successful
   validation.
 - Run all required code and docs gates with logs.
 
@@ -283,7 +283,7 @@ Run commands from repository root (`/home/user/project`).
 
 1. Inspect and confirm baseline before edits.
 
-       rg -n "Task 0.2.2|Acceptance gates for implementation phases|Failure and escalation policy" docs/roadmap.md docs/verification-targets.md
+       rg -n "Task 1.2.2|Acceptance gates for implementation phases|Failure and escalation policy" docs/roadmap.md docs/verification-targets.md
        sed -n '1,260p' .github/workflows/ci.yml
 
 2. Implement phase-gate evaluator and tests.
@@ -318,7 +318,7 @@ Expected indicators of success:
 
 ## Validation and acceptance
 
-Acceptance criteria for Task 0.2.2:
+Acceptance criteria for Task 1.2.2:
 
 - CI blocks phase advancement when mandated verification suites are missing.
 - CI blocks phase advancement when mandated verification suites fail.
@@ -327,7 +327,7 @@ Acceptance criteria for Task 0.2.2:
 - Unit tests cover gate mapping and evaluator outcomes (happy/unhappy/edge).
 - Behavioural tests using `rstest-bdd` v0.5.0 cover scenario-level gate
   behaviour where applicable.
-- Roadmap marks Task 0.2.2 as done only after all quality gates pass.
+- Roadmap marks Task 1.2.2 as done only after all quality gates pass.
 
 Required gates:
 

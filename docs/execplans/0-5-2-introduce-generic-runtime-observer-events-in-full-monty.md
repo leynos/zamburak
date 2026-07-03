@@ -1,4 +1,4 @@
-# Introduce generic runtime observer events in `full-monty` (Task 0.5.2)
+# Introduce generic runtime observer events in `full-monty` (Task 1.5.2)
 
 This ExecPlan is a living document. The sections `Constraints`, `Tolerances`,
 `Risks`, `Progress`, `Surprises & discoveries`, `Decision log`, and
@@ -8,7 +8,7 @@ Status: COMPLETE
 
 ## Purpose / big picture
 
-Implement roadmap Task 0.5.2 from `docs/roadmap.md`: add a generic runtime
+Implement roadmap Task 1.5.2 from `docs/roadmap.md`: add a generic runtime
 observer event substrate in `third_party/full-monty/` with the Track A minimum
 event set from ADR-001:
 
@@ -32,7 +32,7 @@ repository BDD tests under `tests/compatibility/` and `tests/security/`.
   `docs/adr-001-monty-ifc-vm-hooks.md` section "A2. Lightweight event emission
   hooks", `docs/zamburak-design-document.md` section "Two-track execution
   model", and `docs/verification-targets.md` row "IFC propagation".
-- Dependency constraint: Task 0.5.1 is a hard precondition for 0.5.2.
+- Dependency constraint: Task 1.5.1 is a hard precondition for 1.5.2.
   Confirm it is marked done before code changes.
 - In scope: canonical observer events `ValueCreated`, `OpResult`,
   `ExternalCallRequested`, `ExternalCallReturned`, and `ControlCondition`.
@@ -49,7 +49,7 @@ repository BDD tests under `tests/compatibility/` and `tests/security/`.
   exposed by the pinned `full-monty` submodule.
 - Record design decisions in `docs/zamburak-design-document.md`.
 - Update `docs/users-guide.md` for consumer-visible API or behaviour changes.
-- Mark roadmap Task 0.5.2 done in `docs/roadmap.md` only after all gates are
+- Mark roadmap Task 1.5.2 done in `docs/roadmap.md` only after all gates are
   green.
 - Required completion gates: `make check-fmt`, `make lint`, and `make test`.
 
@@ -104,13 +104,13 @@ repository BDD tests under `tests/compatibility/` and `tests/security/`.
 
 ## Progress
 
-- [x] (2026-02-28 02:25Z) Gathered signpost documents, Task 0.5.1 context, and
+- [x] (2026-02-28 02:25Z) Gathered signpost documents, Task 1.5.1 context, and
   current `full-monty` runtime-ID surfaces.
 - [x] (2026-02-28 02:25Z) Drafted this ExecPlan with staged delivery, red-green
   test sequencing, and quality gates.
 - [x] (2026-02-28 02:42Z) Revised plan to include Zamburak-repository BDD
   suites that exercise `full-monty` observer behaviour.
-- [x] (2026-02-28 15:07Z) Confirmed dependency status: roadmap Task 0.5.1 was
+- [x] (2026-02-28 15:07Z) Confirmed dependency status: roadmap Task 1.5.1 was
   already marked done before implementation edits.
 - [x] (2026-02-28 15:41Z) Added observer unit and BDD suites in
   `third_party/full-monty/crates/monty/tests/`.
@@ -119,7 +119,7 @@ repository BDD tests under `tests/compatibility/` and `tests/security/`.
 - [x] (2026-02-28 15:47Z) Added Zamburak compatibility/security BDD probes for
   observer behaviour exposed by the submodule.
 - [x] (2026-02-28 15:54Z) Updated design and user documentation, and marked
-  roadmap Task 0.5.2 done.
+  roadmap Task 1.5.2 done.
 - [x] (2026-02-28 16:22Z) Ran required quality gates and supporting checks.
 
 ## Surprises & discoveries
@@ -168,7 +168,7 @@ repository BDD tests under `tests/compatibility/` and `tests/security/`.
 
 ## Outcomes & retrospective
 
-Task 0.5.2 completed with all requested artefacts and gates.
+Task 1.5.2 completed with all requested artefacts and gates.
 
 - Delivered:
   - new observer API substrate in `third_party/full-monty/crates/monty/src/`,
@@ -193,10 +193,10 @@ Task 0.5.2 completed with all requested artefacts and gates.
 
 ## Context and orientation
 
-Current repository state relevant to Task 0.5.2:
+Current repository state relevant to Task 1.5.2:
 
-- `docs/roadmap.md` marks Task 0.5.1 done and Task 0.5.2 not done.
-- Runtime-ID substrate from Task 0.5.1 is present in:
+- `docs/roadmap.md` marks Task 1.5.1 done and Task 1.5.2 not done.
+- Runtime-ID substrate from Task 1.5.1 is present in:
   - `third_party/full-monty/crates/monty/src/runtime_id.rs`,
   - `third_party/full-monty/crates/monty/src/run.rs`,
   - `third_party/full-monty/crates/monty/src/repl.rs`,
@@ -244,7 +244,7 @@ Files expected to change:
 
 Stage A: preflight and baseline (no feature edits).
 
-- Confirm roadmap dependency status (`0.5.1` done).
+- Confirm roadmap dependency status (`1.5.1` done).
 - Initialize submodule and record baseline green state for required root gates.
 - Identify concrete VM opcode and boundary locations where each canonical event
   will be emitted.
@@ -313,7 +313,7 @@ Stage E: documentation, roadmap closure, and gates.
   decisions and event contract rationale.
 - Update `docs/users-guide.md` with consumer-facing observer API usage and
   no-op default semantics.
-- Mark Task 0.5.2 as done in `docs/roadmap.md` after all validation succeeds.
+- Mark Task 1.5.2 as done in `docs/roadmap.md` after all validation succeeds.
 - Run required gates and include evidence paths.
 
 Go or no-go for Stage E: `make check-fmt`, `make lint`, and `make test` are all
@@ -330,14 +330,14 @@ masked.
 ```sh
 git submodule update --init --recursive
 git submodule status
-rg -n "Task 0.5.1|Task 0.5.2" docs/roadmap.md
+rg -n "Task 1.5.1|Task 1.5.2" docs/roadmap.md
 ```
 
 Expected evidence:
 
 ```plaintext
-... [x] Task 0.5.1 ...
-... [ ] Task 0.5.2 ...
+... [x] Task 1.5.1 ...
+... [ ] Task 1.5.2 ...
 <sha> third_party/full-monty (...)
 ```
 
@@ -414,7 +414,7 @@ make fmt | tee /tmp/fmt-zamburak-observer-events.out
 1. Mark roadmap completion only after all gates pass.
 
 ```plaintext
-Edit docs/roadmap.md: change Task 0.5.2 checkbox from [ ] to [x].
+Edit docs/roadmap.md: change Task 1.5.2 checkbox from [ ] to [x].
 ```
 
 ## Validation and acceptance
@@ -437,7 +437,7 @@ Acceptance behaviours:
   - `make check-fmt`,
   - `make lint`,
   - `make test`.
-- Task 0.5.2 is marked done in `docs/roadmap.md` only after all evidence is
+- Task 1.5.2 is marked done in `docs/roadmap.md` only after all evidence is
   green.
 
 Quality criteria:
@@ -481,8 +481,8 @@ $ make test
 ...
 test result: ok.
 
-$ rg -n "Task 0.5.2" docs/roadmap.md
-... [x] Task 0.5.2: Introduce generic runtime observer events in `full-monty`.
+$ rg -n "Task 1.5.2" docs/roadmap.md
+... [x] Task 1.5.2: Introduce generic runtime observer events in `full-monty`.
 ```
 
 ## Interfaces and dependencies
@@ -526,7 +526,7 @@ Implementation shape constraints:
 
 ## Revision note
 
-- Initial draft created for roadmap Task 0.5.2 with dependency gate,
+- Initial draft created for roadmap Task 1.5.2 with dependency gate,
   additive API strategy, red-green test sequencing, and completion gates.
 - Revised to include explicit BDD coverage in Zamburak
   `tests/compatibility/` and `tests/security/` for behaviour exposed by

@@ -1,4 +1,4 @@
-# Wire `full-monty` observer events into IFC updates (Task 0.6.3)
+# Wire `full-monty` observer events into IFC updates (Task 1.6.3)
 
 This ExecPlan (execution plan) is a living document. The sections
 `Constraints`, `Tolerances`, `Risks`, `Progress`, `Surprises & Discoveries`,
@@ -9,7 +9,7 @@ Status: COMPLETE
 
 ## Purpose / big picture
 
-Implement roadmap Task 0.6.3 from [docs/roadmap.md](/docs/roadmap.md): wire the
+Implement roadmap Task 1.6.3 from [docs/roadmap.md](/docs/roadmap.md): wire the
 Track A `full-monty` runtime observer event stream into the Track B
 information-flow control (IFC) state managed by `crates/zamburak-monty`.
 
@@ -31,9 +31,9 @@ library must be able to observe that:
 
 This is Track B PR B3 in
 [docs/adr-001-monty-ifc-vm-hooks.md](/docs/adr-001-monty-ifc-vm-hooks.md). It
-builds directly on Task 0.6.2 (IFC core) and consumes Track A event and
-snapshot seams from Task 0.5.3 without adding Zamburak semantics to the
-vendored interpreter.
+builds directly on Task 1.6.2 (IFC core) and consumes Track A event and
+observer stream seams from Task 1.5.2 and snapshot seams from Task 1.5.3
+without adding Zamburak semantics to the vendored interpreter.
 
 ## Constraints
 
@@ -44,7 +44,7 @@ vendored interpreter.
   sections "Component responsibilities" and "Strict-mode effect semantics", and
   [docs/verification-targets.md](/docs/verification-targets.md) rows "IFC
   propagation" and "Control context".
-- Dependency precondition: Tasks 0.6.2 and 0.5.3 must remain completed in
+- Dependency precondition: Tasks 1.6.2, 1.5.2, and 1.5.3 must remain completed in
   [docs/roadmap.md](/docs/roadmap.md) before implementation starts.
 - In scope: event-to-IFC graph updates, external-call summary construction from
   observer state, strict-mode control dependency tracking, and additive
@@ -69,7 +69,7 @@ vendored interpreter.
   [docs/zamburak-design-document.md](/docs/zamburak-design-document.md).
 - Update [docs/users-guide.md](/docs/users-guide.md) for any
   library-consumer-visible behaviour or API additions.
-- Mark roadmap Task 0.6.3 done only after all required gates are green.
+- Mark roadmap Task 1.6.3 done only after all required gates are green.
 - Final required gates for the implementation turn are
   `make check-fmt`, `make lint`, and `make test`. For this planning turn, the
   applicable documentation gates are `make fmt`, `make markdownlint`, and
@@ -126,7 +126,7 @@ vendored interpreter.
   fail-closed states surfaced through typed Zamburak errors or conservative
   unknown-top summaries, then cover them with unit and behavioural tests.
 
-- Risk: the existing `CallContext` public surface is too thin for Task 0.6.4,
+- Risk: the existing `CallContext` public surface is too thin for Task 1.6.4,
   so a one-off B3 design could force another public API reshape immediately in
   the next task. Severity: medium. Likelihood: medium. Mitigation: add a nested
   Zamburak-owned IFC payload to call context now rather than scattering
@@ -135,7 +135,7 @@ vendored interpreter.
 ## Progress
 
 - [x] Reviewed the roadmap item, ADR, design document, verification targets,
-  repository layout, user's guide, and previous 0.6.1/0.6.2 ExecPlans.
+  repository layout, user's guide, and previous 1.6.1/1.6.2 ExecPlans.
 - [x] Drafted this ExecPlan.
 - [x] Stage A: initialize `full-monty` and prototype the observer contract for
   control-context lifetime and external-call return provenance.
@@ -173,7 +173,7 @@ vendored interpreter.
 
 - Decision: the expected public-shape outcome is an additive Zamburak-owned IFC
   payload on governed call contexts rather than a Track A API change.
-  Rationale: Task 0.6.3 is Track B integration work, and Task 0.6.4 should be
+  Rationale: Task 1.6.3 is Track B integration work, and Task 1.6.4 should be
   able to consume the same governed context without another public API reshape.
   Date/Author: 2026-03-25 / Codex.
 
@@ -238,7 +238,7 @@ The design document already establishes the canonical event classes:
 4. `ExternalCallReturned`
 5. `ControlCondition`
 
-Task 0.6.3 must translate those generic events into Track B state updates. That
+Task 1.6.3 must translate those generic events into Track B state updates. That
 means this plan cannot stop at event counting. It must name the runtime state
 that is updated, the governed API that exposes the resulting summaries, and the
 tests that prove no supported event class is ignored.
@@ -444,8 +444,8 @@ pub struct CallContext {
 }
 ```
 
-This gives Task 0.6.4 a stable input surface for policy evaluation and gives
-Task 0.6.3 tests a direct way to assert correctness.
+This gives Task 1.6.4 a stable input surface for policy evaluation and gives
+Task 1.6.3 tests a direct way to assert correctness.
 
 Update
 [crates/zamburak-monty/src/run/flow.rs](/crates/zamburak-monty/src/run/flow.rs)
@@ -465,7 +465,7 @@ existing `run_no_limits(...)` contract.
 
 ### Stage D: make strict mode explicit and testable
 
-Task 0.6.3 is not complete if strict mode exists only in documentation. The
+Task 1.6.3 is not complete if strict mode exists only in documentation. The
 governed path must choose a propagation mode and make it observable in tests.
 
 Implementation steps:
@@ -475,7 +475,7 @@ Implementation steps:
    - derive `GraphBudgets` and `PropagationMode` from policy configuration when
      available,
    - provide a small additive constructor or builder for tests so strict and
-     normal mode can both be exercised before Task 0.6.4.
+     normal mode can both be exercised before Task 1.6.4.
 2. When constructing external-call summaries, use
    `zamburak_core::propagation::propagate_labels(...)` so strict-mode control
    behaviour is centralized in the IFC core.
@@ -553,7 +553,7 @@ Update these documents in the same change:
 2. [docs/users-guide.md](/docs/users-guide.md) with the new
    governed-call IFC context shape and any new constructor or runner helper
    used by library consumers.
-3. [docs/roadmap.md](/docs/roadmap.md) by marking Task 0.6.3
+3. [docs/roadmap.md](/docs/roadmap.md) by marking Task 1.6.3
    done only after all gates pass.
 
 Run the final commands exactly this way so failures are preserved through `tee`:
@@ -573,7 +573,7 @@ Minimum success evidence:
 - the new `rstest-bdd` scenarios pass,
 - the security-style regression passes,
 - root `make check-fmt`, `make lint`, and `make test` pass,
-- Task 0.6.3 is marked `[x]` in the roadmap,
+- Task 1.6.3 is marked `[x]` in the roadmap,
 - the user's guide explains the new governed IFC surface.
 
 ## Approval gate

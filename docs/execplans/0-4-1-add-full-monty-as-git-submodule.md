@@ -1,4 +1,4 @@
-# Add `full-monty` as a Git submodule and enforce fork guardrails (Task 0.4.1)
+# Add `full-monty` as a Git submodule and enforce fork guardrails (Task 1.4.1)
 
 This ExecPlan is a living document. The sections `Constraints`, `Tolerances`,
 `Risks`, `Progress`, `Surprises & discoveries`, `Decision log`, and
@@ -11,7 +11,7 @@ the governing execution plan for this task.
 
 ## Purpose / big picture
 
-Implement roadmap Task 0.4.1 from `docs/roadmap.md`: add `full-monty` as a Git
+Implement roadmap Task 1.4.1 from `docs/roadmap.md`: add `full-monty` as a Git
 submodule, define fork rules, and enforce review rejection of non-generic fork
 changes.
 
@@ -31,7 +31,7 @@ hook-substrate internals.
   requirements to keep the fork PR-able", `docs/zamburak-design-document.md`
   section "Two-track execution model", and `docs/repository-layout.md` section
   "Root and operational files".
-- Dependency constraint: Task 0.3.1 is complete and must remain green.
+- Dependency constraint: Task 1.3.1 is complete and must remain green.
 - In scope: submodule placement, fork-change category policy,
   prohibition of Zamburak semantics in fork APIs, and enforceable review
   rejection for non-generic fork deltas.
@@ -45,7 +45,7 @@ hook-substrate internals.
   `docs/zamburak-design-document.md`.
 - Update `docs/users-guide.md` for any consumer-visible behaviour or workflow
   changes introduced by submodule usage and fork-boundary policy.
-- Mark roadmap Task 0.4.1 as done in `docs/roadmap.md` only after all gates
+- Mark roadmap Task 1.4.1 as done in `docs/roadmap.md` only after all gates
   pass.
 - Required completion gates: `make check-fmt`, `make lint`, and `make test`.
 - Because this task updates Markdown docs, also run:
@@ -105,7 +105,7 @@ hook-substrate internals.
 - [x] (2026-02-23 19:45Z) Ran required quality gates:
   `make check-fmt`, `make lint`, `make test`, `make markdownlint`,
   `make nixie`, and `make fmt`.
-- [x] (2026-02-23 19:46Z) Marked roadmap Task 0.4.1 done.
+- [x] (2026-02-23 19:46Z) Marked roadmap Task 1.4.1 done.
 
 ## Surprises & discoveries
 
@@ -149,7 +149,7 @@ hook-substrate internals.
 
 ## Outcomes & retrospective
 
-Task 0.4.1 is complete.
+Task 1.4.1 is complete.
 
 Delivered outcomes:
 
@@ -164,7 +164,7 @@ Delivered outcomes:
 - Added `rstest-bdd` behavioural coverage in
   `tests/compatibility/monty_fork_policy/mod.rs`.
 - Wired CI to run review-policy checks and to initialize submodules.
-- Updated design and consumer documentation, and marked roadmap Task 0.4.1 as
+- Updated design and consumer documentation, and marked roadmap Task 1.4.1 as
   done.
 
 Retrospective:
@@ -181,8 +181,8 @@ Current repository state relevant to this task:
 
 - `third_party/full-monty/` is now present as a pinned Git submodule, and
   `.gitmodules` is tracked in the repository root.
-- Roadmap Task 0.4.1 is now marked done in `docs/roadmap.md` under
-  "Step 0.4: `full-monty` repository mechanics and guardrails".
+- Roadmap Task 1.4.1 is now marked done in `docs/roadmap.md` under
+  "Step 1.4: `full-monty` repository mechanics and guardrails".
 - ADR-001 requires a constrained `full-monty` fork with generic Track A APIs
   and no Zamburak semantics in that API surface.
 - `docs/repository-layout.md` now records `third_party/full-monty/` as an
@@ -211,7 +211,7 @@ Key files expected to change:
 - `tests/compatibility/monty_fork_policy/mod.rs` (new): step definitions.
 - `tests/compatibility/main.rs`: include new behavioural module.
 - `.github/workflows/ci.yml`: run checker in merge-blocking CI.
-- `docs/roadmap.md`: mark Task 0.4.1 done after verification.
+- `docs/roadmap.md`: mark Task 1.4.1 done after verification.
 
 ## Plan of work
 
@@ -259,7 +259,7 @@ Stage D: documentation synchronization, roadmap closure, and full gates.
   fork policy and Track A semantic boundary enforcement.
 - Update `docs/repository-layout.md`, `docs/users-guide.md`, and
   `docs/contents.md` to reflect new operational reality.
-- Mark Task 0.4.1 as done in `docs/roadmap.md`.
+- Mark Task 1.4.1 as done in `docs/roadmap.md`.
 - Run all required quality/documentation/script gates and retain output logs.
 
 Go/no-go for Stage D: all gates pass, docs are synchronized, and roadmap status
@@ -325,7 +325,7 @@ Run from repository root (`/home/user/project`). Use `set -o pipefail` and
 
 6. Mark roadmap completion only after all gates are green.
 
-    Edit docs/roadmap.md: change Task 0.4.1 checkbox from [ ] to [x]
+    Edit docs/roadmap.md: change Task 1.4.1 checkbox from [ ] to [x]
 
 ## Validation and acceptance
 
@@ -340,7 +340,7 @@ Acceptance behaviours:
   at least one happy path, one unhappy path, and edge cases.
 - `make check-fmt`, `make lint`, and `make test` all pass.
 - Documentation gates pass for changed docs.
-- Roadmap Task 0.4.1 is marked done.
+- Roadmap Task 1.4.1 is marked done.
 
 Quality criteria:
 

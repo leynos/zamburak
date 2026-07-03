@@ -81,7 +81,7 @@ Minimum event set:
 - `ControlCondition` (needed for strict-mode control influence).
 
 These event classes are the canonical Track A event surface and are reused by
-`docs/roadmap.md` Task `0.5.2` to avoid drift between planning and ADR
+`docs/roadmap.md` Task `1.5.2` to avoid drift between planning and ADR
 requirements.
 
 ### A3. Snapshot extension seam (optional but preferred)

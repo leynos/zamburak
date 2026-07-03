@@ -1,4 +1,4 @@
-# Freeze canonical policy schema v1 in runtime loading paths (Task 0.1.1)
+# Freeze canonical policy schema v1 in runtime loading paths (Task 1.1.1)
 
 This execution plan (ExecPlan) is a living document. The sections
 `Constraints`, `Tolerances`, `Risks`, `Progress`, `Surprises & Discoveries`,
@@ -12,7 +12,7 @@ authoritative execution plan for this task.
 
 ## Purpose / big picture
 
-Implement the Phase 0 Task 0.1.1 contract from `docs/roadmap.md`: runtime
+Implement the Phase 1 Task 1.1.1 contract from `docs/roadmap.md`: runtime
 policy loading must accept only canonical policy schema version 1 and reject
 any unknown schema version fail-closed.
 
@@ -45,7 +45,7 @@ update user-facing documentation plus roadmap state when complete.
 - Update `docs/users-guide.md` with consumer-visible loader behaviour. The file
   does not currently exist and should be created if still absent at execution
   time.
-- On feature completion, mark Task 0.1.1 as done in `docs/roadmap.md`.
+- On feature completion, mark Task 1.1.1 as done in `docs/roadmap.md`.
 - Quality gates must pass before completion:
   `make check-fmt`, `make lint`, and `make test`.
 
@@ -70,7 +70,7 @@ update user-facing documentation plus roadmap state when complete.
 - Risk: repository runtime structure is currently a minimal single crate while
   roadmap targets `crates/zamburak-policy`. Severity: high Likelihood: high
   Mitigation: introduce only the minimal workspace and policy-crate scaffolding
-  needed for Task 0.1.1, keeping behaviour tightly scoped to loader contracts.
+  needed for Task 1.1.1, keeping behaviour tightly scoped to loader contracts.
 
 - Risk: behavioural test harness could overfit internal details and reduce
   consumer-level coverage value. Severity: medium Likelihood: medium
@@ -103,7 +103,7 @@ update user-facing documentation plus roadmap state when complete.
 
 - Observation: The repository does not yet contain `crates/` or `policies/`
   paths referenced by roadmap traceability. Evidence: `rg --files` output from
-  repository root. Impact: Task 0.1.1 execution must include minimal path
+  repository root. Impact: Task 1.1.1 execution must include minimal path
   scaffolding to align implementation with documented repository contracts.
 
 - Observation: `docs/users-guide.md` does not exist.
@@ -118,9 +118,9 @@ update user-facing documentation plus roadmap state when complete.
 
 ## Decision Log
 
-- Decision: Treat Task 0.1.1 as requiring minimal creation of
+- Decision: Treat Task 1.1.1 as requiring minimal creation of
   `crates/zamburak-policy` and `policies/schema.json` artefacts if absent.
-  Rationale: `docs/roadmap.md` traceability for Task 0.1.1 explicitly maps to
+  Rationale: `docs/roadmap.md` traceability for Task 1.1.1 explicitly maps to
   those paths; implementation should match documented ownership. Date/Author:
   2026-02-09 / Codex
 
@@ -174,7 +174,7 @@ Quality gate outcomes:
 ## Context and orientation
 
 Current repository state is an early scaffold (`src/lib.rs`) plus detailed
-design and roadmap documentation. Task 0.1.1 is the first contract-freeze code
+design and roadmap documentation. Task 1.1.1 is the first contract-freeze code
 delivery and must anchor future policy and compatibility work.
 
 Key documents and expectations:
@@ -186,7 +186,7 @@ Key documents and expectations:
 - `docs/repository-layout.md` allocates loader models to
   `crates/zamburak-policy/src/policy_def.rs` and policy artefacts to
   `policies/schema.json`.
-- `docs/roadmap.md` maps Task 0.1.1 completion to:
+- `docs/roadmap.md` maps Task 1.1.1 completion to:
   `policies/schema.json`, `crates/zamburak-policy/src/policy_def.rs`,
   `crates/zamburak-policy/src/engine.rs`.
 
@@ -236,7 +236,7 @@ Stage D: document and finalize.
 - Create or update `docs/users-guide.md` with consumer-facing loader contract
   and examples.
 - Update `docs/contents.md` to include `docs/users-guide.md` if created.
-- Mark Task 0.1.1 as done in `docs/roadmap.md`.
+- Mark Task 1.1.1 as done in `docs/roadmap.md`.
 - Run all required quality gates and archive logs.
 
 ## Concrete steps
@@ -248,7 +248,7 @@ Run commands from repository root: `/home/user/project`.
        git status --short
        rg --files
 
-2. Create/adjust workspace and policy crate scaffolding required by Task 0.1.1.
+2. Create/adjust workspace and policy crate scaffolding required by Task 1.1.1.
 
        mkdir -p crates/zamburak-policy/src policies tests/compatibility/features
        # Then edit Cargo manifests and source files as defined in Plan of work.
@@ -295,7 +295,7 @@ Acceptance is met only when all checks below pass:
   design decision updates appear in `docs/zamburak-design-document.md` and
   consumer-facing behaviour appears in `docs/users-guide.md`.
 - Roadmap state:
-  Task 0.1.1 checkbox in `docs/roadmap.md` is marked `[x]`.
+  Task 1.1.1 checkbox in `docs/roadmap.md` is marked `[x]`.
 - Quality gates:
   `make check-fmt`, `make lint`, and `make test` succeed.
 
@@ -337,7 +337,7 @@ Expected dependency additions (if not already present):
 
 ## Revision note
 
-Initial draft created for roadmap Task 0.1.1 with explicit execution stages,
+Initial draft created for roadmap Task 1.1.1 with explicit execution stages,
 test strategy, documentation obligations, and quality-gate requirements.
 
 Revision (2026-02-09): completed implementation, updated status to `COMPLETE`,

@@ -56,18 +56,18 @@ Security-regression targets must additionally include:
 
 Phase-gate expectations:
 
-- before Phase 1:
+- before Phase 2:
   schema, LLM sink enforcement, authority lifecycle, and localization contract
   conformance suites must pass,
-- before Phase 2:
+- before Phase 3:
   container mutation, aliasing, and budget overflow fail-closed suites must
   pass,
-- before Phase 3:
+- before Phase 4:
   tool catalogue pinning and Model Context Protocol (MCP) trust-class suites
   must pass,
-- before Phase 4:
-  LLM sink privacy-boundary integration suite must pass,
 - before Phase 5:
+  LLM sink privacy-boundary integration suite must pass,
+- before Phase 6:
   audit confidentiality and tamper-evidence suites must pass.
 - before roadmap completion:
   localization fallback ordering and no-global-state conformance suites must

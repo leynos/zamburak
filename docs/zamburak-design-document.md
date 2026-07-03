@@ -250,7 +250,7 @@ Compatibility invariants for this contract are:
 - explicit no-op observer preserves baseline runtime behaviour,
 - observer-enabled mode adds events without changing suspend/resume semantics.
 
-Task 0.5.4 hardens these invariants with differential tests against the
+Task 1.5.4 hardens these invariants with differential tests against the
 observer-free public entrypoints. The enforced comparison modes are:
 
 - `MontyRun::start(...)` and `MontyRepl::start(...)` or
@@ -669,13 +669,13 @@ sequenceDiagram
 Figure 5: Runtime-ID flow across start, function-call pause, host inspection,
 and resume.
 
-Implementation decision (2026-02-26): Task 0.5.1 uses `Value::id()` as the
+Implementation decision (2026-02-26): Task 1.5.1 uses `Value::id()` as the
 runtime-ID substrate in `full-monty` and exposes it through additive,
 host-facing payload fields. This keeps Track A generic and upstream-friendly
 while providing continuity evidence across `start()` or `resume()` and `dump()`
 or `load()`.
 
-Implementation decision (2026-03-04): Task 0.5.3 adds optional, embedder-owned
+Implementation decision (2026-03-04): Task 1.5.3 adds optional, embedder-owned
 snapshot extension bytes to `Snapshot`, `FutureSnapshot`, `ReplSnapshot`, and
 `ReplFutureSnapshot`. The bytes are persisted by Monty without interpretation,
 so versioning and semantics remain entirely in Track B or host code. The bytes
@@ -808,9 +808,9 @@ choices:
   consistent across Track A and Track B boundaries.
 - `IntegrityLabel::Verified` is a simple variant without a
   `VerificationKind` parameter. Extension to parameterized verification is Task
-  1.1.1 scope.
+  2.1.2 scope.
 - `GraphBudgets` is defined in `zamburak-core` and decoupled from
-  `PolicyBudgets` in `zamburak-policy`. The caller (Task 0.6.3) constructs
+  `PolicyBudgets` in `zamburak-policy`. The caller (Task 1.6.3) constructs
   `GraphBudgets` from `PolicyBudgets`.
 - `DependencyGraph` uses `Vec<ValueId>` for parent edges instead of
   `SmallVec`. The design document pseudocode uses `SmallVec` but `smallvec` is
@@ -824,14 +824,14 @@ choices:
   dependency). A derived value can only exercise capabilities that all its
   sources possess.
 - No cycle detection beyond explicit self-loop rejection. The DAG invariant is
-  maintained structurally by the observer wiring (Task 0.6.3) which only adds
+  maintained structurally by the observer wiring (Task 1.6.3) which only adds
   edges from new values to pre-existing values.
 - `proptest` is added as a dev-dependency for randomized property-based
   testing of lattice algebraic laws, budget invariants, propagation ordering,
   and transitive summary completeness. `kani` (bounded model checking) is
   deferred to a later task as it requires standalone toolchain installation.
 
-Implementation decision (2026-03-26): Task 0.6.3 wires the Track A observer
+Implementation decision (2026-03-26): Task 1.6.3 wires the Track A observer
 stream into a Zamburak-owned `IfcRuntimeState` inside
 `crates/zamburak-monty/src/observer/ifc_state.rs`. The observer now:
 
@@ -845,7 +845,7 @@ stream into a Zamburak-owned `IfcRuntimeState` inside
   becomes ambiguous.
 
 Implementation decision (2026-03-26): Track A exposes `ControlCondition` only
-at branch evaluation, with no explicit scope-exit event. Task 0.6.3 therefore
+at branch evaluation, with no explicit scope-exit event. Task 1.6.3 therefore
 uses a conservative control-context lifetime model in `zamburak-monty`:
 conditions accumulate for the remainder of the governed execution segment. This
 can over-approximate influence after merge points, but it preserves the
@@ -1238,9 +1238,9 @@ The class diagram above shows `LocalizationArgs` as a parameter to `lookup()`
 and `message()`. ADR-002 sketches this as `HashMap<&str, FluentValue<'a>>`,
 which would couple `zamburak-core` to the `fluent-bundle` crate at the
 design-contract phase. To avoid this coupling, the design-contract
-implementation (Task 0.3.1) defines `LocalizationArgs<'a>` as
-`HashMap<&'a str, String>`. The `FluentLocalizerAdapter` introduced in Phase 6
-(Task 6.1.2) will convert `String` values to `FluentValue` internally, so
+implementation (Task 7.1.1) defines `LocalizationArgs<'a>` as
+`HashMap<&'a str, String>`. The `FluentLocalizerAdapter` introduced in Phase 7
+(Task 7.1.2) will convert `String` values to `FluentValue` internally, so
 downstream consumers of the `Localizer` trait are unaffected by this
 substitution.
 
@@ -1514,9 +1514,9 @@ Evaluation progression:
   or equivalent,
 - later: continuous red-team generation and trend tracking.
 
-### Design-level acceptance criteria before phase 1 build-out
+### Design-level acceptance criteria before phase 2 build-out
 
-Before Phase 1 implementation begins, design-contract conformance tests must
+Before Phase 2 implementation begins, design-contract conformance tests must
 exist and pass for:
 
 - policy schema contract:
@@ -1537,7 +1537,7 @@ exist and pass for:
   modules and test files) use uv runtime metadata, follow Cuprum-first command
   invocation posture, and include matching tests in `scripts/tests/`.
 
-If any contract conformance suite is missing or failing, phase-1 build work is
+If any contract conformance suite is missing or failing, phase-2 build work is
 blocked.
 
 ### Automation script delivery baseline
@@ -1601,7 +1601,7 @@ It compares medians from observer-free baseline execution against:
 - observer-aware execution with
   `RuntimeObserverHandle::new(NoopRuntimeObserver)`.
 
-The current calibrated Task 0.5.4 ceilings are:
+The current calibrated Task 1.5.4 ceilings are:
 
 - disabled handle overhead `<= 1.20x baseline`,
 - no-op observer overhead `<= 2.15x baseline`.
@@ -1680,8 +1680,8 @@ Technology baseline and verification target expectations are tracked in
 
 The `zamburak-monty` crate is the first Track B adapter layer (PR B1). It
 bridges the generic Track A observer substrate into Zamburak governance
-semantics without implementing full IFC propagation (deferred to Tasks 0.6.2
-and 0.6.3).
+semantics without implementing full IFC propagation (deferred to Tasks 1.6.2
+and 1.6.3).
 
 ### `GovernedRunner` orchestration pattern
 
@@ -1729,7 +1729,7 @@ flowchart TD
 ### `ExternalCallMediator` trait boundary
 
 The mediation hook is a trait (`ExternalCallMediator`) rather than a hard-wired
-`PolicyEngine` reference. This allows Tasks 0.6.3 and 0.6.4 to provide
+`PolicyEngine` reference. This allows Tasks 1.6.3 and 1.6.4 to provide
 progressively richer mediator implementations without changing the adapter
 crate's public run API.
 
@@ -1745,7 +1745,7 @@ call kind, function name, and observer-derived IFC context) and returns a
 The shared mediator handle uses `Arc<Mutex<dyn ExternalCallMediator>>`,
 consistent with `full-monty`'s own `SharedRuntimeObserver` pattern.
 
-Task 0.6.3 extends `CallContext` with a nested `CallIfcContext` payload:
+Task 1.6.3 extends `CallContext` with a nested `CallIfcContext` payload:
 
 - `propagation_mode` records whether the call summary was built in normal or
   strict mode,
@@ -1772,7 +1772,7 @@ Zamburak-owned wrapper types (`GovernedRunProgress`, `GovernedRunError`,
 internal types change and avoids leaking Track A internals into Track B
 consumers.
 
-Implementation decision (2026-04-04): Task 0.6.4 adds runtime policy evaluation
+Implementation decision (2026-04-04): Task 1.6.4 adds runtime policy evaluation
 for governed external-call boundaries. Key design choices:
 
 - `ExternalCallPolicyInput` in `zamburak-policy` is a policy-layer-owned
@@ -1803,7 +1803,7 @@ for governed external-call boundaries. Key design choices:
 - All label-string parsing uses `FromStr` implementations in
   `zamburak-core` (`IntegrityLabel`, `DataLabel`). Unrecognized label strings
   fail closed: deny for integrity checks, treat-as-present for confidentiality
-  checks. Verification requirements remain a placeholder until Task 1.1.1.
+  checks. Verification requirements remain a placeholder until Task 2.1.2.
 - Keyword argument rules prevent bypass of guarded parameters: each keyword
   value summary is checked against every `arg_rule` whose `arg` name matches.
 
