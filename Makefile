@@ -1,4 +1,4 @@
-.PHONY: help all clean test build release lint typecheck fmt check-fmt markdownlint nixie phase-gate script-baseline script-typecheck script-test monty-sync lint-full-monty-local
+.PHONY: help all clean test build release lint typecheck fmt check-fmt markdownlint nixie phase-gate script-baseline script-typecheck script-test test-workflow-contracts monty-sync lint-full-monty-local
 
 
 TARGET ?= libzamburak.rlib
@@ -61,6 +61,9 @@ script-typecheck: ## Run script type checks with ty
 
 script-test: ## Run script baseline test suite
 	uv run $(SCRIPT_UV_DEPS) pytest scripts/tests
+
+test-workflow-contracts: ## Validate the mutation-testing caller contract
+	uv run --with 'pytest>=8' --with 'pyyaml>=6' pytest tests/workflow_contracts -q
 
 monty-sync: ## Sync full-monty fork branch with upstream and run verification gates
 	uv run scripts/monty_sync.py
