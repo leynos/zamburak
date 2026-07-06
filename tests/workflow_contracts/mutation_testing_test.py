@@ -22,9 +22,9 @@ WORKFLOW_PATH = (
 )
 
 #: The pinned commit of leynos/shared-actions (the merge commit of
-#: leynos/shared-actions PR #319). Bump the workflow and this test
-#: together.
-PINNED_SHA = "47aea18960d24f33aedc4782ec6b73e365418313"
+#: leynos/shared-actions PR #319, then bumped for artefact preservation
+#: on timeout). Bump the workflow and this test together.
+PINNED_SHA = "2b09d10192627fd6e1034e7c12625dd266b45503"
 
 EXPECTED_USES = (
     "leynos/shared-actions/.github/workflows/mutation-cargo.yml@" + PINNED_SHA
@@ -32,11 +32,13 @@ EXPECTED_USES = (
 
 #: The exact caller configuration: the root crate plus the crates/
 #: workspace members are in scope, the test-utils fixture crate is
-#: excluded, and the CI baseline's --all-features is mirrored.
+#: excluded, the CI baseline's --all-features is mirrored, and the
+#: whole workspace is tested against each mutant so crates covered by
+#: dependent crates' tests do not report false survivors.
 EXPECTED_WITH = {
     "paths": "src/,crates/,examples/,benches/",
     "exclude-globs": "crates/test-utils/**",
-    "extra-args": "--all-features",
+    "extra-args": "--all-features --test-workspace=true",
 }
 
 
