@@ -79,6 +79,8 @@ jobs:
         run: make script-test
       - name: Lint
         run: make lint
+      - name: Workflow contract tests
+        run: make test-workflow-contracts
       - name: Test and Measure Coverage
         uses: leynos/shared-actions/.github/actions/generate-coverage@1213d7874aa42ff034587d9385f35178d51e1f65
         with:
