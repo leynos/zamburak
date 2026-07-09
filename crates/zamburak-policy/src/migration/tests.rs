@@ -10,12 +10,17 @@ use super::{
 use crate::policy_def::{PolicyDefinition, SchemaVersion};
 
 #[fixture]
-fn legacy_policy_v0() -> PolicyDefinitionV0 {
-    serde_yaml::from_str(include_str!(concat!(
+fn legacy_policy_v0_yaml() -> &'static str {
+    include_str!(concat!(
         env!("CARGO_MANIFEST_DIR"),
         "/../../tests/test_utils/policy-v0.yaml"
-    )))
-    .expect("test fixture should deserialize as schema v0")
+    ))
+}
+
+#[fixture]
+fn legacy_policy_v0(legacy_policy_v0_yaml: &str) -> PolicyDefinitionV0 {
+    serde_yaml::from_str(legacy_policy_v0_yaml)
+        .expect("test fixture should deserialize as schema v0")
 }
 
 #[rstest]
@@ -75,32 +80,14 @@ fn canonical_policy_audit_has_no_migration_steps() {
 
 #[test]
 fn canonical_audit_hashes_are_stable_for_equivalent_json_orderings() {
-    let first_document = r#"{
-        "schema_version": 1,
-        "policy_name": "ordered",
-        "default_action": "Deny",
-        "strict_mode": true,
-        "budgets": {
-          "max_values": 1,
-          "max_parents_per_value": 1,
-          "max_closure_steps": 1,
-          "max_witness_depth": 1
-        },
-        "tools": []
-    }"#;
-    let second_document = r#"{
-        "tools": [],
-        "budgets": {
-          "max_witness_depth": 1,
-          "max_closure_steps": 1,
-          "max_parents_per_value": 1,
-          "max_values": 1
-        },
-        "strict_mode": true,
-        "default_action": "Deny",
-        "policy_name": "ordered",
-        "schema_version": 1
-    }"#;
+    let first_document = include_str!(concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/../../tests/test_utils/ordered-policy-a.json"
+    ));
+    let second_document = include_str!(concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/../../tests/test_utils/ordered-policy-b.json"
+    ));
 
     let first_policy = PolicyDefinition::from_json_str(first_document)
         .expect("first canonical policy should parse");
@@ -123,13 +110,13 @@ fn canonical_audit_hashes_are_stable_for_equivalent_json_orderings() {
 }
 
 #[rstest]
-fn migration_hashes_change_when_policy_input_changes(legacy_policy_v0: PolicyDefinitionV0) {
+fn migration_hashes_change_when_policy_input_changes(
+    legacy_policy_v0: PolicyDefinitionV0,
+    legacy_policy_v0_yaml: &str,
+) {
     let baseline_policy = legacy_policy_v0;
-    let changed_policy_yaml = include_str!(concat!(
-        env!("CARGO_MANIFEST_DIR"),
-        "/../../tests/test_utils/policy-v0.yaml"
-    ))
-    .replace("personal_assistant_default", "different_policy_name");
+    let changed_policy_yaml =
+        legacy_policy_v0_yaml.replace("personal_assistant_default", "different_policy_name");
     let changed_policy = serde_yaml::from_str::<PolicyDefinitionV0>(&changed_policy_yaml)
         .expect("test fixture should deserialize as schema v0");
 

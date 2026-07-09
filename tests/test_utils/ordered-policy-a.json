@@ -1,0 +1,13 @@
+{
+  "schema_version": 1,
+  "policy_name": "ordered",
+  "default_action": "Deny",
+  "strict_mode": true,
+  "budgets": {
+    "max_values": 1,
+    "max_parents_per_value": 1,
+    "max_closure_steps": 1,
+    "max_witness_depth": 1
+  },
+  "tools": []
+}
