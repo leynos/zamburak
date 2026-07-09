@@ -8,6 +8,7 @@
 TARGET ?= libzamburak.rlib
 
 CARGO ?= cargo
+WHITAKER ?= whitaker
 BUILD_JOBS ?=
 RUST_FLAGS ?= -D warnings
 RUSTDOC_FLAGS ?= -D warnings
@@ -57,9 +58,10 @@ phase-gate: ## Evaluate phase-gate verification suites for configured target
 target/%/$(TARGET): ## Build binary in debug or release mode
 	$(CARGO) build $(BUILD_JOBS) $(if $(findstring release,$(@)),--release)
 
-lint: ## Run Clippy with warnings denied
+lint: ## Run Clippy and the Whitaker Dylint suite with warnings denied
 	RUSTDOCFLAGS="$(RUSTDOC_FLAGS)" $(CARGO) doc --workspace --no-deps
 	$(CARGO) clippy --workspace $(CLIPPY_FLAGS)
+	RUSTFLAGS="$(RUST_FLAGS)" $(WHITAKER) --all -- $(CARGO_FLAGS)
 
 typecheck: script-typecheck ## Run compile-time type checks
 	$(CARGO) check --workspace $(CARGO_FLAGS) $(BUILD_JOBS)
