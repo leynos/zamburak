@@ -314,6 +314,7 @@ const fn compute_phase_gate_status(
 
 #[cfg(test)]
 mod tests {
+    //! Tests for the phase-gate evaluation contract.
     use super::{
         PhaseGateStatus, PhaseGateTarget, evaluate_phase_gate, parse_phase_gate_target,
         required_suites_for_target,

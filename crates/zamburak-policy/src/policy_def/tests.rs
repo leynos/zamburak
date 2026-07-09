@@ -1,13 +1,7 @@
 //! Unit tests for policy schema loading, migration, and fail-closed behaviour.
 
-mod policy_yaml {
-    //! Shared policy fixtures and schema-version helpers for tests.
-
-    include!(concat!(
-        env!("CARGO_MANIFEST_DIR"),
-        "/../../tests/test_utils/policy_yaml.rs"
-    ));
-}
+#[path = "../../../../tests/test_utils/policy_yaml.rs"]
+mod policy_yaml;
 
 use super::{
     CANONICAL_POLICY_SCHEMA_VERSION, PolicyDefinition, PolicyLoadError,

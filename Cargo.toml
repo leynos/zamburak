@@ -51,6 +51,7 @@ zamburak-core = { path = "crates/zamburak-core" }
 zamburak-policy = { path = "crates/zamburak-policy" }
 
 [dev-dependencies]
+anyhow = "1.0"
 backon = { version = "1.6.0", features = ["std-blocking-sleep"] }
 monty = { path = "third_party/full-monty/crates/monty" }
 rstest = "0.26.1"

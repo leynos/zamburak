@@ -2,6 +2,7 @@
 
 use std::sync::{Arc, Mutex};
 
+use anyhow::{Context as _, ensure};
 use monty::{MontyObject, MontyRun, NoLimitTracker, PrintWriter};
 use rstest::fixture;
 use rstest_bdd_macros::{given, scenario, then, when};
@@ -41,7 +42,14 @@ fn take_pending_call(
     }
 }
 
-fn captured_context(world: &GovernedIfcWorld, function_name: &str) -> CallContext {
+/// Fetch the captured call context for `function_name`.
+///
+/// Fixture-style query: failure to find the context is reported as an error
+/// so the calling step can propagate it as the scenario verdict.
+fn captured_context(
+    world: &GovernedIfcWorld,
+    function_name: &str,
+) -> Result<CallContext, anyhow::Error> {
     let contexts = world
         .contexts
         .lock()
@@ -50,7 +58,7 @@ fn captured_context(world: &GovernedIfcWorld, function_name: &str) -> CallContex
         .iter()
         .find(|context| context.function_name == function_name)
         .cloned()
-        .unwrap_or_else(|| panic!("expected named context to be captured"))
+        .context("expected named context to be captured")
 }
 
 #[given("a program whose constant effect call is control-dependent on an external result")]
@@ -134,52 +142,91 @@ fn then_aggregate_integrity(
     world: &GovernedIfcWorld,
     function_name: String,
     integrity: IntegrityArg,
-) {
-    let context = captured_context(world, function_name.trim_matches('"'));
-    assert_eq!(context.ifc.aggregate_summary.integrity_join, integrity.0,);
+) -> Result<(), anyhow::Error> {
+    let context = captured_context(world, function_name.trim_matches('"'))?;
+    ensure!(
+        context.ifc.aggregate_summary.integrity_join == integrity.0,
+        "aggregate integrity mismatch: expected {:?}, got {:?}",
+        integrity.0,
+        context.ifc.aggregate_summary.integrity_join,
+    );
+    Ok(())
 }
 
 #[then("the captured call context for {function_name} has PC integrity {integrity}")]
-fn then_pc_integrity(world: &GovernedIfcWorld, function_name: String, integrity: IntegrityArg) {
-    let context = captured_context(world, function_name.trim_matches('"'));
-    assert_eq!(context.ifc.control_context.pc_integrity(), integrity.0,);
+fn then_pc_integrity(
+    world: &GovernedIfcWorld,
+    function_name: String,
+    integrity: IntegrityArg,
+) -> Result<(), anyhow::Error> {
+    let context = captured_context(world, function_name.trim_matches('"'))?;
+    ensure!(
+        context.ifc.control_context.pc_integrity() == integrity.0,
+        "PC integrity mismatch: expected {:?}, got {:?}",
+        integrity.0,
+        context.ifc.control_context.pc_integrity(),
+    );
+    Ok(())
 }
 
 #[then("the captured call context for {function_name} has first argument integrity {integrity}")]
-fn then_arg_integrity(world: &GovernedIfcWorld, function_name: String, integrity: IntegrityArg) {
-    let context = captured_context(world, function_name.trim_matches('"'));
+fn then_arg_integrity(
+    world: &GovernedIfcWorld,
+    function_name: String,
+    integrity: IntegrityArg,
+) -> Result<(), anyhow::Error> {
+    let context = captured_context(world, function_name.trim_matches('"'))?;
     let expected = integrity.0;
-    match context.ifc.arg_summaries.first() {
-        Some(summary) => assert_eq!(summary.integrity_join, expected),
-        None => panic!("expected at least one argument summary"),
-    }
+    let summary = context
+        .ifc
+        .arg_summaries
+        .first()
+        .context("expected at least one argument summary")?;
+    ensure!(
+        summary.integrity_join == expected,
+        "first argument integrity mismatch: expected {expected:?}, got {:?}",
+        summary.integrity_join,
+    );
+    Ok(())
 }
 
 #[then(
     "the captured call context for {function_name} has aggregate origin-count at least {min_count}"
 )]
-fn then_aggregate_origin_count(world: &GovernedIfcWorld, function_name: String, min_count: u32) {
-    let context = captured_context(world, function_name.trim_matches('"'));
-    assert!(
+fn then_aggregate_origin_count(
+    world: &GovernedIfcWorld,
+    function_name: String,
+    min_count: u32,
+) -> Result<(), anyhow::Error> {
+    let context = captured_context(world, function_name.trim_matches('"'))?;
+    ensure!(
         context.ifc.aggregate_summary.origin_count >= min_count,
         "expected aggregate origin_count >= {min_count}, got {}",
         context.ifc.aggregate_summary.origin_count,
     );
+    Ok(())
 }
 
 #[then(
     "the captured call context for {function_name} has first argument origin-count at least {min_count}"
 )]
-fn then_arg_origin_count(world: &GovernedIfcWorld, function_name: String, min_count: u32) {
-    let context = captured_context(world, function_name.trim_matches('"'));
-    match context.ifc.arg_summaries.first() {
-        Some(summary) => assert!(
-            summary.origin_count >= min_count,
-            "expected first-argument origin_count >= {min_count}, got {}",
-            summary.origin_count,
-        ),
-        None => panic!("expected at least one argument summary"),
-    }
+fn then_arg_origin_count(
+    world: &GovernedIfcWorld,
+    function_name: String,
+    min_count: u32,
+) -> Result<(), anyhow::Error> {
+    let context = captured_context(world, function_name.trim_matches('"'))?;
+    let summary = context
+        .ifc
+        .arg_summaries
+        .first()
+        .context("expected at least one argument summary")?;
+    ensure!(
+        summary.origin_count >= min_count,
+        "expected first-argument origin_count >= {min_count}, got {}",
+        summary.origin_count,
+    );
+    Ok(())
 }
 
 #[scenario(
