@@ -7,8 +7,8 @@ use monty::{MontyObject, MontyRun, NoLimitTracker, PrintWriter};
 use rstest::fixture;
 use rstest_bdd_macros::{given, scenario, then, when};
 use test_utils::governed_run_test_helpers::RecordingMediator;
-use zamburak_core::IntegrityLabel;
 use zamburak_core::propagation::PropagationMode;
+use zamburak_core::{DependencySummary, IntegrityLabel};
 use zamburak_monty::{
     CallContext, GovernedIfcConfig, GovernedRunProgress, GovernedRunner, IfcValueSeedConfig,
 };
@@ -137,20 +137,60 @@ impl std::str::FromStr for IntegrityArg {
     }
 }
 
+/// Fetch the integrity label selected by `extract` from the captured call
+/// context for `function_name`, then check it equals the expected label.
+fn ensure_context_integrity(
+    world: &GovernedIfcWorld,
+    function_name: &str,
+    expected: (IntegrityLabel, &str),
+    extract: impl FnOnce(&CallContext) -> Result<IntegrityLabel, anyhow::Error>,
+) -> Result<(), anyhow::Error> {
+    let context = captured_context(world, function_name.trim_matches('"'))?;
+    let actual = extract(&context)?;
+    let (expected_label, what) = expected;
+    ensure!(
+        actual == expected_label,
+        "{what} integrity mismatch: expected {expected_label:?}, got {actual:?}"
+    );
+    Ok(())
+}
+
+/// Fetch the origin count selected by `extract` from the captured call
+/// context for `function_name`, then check it meets the minimum.
+fn ensure_context_origin_count(
+    world: &GovernedIfcWorld,
+    function_name: &str,
+    expected: (u32, &str),
+    extract: impl FnOnce(&CallContext) -> Result<u32, anyhow::Error>,
+) -> Result<(), anyhow::Error> {
+    let context = captured_context(world, function_name.trim_matches('"'))?;
+    let actual = extract(&context)?;
+    let (min_count, what) = expected;
+    ensure!(
+        actual >= min_count,
+        "expected {what} origin_count >= {min_count}, got {actual}"
+    );
+    Ok(())
+}
+
+/// Fetch the first argument summary or report its absence as an error.
+fn first_arg_summary(context: &CallContext) -> Result<&DependencySummary, anyhow::Error> {
+    context
+        .ifc
+        .arg_summaries
+        .first()
+        .context("expected at least one argument summary")
+}
+
 #[then("the captured call context for {function_name} has aggregate integrity {integrity}")]
 fn then_aggregate_integrity(
     world: &GovernedIfcWorld,
     function_name: String,
     integrity: IntegrityArg,
 ) -> Result<(), anyhow::Error> {
-    let context = captured_context(world, function_name.trim_matches('"'))?;
-    ensure!(
-        context.ifc.aggregate_summary.integrity_join == integrity.0,
-        "aggregate integrity mismatch: expected {:?}, got {:?}",
-        integrity.0,
-        context.ifc.aggregate_summary.integrity_join,
-    );
-    Ok(())
+    ensure_context_integrity(world, &function_name, (integrity.0, "aggregate"), |c| {
+        Ok(c.ifc.aggregate_summary.integrity_join)
+    })
 }
 
 #[then("the captured call context for {function_name} has PC integrity {integrity}")]
@@ -159,14 +199,9 @@ fn then_pc_integrity(
     function_name: String,
     integrity: IntegrityArg,
 ) -> Result<(), anyhow::Error> {
-    let context = captured_context(world, function_name.trim_matches('"'))?;
-    ensure!(
-        context.ifc.control_context.pc_integrity() == integrity.0,
-        "PC integrity mismatch: expected {:?}, got {:?}",
-        integrity.0,
-        context.ifc.control_context.pc_integrity(),
-    );
-    Ok(())
+    ensure_context_integrity(world, &function_name, (integrity.0, "PC"), |c| {
+        Ok(c.ifc.control_context.pc_integrity())
+    })
 }
 
 #[then("the captured call context for {function_name} has first argument integrity {integrity}")]
@@ -175,19 +210,12 @@ fn then_arg_integrity(
     function_name: String,
     integrity: IntegrityArg,
 ) -> Result<(), anyhow::Error> {
-    let context = captured_context(world, function_name.trim_matches('"'))?;
-    let expected = integrity.0;
-    let summary = context
-        .ifc
-        .arg_summaries
-        .first()
-        .context("expected at least one argument summary")?;
-    ensure!(
-        summary.integrity_join == expected,
-        "first argument integrity mismatch: expected {expected:?}, got {:?}",
-        summary.integrity_join,
-    );
-    Ok(())
+    ensure_context_integrity(
+        world,
+        &function_name,
+        (integrity.0, "first argument"),
+        |c| Ok(first_arg_summary(c)?.integrity_join),
+    )
 }
 
 #[then(
@@ -198,13 +226,9 @@ fn then_aggregate_origin_count(
     function_name: String,
     min_count: u32,
 ) -> Result<(), anyhow::Error> {
-    let context = captured_context(world, function_name.trim_matches('"'))?;
-    ensure!(
-        context.ifc.aggregate_summary.origin_count >= min_count,
-        "expected aggregate origin_count >= {min_count}, got {}",
-        context.ifc.aggregate_summary.origin_count,
-    );
-    Ok(())
+    ensure_context_origin_count(world, &function_name, (min_count, "aggregate"), |c| {
+        Ok(c.ifc.aggregate_summary.origin_count)
+    })
 }
 
 #[then(
@@ -215,18 +239,9 @@ fn then_arg_origin_count(
     function_name: String,
     min_count: u32,
 ) -> Result<(), anyhow::Error> {
-    let context = captured_context(world, function_name.trim_matches('"'))?;
-    let summary = context
-        .ifc
-        .arg_summaries
-        .first()
-        .context("expected at least one argument summary")?;
-    ensure!(
-        summary.origin_count >= min_count,
-        "expected first-argument origin_count >= {min_count}, got {}",
-        summary.origin_count,
-    );
-    Ok(())
+    ensure_context_origin_count(world, &function_name, (min_count, "first-argument"), |c| {
+        Ok(first_arg_summary(c)?.origin_count)
+    })
 }
 
 #[scenario(
