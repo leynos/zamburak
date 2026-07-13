@@ -13,13 +13,15 @@ jobs:
     env:
       CARGO_TERM_COLOR: always
       BUILD_PROFILE: debug
+      CS_ACCESS_TOKEN: ${{ secrets.CS_ACCESS_TOKEN || '' }}
+      CODESCENE_CLI_SHA256: ${{ vars.CODESCENE_CLI_SHA256 || '' }}
     steps:
       - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8
         with:
           fetch-depth: 0
           submodules: recursive
       - name: Setup Rust
-        uses: leynos/shared-actions/.github/actions/setup-rust@f9f1c863c8a5bef64aa6779caa746e1a4a6c1ad4
+        uses: leynos/shared-actions/.github/actions/setup-rust@927edd45ae77be4251a8a18ca9eb5613a2e32cbd
       - name: Monty fork review policy
         if: ${{ github.event_name == 'pull_request' }}
         run: |
@@ -82,19 +84,23 @@ jobs:
       - name: Workflow contract tests
         run: make test-workflow-contracts
       - name: Test and Measure Coverage
-        uses: leynos/shared-actions/.github/actions/generate-coverage@1213d7874aa42ff034587d9385f35178d51e1f65
+        uses: leynos/shared-actions/.github/actions/generate-coverage@927edd45ae77be4251a8a18ca9eb5613a2e32cbd
         with:
           output-path: lcov.info
           format: lcov
-      - name: Upload coverage data to CodeScene
-        env:
-          CS_ACCESS_TOKEN: ${{ secrets.CS_ACCESS_TOKEN }}
-        if: ${{ env.CS_ACCESS_TOKEN }}
-        uses: leynos/shared-actions/.github/actions/upload-codescene-coverage@feeb29c2be7b343cb62b0ffcb1cca176eb5b4db9
-        with:
-          format: lcov
-          access-token: ${{ env.CS_ACCESS_TOKEN }}
-          installer-checksum: ${{ vars.CODESCENE_CLI_SHA256 }}
+          use-cargo-nextest: 'false'
+          with-ratchet: 'true'
+      # The `mode: check` step is deliberately not wired in yet: this
+      # repository's CodeScene project (76771) has not been confirmed
+      # to carry a coverage-gates configuration, and every other
+      # project surveyed during this rollout (ddlint 69278, chutoro
+      # 71838) lacked one, failing `cs-coverage check` unconditionally
+      # with "HTTP call succeeded, but the received project-config
+      # isn't valid. Lacks the gates configuration." — a CodeScene-side
+      # per-project setting, not a CI defect. Add the check step in a
+      # fast-follow PR once coverage-main.yml has uploaded to main at
+      # least once and the gate is confirmed to resolve, or once
+      # CodeScene confirms the project's coverage gate is enabled.
 
   phase-gate:
     runs-on: ubuntu-latest
@@ -109,6 +115,6 @@ jobs:
           fetch-depth: 0
           submodules: recursive
       - name: Setup Rust
-        uses: leynos/shared-actions/.github/actions/setup-rust@f9f1c863c8a5bef64aa6779caa746e1a4a6c1ad4
+        uses: leynos/shared-actions/.github/actions/setup-rust@927edd45ae77be4251a8a18ca9eb5613a2e32cbd
       - name: Evaluate phase-gate suites
         run: make phase-gate
