@@ -128,7 +128,7 @@ consistency reveals no remaining drift.
   with actual repository contents (Tables 10, 11, 12, 13, 14).
 - [x] (2026-02-22 00:25Z) Stage F: all eight quality gates passed.
 - [x] (2026-02-22 00:27Z) Stage G: marked roadmap Task 1.2.1 done and
-  finalised this ExecPlan.
+  finalized this ExecPlan.
 
 ## Surprises & discoveries
 
@@ -160,7 +160,7 @@ consistency reveals no remaining drift.
 ## Decision log
 
 - Decision: this task is primarily a documentation-and-configuration
-  synchronisation effort, not a feature implementation. Rationale: the
+  synchronization effort, not a feature implementation. Rationale: the
   completion criterion is "baseline versions and gate commands are consistent
   across config and documentation", which means aligning existing files rather
   than introducing new behaviour. Date/Author: 2026-02-22 / Codex.
@@ -203,7 +203,7 @@ consistency reveals no remaining drift.
 
 - Decision: do not update `docs/users-guide.md` for Task 1.2.1. Rationale:
   this task changes build tooling configuration and documentation
-  synchronisation, not public Rust API behaviour consumed by library users.
+  synchronization, not public Rust API behaviour consumed by library users.
   Date/Author: 2026-02-22 / Codex.
 
 ## Outcomes & retrospective
@@ -495,7 +495,7 @@ Run the full gate suite to confirm all changes are clean:
 
 Go/no-go for Stage F: all eight commands exit zero.
 
-Stage G: roadmap closure and ExecPlan finalisation.
+Stage G: roadmap closure and ExecPlan finalization.
 
 1. Mark Task 1.2.1, "Align toolchain and quality-gate baseline", as done in
    `docs/roadmap.md` by changing its checkbox from `- [ ]` to `- [x]`.

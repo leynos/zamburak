@@ -3,7 +3,7 @@
 # requires-python = ">=3.13"
 # dependencies = ["cuprum==0.1.0"]
 # ///
-"""Synchronise `full-monty` and run repository verification gates.
+"""Synchronize `full-monty` and run repository verification gates.
 
 The script initializes and refreshes `third_party/full-monty`, fast-forwards
 the fork branch against upstream, stages the submodule pointer update, and runs

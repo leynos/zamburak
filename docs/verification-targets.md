@@ -80,7 +80,7 @@ Phase-gate checks are enforced in repository CI as follows:
 - `.github/phase-gate-target.txt` declares the target phase currently permitted
   for advancement.
 - `make phase-gate` evaluates required suites for that target by:
-  - checking that mandated suites are present in the test catalog produced by
+  - checking that mandated suites are present in the test catalogue produced by
     `cargo test --workspace --all-targets --all-features -- --list`,
   - executing mandated suites by their configured test filters.
 - `.github/workflows/ci.yml` runs `make phase-gate` in the merge-blocking

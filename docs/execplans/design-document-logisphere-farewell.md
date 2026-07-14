@@ -313,7 +313,7 @@ If a quality gate fails, fix only the reported issue, rerun the failed command,
 then rerun the full documentation gate sequence. Do not proceed to commit until
 all gates pass.
 
-## Artifacts and Notes
+## Artefacts and Notes
 
 Expected output evidence to collect during execution:
 

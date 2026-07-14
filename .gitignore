@@ -1,5 +1,9 @@
 target/
 __pycache__/
+.typos-oxendict-base.json
+.typos-oxendict-base.toml
+.uv-cache/
+.uv-tools/
 **/*.rs.bk
 *.swp
 .grepai/

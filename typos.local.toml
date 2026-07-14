@@ -1,0 +1,36 @@
+# Repository-specific external names, machine literals and stable diagnostics.
+
+schema = 1
+
+[oxford]
+stems = []
+
+[words]
+accepted = []
+
+[words.corrections]
+
+[patterns]
+ignore = [
+  # Astroid is the upstream package and API spelling.
+  '(?m)^# dependencies = \["astroid"\]$',
+  '(?m)^\t--with cmd-mox --with astroid --with cuprum==0\.1\.0 \\$',
+  '(?m)^    from astroid import nodes$',
+  '(?m)^        import astroid$',
+  '(?m)^        from astroid import nodes$',
+  '(?m)^        tree = astroid\.parse\(script_text\)$',
+  '(?m)^    except astroid\.AstroidSyntaxError:$',
+  # Cargo and GitHub workflow values are machine interfaces.
+  '(?m)^      CARGO_TERM_COLOR: always$',
+  '(?m)^    types: \[opened, reopened, synchronize, labeled, ready_for_review\]$',
+  # Preserve the complete formal publication title.
+  '(?m)^\[\^19\]: Command Query Responsibility Segregation pattern — Azure Architecture\n       Center \| Microsoft Learn,$',
+  # These public Display strings are existing compatibility-sensitive output.
+  "(?m)^        write!\\(f, \"unrecognised integrity label '\\{\\}'\", self\\.label\\)$",
+  "(?m)^        write!\\(f, \"unrecognised data label '\\{\\}'\", self\\.label\\)$",
+]
+
+[files]
+exclude = [
+  "**/__pycache__/**",
+]

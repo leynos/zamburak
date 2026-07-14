@@ -61,10 +61,10 @@ impl IntegrityLabel {
     }
 }
 
-/// Error returned when an unrecognised integrity label string is parsed.
+/// Error returned when an unrecognized integrity label string is parsed.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct ParseIntegrityLabelError {
-    /// The unrecognised input string.
+    /// The unrecognized input string.
     pub label: String,
 }
 
@@ -137,10 +137,10 @@ impl DataLabel {
     }
 }
 
-/// Error returned when an unrecognised data label string is parsed.
+/// Error returned when an unrecognized data label string is parsed.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct ParseDataLabelError {
-    /// The unrecognised input string.
+    /// The unrecognized input string.
     pub label: String,
 }
 

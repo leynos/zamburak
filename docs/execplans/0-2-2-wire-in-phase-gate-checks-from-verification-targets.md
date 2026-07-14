@@ -357,7 +357,7 @@ Evidence to capture during implementation:
 
 Prescriptive interface goals for this task:
 
-- A stable command surface for gate execution, invokable from CI and local
+- A stable command surface for gate execution, invocable from CI and local
   runs (through `make` target(s)).
 - A Rust phase-gate evaluator API that returns structured outcomes rather than
   string parsing, so tests can assert deterministic semantics.

@@ -1,6 +1,6 @@
 """Shared fixtures for script baseline validation tests.
 
-This module centralises test-fixture helpers used by both unit and behavioural
+This module centralizes test-fixture helpers used by both unit and behavioural
 script-baseline suites, including temporary scripts-root setup and convenience
 file writers.
 

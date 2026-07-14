@@ -407,7 +407,7 @@ Acceptance is behaviour-based and must be demonstrable:
   safely.
 - Script must not issue destructive git commands against user changes.
 
-## Artifacts and notes
+## Artefacts and notes
 
 Evidence snippets captured during implementation:
 

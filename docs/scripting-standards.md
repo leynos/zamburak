@@ -195,7 +195,7 @@ allowlisted `Program` values, run via `run_sync()`/`run()`, and inspect
   pre-declared. This keeps command intent explicit and supports project-wide
   auditing.
 - Manual allowlist: use `frozenset([PROGRAM, ...])` for ad‑hoc scoping or when
-  mixing catalogued and uncatalogued programs.
+  mixing catalogued and uncataloged programs.
 - Enforcement: executing a non-allowlisted program raises an exception and
   fails fast.
 - Migration note: this is a breaking behaviour change from Plumbum, where
@@ -617,3 +617,22 @@ The repository enforces script baseline contracts through two Make targets:
 
 This document should be referenced when introducing or updating automation
 scripts to maintain a consistent developer experience across the repository.
+
+## Spelling policy
+
+`make markdownlint` enforces en-GB-oxendict spelling through the pinned
+`typos` release. The tracked `typos.toml` is deterministic output assembled
+from the shared estate dictionary and the narrow repository policy in
+`typos.local.toml`; never edit generated entries by hand.
+
+`make spelling-config-write` invokes the exact, commit-pinned
+`typos-config-builder` CLI to refresh the untracked shared-dictionary cache
+when its authority is newer and render the configuration. Use
+`make spelling-config` to verify cache and generated-config drift. The builder
+only refreshes, parses, merges and renders spelling policy. Harvesting, Typos
+execution, phrase enforcement and Mermaid validation remain consumer-owned.
+
+The consumer phrase checker rejects punctuation-sensitive shared corrections
+to forms such as `handwritten` in tracked UTF-8 text. Repository exceptions
+belong in the local overlay as anchored exact or full-line patterns rather than
+bare accepted words.

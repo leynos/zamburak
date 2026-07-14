@@ -83,10 +83,10 @@ fn main() -> ExitCode {
 fn run() -> Result<(), PhaseGateCliError> {
     let cli_args = parse_cli_args(env::args().skip(1).collect())?;
     let target = resolve_target(&cli_args)?;
-    let test_catalog = list_available_tests()?;
+    let test_catalogue = list_available_tests()?;
     let mut failing_suite_ids = BTreeSet::new();
 
-    let initial_report = evaluate_phase_gate(target, &test_catalog, &failing_suite_ids);
+    let initial_report = evaluate_phase_gate(target, &test_catalogue, &failing_suite_ids);
     if initial_report.status == PhaseGateStatus::MissingSuites {
         emit_failure_report(&initial_report);
         return Err(PhaseGateCliError::GateBlocked);
@@ -98,7 +98,7 @@ fn run() -> Result<(), PhaseGateCliError> {
         }
     }
 
-    let final_report = evaluate_phase_gate(target, &test_catalog, &failing_suite_ids);
+    let final_report = evaluate_phase_gate(target, &test_catalogue, &failing_suite_ids);
     emit_report(&final_report);
     if final_report.status == PhaseGateStatus::Passed {
         Ok(())

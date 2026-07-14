@@ -66,6 +66,8 @@ jobs:
         run: |
           python3 -m pip install --user uv==0.10.2
           echo "${HOME}/.local/bin" >> "${GITHUB_PATH}"
+      - name: Enforce en-GB-oxendict spelling
+        run: make spelling
       - name: Format
         run: make check-fmt
       - name: Markdown lint
@@ -75,6 +77,8 @@ jobs:
             **/*.md
             !**/target/**
             !**/dist/**
+            !**/.uv-cache/**
+            !**/.uv-tools/**
       - name: Script baseline
         run: make script-baseline
       - name: Script tests
@@ -90,6 +94,16 @@ jobs:
           format: lcov
           use-cargo-nextest: 'false'
           with-ratchet: 'true'
+      - name: Set up Rust for Merman
+        uses: dtolnay/rust-toolchain@e97e2d8cc328f1b50210efc529dca0028893a2d9 # master
+        with:
+          toolchain: '1.95.0'
+      - name: Install Mermaid validation tools
+        run: |
+          uv tool install nixie-cli==1.1.0
+          cargo +1.95.0 install merman-cli --version '=0.7.0' --locked
+      - name: Validate Mermaid diagrams
+        run: make nixie
       # The `mode: check` step is deliberately not wired in yet: this
       # repository's CodeScene project (76771) has not been confirmed
       # to carry a coverage-gates configuration, and every other

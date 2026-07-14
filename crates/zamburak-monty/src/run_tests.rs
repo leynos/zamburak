@@ -273,7 +273,7 @@ fn resumed_external_return_provenance_flows_into_following_effect() {
 }
 
 #[rstest]
-fn policy_mediator_honors_governed_runner_caller_authority() {
+fn policy_mediator_honours_governed_runner_caller_authority() {
     let policy_yaml = r#"
 schema_version: 1
 policy_name: test_policy
