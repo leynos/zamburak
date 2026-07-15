@@ -322,7 +322,7 @@ only the new snapshot fields and re-run the Stage B tests to re-establish the
 red state before proceeding. If the submodule is uninitialized, rerun
 `git submodule update --init --recursive` before searching for files.
 
-## Artifacts and notes
+## Artefacts and notes
 
 Expected BDD probe output includes the new suite name and a green result. For
 example:

@@ -150,7 +150,7 @@ tests plus the new IFC unit, property, and behavioural tests. Running
   `crates/zamburak-core/src/dependency_graph.rs` (`check_reachable` method)
   with cycle-detection errors defined in
   `crates/zamburak-core/src/ifc_errors.rs` (`CycleDetected`,
-  `ClosureStepBudgetExhausted`). Tests exercising this behavior are in
+  `ClosureStepBudgetExhausted`). Tests exercising this behaviour are in
   `crates/zamburak-core/src/dependency_graph_tests.rs`
   (`add_dependency_cycle_rejected`,
   `add_dependency_reachability_budget_exhaustion`). Date/Author: 2026-03-22 /
@@ -566,7 +566,7 @@ and attempting to add a duplicate edge returns `IfcError::DuplicateEdge`. These
 are explicit errors, not no-ops. If a step fails, fix the issue and re-run the
 gate from the repository root.
 
-## Artifacts and notes
+## Artefacts and notes
 
 Evidence to capture during implementation:
 

@@ -1,5 +1,11 @@
 target/
 __pycache__/
+*.py[cod]
+*$py.class
+.typos-oxendict-base.json
+.typos-oxendict-base.toml
+.uv-cache/
+.uv-tools/
 **/*.rs.bk
 *.swp
 .grepai/

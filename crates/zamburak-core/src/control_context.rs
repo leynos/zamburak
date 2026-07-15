@@ -35,7 +35,7 @@ pub struct EffectCounters {
 }
 
 impl EffectCounters {
-    /// Create a zero-initialised counter set.
+    /// Create a zero-initialized counter set.
     #[must_use]
     pub fn new() -> Self {
         Self::default()

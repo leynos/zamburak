@@ -280,7 +280,7 @@ Stage C: conformance and behavioural proof.
   and asserting non-weakening of key decision defaults.
 
 Go/no-go for Stage C: compatibility and security suites pass and provide clear
-evidence artifacts for migration correctness and auditability.
+evidence artefacts for migration correctness and auditability.
 
 Stage D: documentation, roadmap closure, and quality gates.
 

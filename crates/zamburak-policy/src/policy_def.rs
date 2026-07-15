@@ -128,7 +128,7 @@ pub struct PolicyDefinition {
     pub tools: Vec<ToolPolicy>,
 }
 
-/// Generate a loader function with migration audit for a given serialisation format.
+/// Generate a loader function with migration audit for a given serialization format.
 macro_rules! define_loader_with_migration_audit {
     (
         fn_name: $fn_name:ident,

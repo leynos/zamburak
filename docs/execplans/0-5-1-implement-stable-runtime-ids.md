@@ -341,7 +341,7 @@ Quality criteria:
 - If a gate fails, fix one failure class at a time and rerun only the affected
   focused tests before rerunning full gates.
 
-## Artifacts and notes
+## Artefacts and notes
 
 Expected evidence snippets at completion:
 

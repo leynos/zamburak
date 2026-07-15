@@ -145,7 +145,7 @@ def test_run_monty_sync_no_revision_change_logs_already_current_and_runs_gates(
 def test_run_monty_sync_initializes_submodule_before_submodule_operations(
     tmp_path: Path,
 ) -> None:
-    """Verify submodule initialisation occurs before submodule-scoped commands."""
+    """Verify submodule initialization occurs before submodule-scoped commands."""
     config = build_config(tmp_path)
     rev = "1111111111111111111111111111111111111111"
     runner = AnyOrderRunner(

@@ -116,7 +116,7 @@ def invocation(
     Returns
     -------
     CommandInvocation
-        Normalised invocation object for use in command stubs.
+        Normalized invocation object for use in command stubs.
     """
     cwd = config.submodule_root if submodule else config.repo_root
     return CommandInvocation(program=program, args=args, cwd=cwd)
@@ -462,11 +462,11 @@ def post_sync_stubs(
     tuple[CommandStub, ...]
         Stubs for post-sync revision capture and ``git add`` pointer staging.
     """
-    normalised_new_revision = new_revision.rstrip("\n")
+    normalized_new_revision = new_revision.rstrip("\n")
     return (
         CommandStub(
             invocation(config, program="git", args=("rev-parse", "HEAD"), submodule=True),
-            successful_outcome(f"{normalised_new_revision}\n"),
+            successful_outcome(f"{normalized_new_revision}\n"),
         ),
         CommandStub(
             invocation(config, program="git", args=("add", config.submodule_path.as_posix())),

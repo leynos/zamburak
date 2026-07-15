@@ -47,7 +47,7 @@ pub enum IfcError {
     ///
     /// Note: `summary::compute_summary` does NOT return this error; instead it
     /// returns `Ok(DependencySummary::unknown_top())` on budget exhaustion as
-    /// part of its fail-closed conservative behavior.
+    /// part of its fail-closed conservative behaviour.
     #[error(
         "closure step budget exhausted: \
          {steps} steps taken, limit is {limit}"
