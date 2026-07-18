@@ -2,6 +2,8 @@
 
 use rstest::rstest;
 
+use std::str::FromStr;
+
 use crate::AuthorityCapability;
 
 use super::{AuthoritySet, DataLabel, DataLabels, IntegrityLabel};
@@ -136,6 +138,43 @@ fn data_labels_subset_check() {
 
     assert!(small.is_subset_of(&large));
     assert!(!large.is_subset_of(&small));
+}
+
+#[test]
+fn data_labels_iter_visits_every_member() {
+    let labels = DataLabels::from_iter([DataLabel::Pii, DataLabel::AuthSecret]);
+
+    let mut seen: Vec<DataLabel> = labels.iter().copied().collect();
+    seen.sort_by_key(|label| format!("{label:?}"));
+
+    let mut expected = vec![DataLabel::Pii, DataLabel::AuthSecret];
+    expected.sort_by_key(|label| format!("{label:?}"));
+
+    assert_eq!(seen, expected);
+}
+
+// ---------------------------------------------------------------------------
+// Parse error Display
+// ---------------------------------------------------------------------------
+
+#[test]
+fn parse_integrity_label_error_display_reports_the_offending_input() {
+    let error = IntegrityLabel::from_str("not-a-real-label").expect_err("must fail closed");
+
+    assert_eq!(
+        error.to_string(),
+        "unrecognised integrity label 'not-a-real-label'"
+    );
+}
+
+#[test]
+fn parse_data_label_error_display_reports_the_offending_input() {
+    let error = DataLabel::from_str("not-a-real-label").expect_err("must fail closed");
+
+    assert_eq!(
+        error.to_string(),
+        "unrecognised data label 'not-a-real-label'"
+    );
 }
 
 // ---------------------------------------------------------------------------

@@ -300,6 +300,19 @@ Ok::<(), PolicyLoadError>(())"###
         }
     }
 }
+
 mod loading;
 mod schema;
+
+pub use schema::{
+    ArgRule, ContextRules, PolicyAction, PolicyBudgets, PolicyLoadError, SideEffectClass,
+    ToolPolicy,
+};
+
+use loading::{
+    MigrationLoadParsers, SchemaVersionProbe, load_with_migration_audit,
+    parse_canonical_json_policy, parse_canonical_yaml_policy,
+};
+
+#[cfg(test)]
 mod tests;

@@ -4,8 +4,8 @@
 mod policy_yaml;
 
 use super::{
-    CANONICAL_POLICY_SCHEMA_VERSION, PolicyDefinition, PolicyLoadError,
-    PolicyLoadError::UnsupportedSchemaVersion, PolicyLoadOutcome, SchemaVersion,
+    BudgetLimit, CANONICAL_POLICY_SCHEMA_VERSION, PolicyAction, PolicyBudgets, PolicyDefinition,
+    PolicyLoadError, PolicyLoadError::UnsupportedSchemaVersion, PolicyLoadOutcome, SchemaVersion,
 };
 use rstest::rstest;
 
@@ -178,4 +178,46 @@ fn rejects_invalid_policy_shapes(
         PolicyDefinition::from_yaml_str(&invalid_policy_yaml).expect_err(expectation_message);
 
     assert!(matches!(error, PolicyLoadError::InvalidYaml(_)));
+}
+
+/// Budget value used throughout [`ensure_canonical_schema_version_rejects_mismatched_version`].
+const SINGLE_UNIT_BUDGET: BudgetLimit = BudgetLimit::new(1);
+
+#[test]
+fn ensure_canonical_schema_version_rejects_mismatched_version() {
+    let mismatched_schema_version =
+        SchemaVersion::new(CANONICAL_POLICY_SCHEMA_VERSION.as_u64() + 1);
+    let policy = PolicyDefinition {
+        schema_version: mismatched_schema_version,
+        policy_name: "mismatched".to_owned(),
+        default_action: PolicyAction::Deny,
+        strict_mode: true,
+        budgets: PolicyBudgets {
+            max_values: SINGLE_UNIT_BUDGET,
+            max_parents_per_value: SINGLE_UNIT_BUDGET,
+            max_closure_steps: SINGLE_UNIT_BUDGET,
+            max_witness_depth: SINGLE_UNIT_BUDGET,
+        },
+        tools: Vec::new(),
+    };
+
+    // Exercise `BudgetLimit::as_u64` directly before `policy` is consumed below.
+    assert_eq!(policy.budgets.max_values.as_u64(), 1);
+
+    let error = policy
+        .ensure_canonical_schema_version()
+        .expect_err("mismatched schema version must fail closed");
+
+    assert!(matches!(
+        error,
+        UnsupportedSchemaVersion { found, expected }
+            if found == mismatched_schema_version && expected == CANONICAL_POLICY_SCHEMA_VERSION
+    ));
+    assert_eq!(
+        error.to_string(),
+        format!(
+            "unsupported policy schema_version `{mismatched_schema_version}`; only \
+             `{CANONICAL_POLICY_SCHEMA_VERSION}` is accepted"
+        )
+    );
 }
