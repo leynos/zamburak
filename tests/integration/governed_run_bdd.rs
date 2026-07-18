@@ -2,6 +2,7 @@
 
 use std::sync::{Arc, Mutex};
 
+use anyhow::{Context as _, anyhow, ensure};
 use monty::{MontyObject, MontyRun, NoLimitTracker, PrintWriter};
 use rstest::fixture;
 use rstest_bdd_macros::{given, scenario, then, when};
@@ -94,21 +95,30 @@ fn when_run_with_inputs(world: &mut GovernedRunWorld, a: i64, b: i64) {
 }
 
 #[when("the host resumes the pending external call with integer result {value:i64}")]
-fn when_resume_pending_call(world: &mut GovernedRunWorld, value: i64) {
-    let suspended = take_pending_call(world);
+fn when_resume_pending_call(world: &mut GovernedRunWorld, value: i64) -> Result<(), anyhow::Error> {
+    let suspended = take_pending_call(world)?;
     world.result = Some(suspended.resume(MontyObject::Int(value), PrintWriter::Stdout));
+    Ok(())
 }
 
 // ── Then steps ───────────────────────────────────────────────────────
 
-/// Helper: assert the run completed with a specific [`MontyObject`] value.
-fn assert_complete_with_value(world: &GovernedRunWorld, expected: &MontyObject) {
-    let result = require_result(world);
+/// Helper: check the run completed with a specific [`MontyObject`] value,
+/// reporting mismatches as errors the calling step propagates.
+fn assert_complete_with_value(
+    world: &GovernedRunWorld,
+    expected: &MontyObject,
+) -> Result<(), anyhow::Error> {
+    let result = require_result(world)?;
     match result {
         Ok(GovernedRunProgress::Complete(value)) => {
-            assert_eq!(value, expected, "expected Complete({expected:?})");
+            ensure!(
+                value == expected,
+                "expected Complete({expected:?}), got Complete({value:?})"
+            );
+            Ok(())
         }
-        other => panic!("expected Complete({expected:?}), got {other:?}"),
+        other => Err(anyhow!("expected Complete({expected:?}), got {other:?}")),
     }
 }
 
@@ -116,51 +126,58 @@ fn assert_complete_with_value(world: &GovernedRunWorld, expected: &MontyObject) 
 /// `function_name` equal to `expected_fn_name`.
 ///
 /// `extract` returns `Some(&str)` when the progress is the expected variant,
-/// and `None` otherwise. `variant_label` appears only in panic messages.
+/// and `None` otherwise. `variant_label` appears only in error messages.
 fn assert_progress_function_name<'a, F>(
     world: &'a GovernedRunWorld,
     expected_fn_name: &str,
     variant_label: &str,
     extract: F,
-) where
+) -> Result<(), anyhow::Error>
+where
     F: FnOnce(&'a GovernedRunProgress<NoLimitTracker>) -> Option<&'a str>,
 {
-    let result = require_result(world);
+    let result = require_result(world)?;
     let progress = match result {
         Ok(p) => p,
-        other => panic!("expected {variant_label} for \"{expected_fn_name}\", got {other:?}"),
+        other => {
+            return Err(anyhow!(
+                "expected {variant_label} for \"{expected_fn_name}\", got {other:?}"
+            ));
+        }
     };
-    match extract(progress) {
-        Some(fn_name) => assert_eq!(
-            fn_name, expected_fn_name,
-            "{variant_label} function name mismatch"
-        ),
-        None => panic!("expected {variant_label} for \"{expected_fn_name}\", got {progress:?}"),
-    }
+    let fn_name = extract(progress).with_context(|| {
+        format!("expected {variant_label} for \"{expected_fn_name}\", got {progress:?}")
+    })?;
+    ensure!(
+        fn_name == expected_fn_name,
+        "{variant_label} function name mismatch: expected \"{expected_fn_name}\", got \"{fn_name}\""
+    );
+    Ok(())
 }
 
 #[then("the result is Complete with integer value {expected:i64}")]
-fn then_complete_int(world: &GovernedRunWorld, expected: i64) {
-    assert_complete_with_value(world, &MontyObject::Int(expected));
+fn then_complete_int(world: &GovernedRunWorld, expected: i64) -> Result<(), anyhow::Error> {
+    assert_complete_with_value(world, &MontyObject::Int(expected))
 }
 
 #[then("the result is Complete with string value {expected}")]
-fn then_complete_string(world: &GovernedRunWorld, expected: String) {
+fn then_complete_string(world: &GovernedRunWorld, expected: String) -> Result<(), anyhow::Error> {
     let expected_str = expected.trim_matches('"').to_owned();
-    assert_complete_with_value(world, &MontyObject::String(expected_str));
+    assert_complete_with_value(world, &MontyObject::String(expected_str))
 }
 
 #[then("the result is Complete")]
-fn then_complete(world: &GovernedRunWorld) {
-    let result = require_result(world);
-    assert!(
+fn then_complete(world: &GovernedRunWorld) -> Result<(), anyhow::Error> {
+    let result = require_result(world)?;
+    ensure!(
         matches!(result, Ok(GovernedRunProgress::Complete(_))),
         "expected Complete, got {result:?}"
     );
+    Ok(())
 }
 
 #[then("the result is Denied for function {name}")]
-fn then_denied(world: &GovernedRunWorld, name: String) {
+fn then_denied(world: &GovernedRunWorld, name: String) -> Result<(), anyhow::Error> {
     let expected = name.trim_matches('"').to_owned();
     assert_progress_function_name(world, &expected, "Denied", |p| {
         if let GovernedRunProgress::Denied { function_name, .. } = p {
@@ -168,11 +185,11 @@ fn then_denied(world: &GovernedRunWorld, name: String) {
         } else {
             None
         }
-    });
+    })
 }
 
 #[then("the result is ExternalCallPending for function {name}")]
-fn then_external_call_pending(world: &GovernedRunWorld, name: String) {
+fn then_external_call_pending(world: &GovernedRunWorld, name: String) -> Result<(), anyhow::Error> {
     let expected = name.trim_matches('"').to_owned();
     assert_progress_function_name(world, &expected, "ExternalCallPending", |p| {
         if let GovernedRunProgress::ExternalCallPending { context, .. } = p {
@@ -180,21 +197,25 @@ fn then_external_call_pending(world: &GovernedRunWorld, name: String) {
         } else {
             None
         }
-    });
+    })
 }
 
 #[then("the denial reason mentions {fragment}")]
-fn then_denial_reason_contains(world: &GovernedRunWorld, fragment: String) {
+fn then_denial_reason_contains(
+    world: &GovernedRunWorld,
+    fragment: String,
+) -> Result<(), anyhow::Error> {
     let expected_fragment = fragment.trim_matches('"');
-    let result = require_result(world);
+    let result = require_result(world)?;
     match result {
         Ok(GovernedRunProgress::Denied { reason, .. }) => {
-            assert!(
+            ensure!(
                 reason.contains(expected_fragment),
                 "expected reason to contain \"{expected_fragment}\", got: {reason}"
             );
+            Ok(())
         }
-        other => panic!("expected Denied, got {other:?}"),
+        other => Err(anyhow!("expected Denied, got {other:?}")),
     }
 }
 
@@ -252,25 +273,24 @@ fn build_monty_run(source: &str, input_names: Vec<String>) -> MontyRun {
     }
 }
 
+/// Fixture-style query returning the stored run outcome, reporting a missing
+/// run step as an error the calling step propagates.
 fn require_result(
     world: &GovernedRunWorld,
-) -> &Result<GovernedRunProgress<NoLimitTracker>, zamburak_monty::GovernedRunError> {
-    world
-        .result
-        .as_ref()
-        .unwrap_or_else(|| panic!("run step must execute first"))
+) -> Result<
+    &Result<GovernedRunProgress<NoLimitTracker>, zamburak_monty::GovernedRunError>,
+    anyhow::Error,
+> {
+    world.result.as_ref().context("run step must execute first")
 }
 
 fn take_pending_call(
     world: &mut GovernedRunWorld,
-) -> zamburak_monty::SuspendedCall<NoLimitTracker> {
-    let result = world
-        .result
-        .take()
-        .unwrap_or_else(|| panic!("run step must execute first"));
+) -> Result<zamburak_monty::SuspendedCall<NoLimitTracker>, anyhow::Error> {
+    let result = world.result.take().context("run step must execute first")?;
     match result {
-        Ok(GovernedRunProgress::ExternalCallPending { suspended, .. }) => suspended,
-        other => panic!("expected ExternalCallPending, got {other:?}"),
+        Ok(GovernedRunProgress::ExternalCallPending { suspended, .. }) => Ok(suspended),
+        other => Err(anyhow!("expected ExternalCallPending, got {other:?}")),
     }
 }
 

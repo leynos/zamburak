@@ -74,6 +74,28 @@ fn context_rule_denies_on_pc_integrity_match(#[case] label: &str) {
 }
 
 #[test]
+fn context_rule_falls_through_when_pc_integrity_does_not_match() {
+    let yaml = concat!(
+        "  - tool: llm_api_call\n",
+        "    side_effect_class: ExternalWrite\n",
+        "    context_rules:\n",
+        "      deny_if_pc_integrity_contains:\n",
+        "        - Verified\n",
+        "    default_decision: Allow"
+    );
+    let engine = minimal_policy_with_tools(yaml);
+    // The context rule only lists a recognised label ("Verified") that does
+    // not match the input's actual ("Untrusted") PC integrity, so the rule
+    // must not fire and evaluation should fall through to the tool's
+    // default decision.
+    let input = make_input("llm_api_call", vec![], control_context_with_untrusted_pc());
+    assert!(matches!(
+        engine.evaluate_external_call(&input),
+        ExternalCallPolicyDecision::Allow(_)
+    ));
+}
+
+#[test]
 fn arg_rule_requires_integrity_denies_when_missing() {
     let engine = minimal_policy_with_tools(concat!(
         "  - tool: file_write\n",

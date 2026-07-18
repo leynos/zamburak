@@ -1,0 +1,11 @@
+{
+  "rule_sets": [
+    {
+      "matching_content_path": "tests/integration/**",
+      "matching_content_path_doc": "BDD step definitions are necessarily structurally similar (fetch context, extract, ensure); function-similarity duplication is a false positive for parameterised rstest-bdd steps.",
+      "rules": [
+        { "name": "Code Duplication", "weight": 0.0 }
+      ]
+    }
+  ]
+}

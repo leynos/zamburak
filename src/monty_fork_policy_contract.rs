@@ -163,6 +163,7 @@ fn is_api_surface_line(line: &str) -> bool {
 
 #[cfg(test)]
 mod tests {
+    //! Tests for the monty fork review policy contract.
     use rstest::rstest;
 
     use super::{

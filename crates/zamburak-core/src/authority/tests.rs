@@ -2,9 +2,9 @@
 
 use super::test_helpers::*;
 use super::{
-    AuthorityLifecycleError, AuthorityToken, DelegationRequest, InvalidAuthorityReason,
-    IssuerTrust, RevocationIndex, ScopeResource, TokenTimestamp, revalidate_tokens_on_restore,
-    validate_tokens_at_policy_boundary,
+    AuthorityLifecycleError, AuthorityScope, AuthorityToken, DelegationRequest,
+    InvalidAuthorityReason, IssuerTrust, RevocationIndex, ScopeResource, TokenTimestamp,
+    revalidate_tokens_on_restore, validate_tokens_at_policy_boundary,
 };
 use rstest::rstest;
 
@@ -302,4 +302,35 @@ fn grants_respects_subject_capability_and_scope(
     let out = ScopeResource::try_from("calendar_write")?;
     assert!(!valid.grants(&subj, &cap, &out));
     Ok(())
+}
+
+#[rstest]
+fn token_issuer_accessor_returns_the_minting_issuer(
+    token_valid: Result<AuthorityToken, AuthorityLifecycleError>,
+) -> Result<(), AuthorityLifecycleError> {
+    let valid = token_valid?;
+    assert_eq!(valid.issuer().as_str(), TEST_ISSUER);
+    Ok(())
+}
+
+#[rstest]
+fn authority_scope_new_rejects_an_empty_resource_set() {
+    let error = AuthorityScope::new(Vec::<ScopeResource>::new())
+        .expect_err("an empty scope must fail closed");
+
+    assert!(matches!(
+        error,
+        AuthorityLifecycleError::EmptyField { field: "scope" }
+    ));
+}
+
+#[rstest]
+#[case::revoked(InvalidAuthorityReason::Revoked, "revoked")]
+#[case::expired(InvalidAuthorityReason::Expired, "expired")]
+#[case::pre_issuance(InvalidAuthorityReason::PreIssuance, "pre-issuance")]
+fn invalid_authority_reason_display_matches_expected_text(
+    #[case] reason: InvalidAuthorityReason,
+    #[case] expected: &str,
+) {
+    assert_eq!(reason.to_string(), expected);
 }

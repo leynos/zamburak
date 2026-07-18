@@ -214,3 +214,6 @@ fn build_engine_load_outcome(policy_load_outcome: PolicyLoadOutcome) -> PolicyEn
         load_outcome: LoadOutcome::new(policy_engine, migration_audit),
     }
 }
+
+#[cfg(test)]
+mod tests;
