@@ -22,7 +22,7 @@ jobs:
           fetch-depth: 0
           submodules: recursive
       - name: Setup Rust
-        uses: leynos/shared-actions/.github/actions/setup-rust@18bed1ca49a6de3d8882bd72635a32ae3f023d57
+        uses: leynos/shared-actions/.github/actions/setup-rust@e0d9b652b137eb15314fff188f09e1ba18d3cc5b
       - name: Monty fork review policy
         if: ${{ github.event_name == 'pull_request' }}
         run: |
@@ -147,6 +147,6 @@ jobs:
           fetch-depth: 0
           submodules: recursive
       - name: Setup Rust
-        uses: leynos/shared-actions/.github/actions/setup-rust@18bed1ca49a6de3d8882bd72635a32ae3f023d57
+        uses: leynos/shared-actions/.github/actions/setup-rust@e0d9b652b137eb15314fff188f09e1ba18d3cc5b
       - name: Evaluate phase-gate suites
         run: make phase-gate
