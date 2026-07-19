@@ -51,7 +51,6 @@
   semantics, invariants, trust boundaries, and policy contracts.
 - [Engineering standards](zamburak-engineering-standards.md) - Project-specific
   implementation and review standards for security-critical changes.
-  - [Mutation-testing workflow contract
-    tests](zamburak-engineering-standards.md#mutation-testing-workflow-contract-tests)
-    - How the mutation-testing caller workflow is pinned and contract-tested,
-    and how to run the check locally.
+- [Developers' guide](developers-guide.md) - Contributor-facing guidance on
+  project tooling and workflows, including the mutation-testing caller workflow
+  and its contract tests.
