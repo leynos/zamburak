@@ -29,9 +29,8 @@ decision record is updated, and roadmap task `1.2.3` is marked done.
 - Implement to these normative signposts:
   `docs/scripting-standards.md` sections "Language and runtime", "Testing
   expectations", and "CI wiring: GitHub Actions (Cyclopts-first)";
-  `docs/repository-layout.md` section "Root and operational files"
-  (`scripts/`); `docs/tech-baseline.md` section "Required engineering tools and
-  rationale".
+  `docs/repository-layout.md` section "Root and operational files" (`scripts/`);
+  `docs/tech-baseline.md` section "Required engineering tools and rationale".
 - Keep scope limited to script runtime metadata, command invocation patterns,
   and script test conventions.
 - Dependencies for this roadmap task are none.
@@ -42,8 +41,8 @@ decision record is updated, and roadmap task `1.2.3` is marked done.
   cases.
 - `rstest-bdd` v0.5.0 applies only where Rust behavioural tests are introduced.
   For this task, behavioural testing for Python scripts should follow
-  `docs/scripting-standards.md` (`pytest-bdd`) unless a Rust-facing change
-  makes `rstest-bdd` applicable.
+  `docs/scripting-standards.md` (`pytest-bdd`) unless a Rust-facing change makes
+  `rstest-bdd` applicable.
 - Record design decisions taken during implementation in
   `docs/zamburak-design-document.md`.
 - Update `docs/users-guide.md` if and only if this task changes

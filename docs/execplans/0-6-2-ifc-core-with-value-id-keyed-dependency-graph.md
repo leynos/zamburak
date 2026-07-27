@@ -1,9 +1,8 @@
 # Add IFC core with `ValueId`-keyed dependency graph (Task 1.6.2)
 
-This ExecPlan (execution plan) is a living document. The sections
-`Constraints`, `Tolerances`, `Risks`, `Progress`, `Surprises & Discoveries`,
-`Decision Log`, and `Outcomes & Retrospective` must be kept up to date as work
-proceeds.
+This ExecPlan (execution plan) is a living document. The sections `Constraints`,
+`Tolerances`, `Risks`, `Progress`, `Surprises & Discoveries`, `Decision Log`,
+and `Outcomes & Retrospective` must be kept up to date as work proceeds.
 
 Status: COMPLETED
 
@@ -268,10 +267,9 @@ generation) and `thiserror` (error derivation). Dev-dependencies include
 Create three new modules in `crates/zamburak-core/src/`:
 
 `value_id.rs` defines a `ValueId` newtype wrapping `u64` as a plain
-`#[repr(transparent)]` struct, mirroring the backing type of `RuntimeValueId`
-in `full-monty`. The type must derive `Clone`, `Copy`, `Debug`, `Eq`,
-`PartialEq`, `Hash`, `Ord`, `PartialOrd` and implement `Display` for
-diagnostics.
+`#[repr(transparent)]` struct, mirroring the backing type of `RuntimeValueId` in
+`full-monty`. The type must derive `Clone`, `Copy`, `Debug`, `Eq`, `PartialEq`,
+`Hash`, `Ord`, `PartialOrd` and implement `Display` for diagnostics.
 
 `trust.rs` defines:
 

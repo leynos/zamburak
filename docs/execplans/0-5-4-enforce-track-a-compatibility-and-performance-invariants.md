@@ -1,9 +1,8 @@
 # Enforce Track A compatibility and performance invariants (Task 1.5.4)
 
-This ExecPlan (execution plan) is a living document. The sections
-`Constraints`, `Tolerances`, `Risks`, `Progress`, `Surprises & discoveries`,
-`Decision log`, and `Outcomes & retrospective` must be kept up to date as work
-proceeds.
+This ExecPlan (execution plan) is a living document. The sections `Constraints`,
+`Tolerances`, `Risks`, `Progress`, `Surprises & discoveries`, `Decision log`,
+and `Outcomes & retrospective` must be kept up to date as work proceeds.
 
 Status: COMPLETE
 
@@ -189,11 +188,11 @@ that Track A additions do not change baseline runtime behaviour.
 ## Decision log
 
 - Decision: define "baseline Monty" for this task as the existing
-  observer-free public execution entrypoints in the pinned `full-monty`
-  revision (`MontyRun::start`, `MontyRun::run_no_limits`, `MontyRepl::start`,
-  and `MontyRepl::start_no_print`). Rationale: this keeps the gate
-  deterministic, offline, and aligned with the public contract that Track A
-  additions must preserve. Date/Author: 2026-03-07 / Codex.
+  observer-free public execution entrypoints in the pinned `full-monty` revision
+  (`MontyRun::start`, `MontyRun::run_no_limits`, `MontyRepl::start`, and
+  `MontyRepl::start_no_print`). Rationale: this keeps the gate deterministic,
+  offline, and aligned with the public contract that Track A additions must
+  preserve. Date/Author: 2026-03-07 / Codex.
 
 - Decision: keep the authoritative behaviour and overhead assertions
   inside `third_party/full-monty/crates/monty/tests/`, and use superproject

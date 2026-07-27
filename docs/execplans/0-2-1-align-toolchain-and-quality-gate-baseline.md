@@ -16,9 +16,9 @@ quality-gate baseline with repository configuration.
 
 After this change, every version pin, quality-gate command, and engineering
 tool referenced in documentation will match the actual repository configuration
-files, and vice versa. A contributor reading any one of
-`docs/tech-baseline.md`, `AGENTS.md`, `docs/zamburak-engineering-standards.md`,
-or `docs/repository-layout.md` will find commands and versions that correspond
+files, and vice versa. A contributor reading any one of `docs/tech-baseline.md`,
+`AGENTS.md`, `docs/zamburak-engineering-standards.md`, or
+`docs/repository-layout.md` will find commands and versions that correspond
 exactly to what `rust-toolchain.toml`, `Makefile`, `Cargo.toml`, and
 `clippy.toml` actually do.
 
@@ -499,8 +499,8 @@ Stage G: roadmap closure and ExecPlan finalization.
 
 1. Mark Task 1.2.1, "Align toolchain and quality-gate baseline", as done in
    `docs/roadmap.md` by changing its checkbox from `- [ ]` to `- [x]`.
-2. Update this ExecPlan: fill in `Progress` timestamps, `Outcomes &
-   Retrospective`, and change status from `DRAFT` to `COMPLETE`.
+2. Update this ExecPlan: fill in `Progress` timestamps,
+   `Outcomes & Retrospective`, and change status from `DRAFT` to `COMPLETE`.
 
 ## Concrete steps
 
@@ -618,8 +618,8 @@ This task introduces no new Rust library code, functions, traits, or APIs. The
 interfaces are:
 
 - `Makefile` variable `RUSTDOC_FLAGS` (new, defaulting to `-D warnings`).
-- `Makefile` `lint` target with corrected `--workspace` flag on both `cargo
-  doc` and `cargo clippy` invocations.
+- `Makefile` `lint` target with corrected `--workspace` flag on both
+  `cargo doc` and `cargo clippy` invocations.
 - `Cargo.toml` `[lints.rustdoc]` section (new, migrated from
   `[lints.rust]` for the renamed `missing_crate_level_docs` lint).
 - No changes to `rust-toolchain.toml` (already consistent).

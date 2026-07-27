@@ -34,7 +34,7 @@ The core design motivation comes from two external observations:
   enforcement,
 - the Lethal Trifecta model in
   [The lethal trifecta for AI agents](https://simonwillison.net/2025/Jun/16/the-lethal-trifecta/)
-   describes when real-world data theft becomes easy: private-data access,
+  describes when real-world data theft becomes easy: private-data access,
   exposure to untrusted content, and external communication in the same agent
   workflow.
 

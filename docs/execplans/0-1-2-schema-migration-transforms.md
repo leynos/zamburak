@@ -1,9 +1,8 @@
 # Implement explicit schema migration transforms and conformance evidence (Task 1.1.2)
 
-This execution plan (ExecPlan) is a living document. The sections
-`Constraints`, `Tolerances`, `Risks`, `Progress`, `Surprises & Discoveries`,
-`Decision Log`, and `Outcomes & Retrospective` must be kept up to date as work
-proceeds.
+This execution plan (ExecPlan) is a living document. The sections `Constraints`,
+`Tolerances`, `Risks`, `Progress`, `Surprises & Discoveries`, `Decision Log`,
+and `Outcomes & Retrospective` must be kept up to date as work proceeds.
 
 Status: COMPLETE
 
@@ -186,8 +185,8 @@ Delivered outcomes:
 - Added conformance tests:
   unit tests in `crates/zamburak-policy/src/migration.rs` and
   `crates/zamburak-policy/src/policy_def/tests.rs`, compatibility BDD scenarios
-  in `tests/compatibility/features/policy_schema.feature`, and security tests
-  in `tests/security/migration_security.rs`.
+  in `tests/compatibility/features/policy_schema.feature`, and security tests in
+  `tests/security/migration_security.rs`.
 - Added migration fixtures:
   `tests/test_utils/policy-v0.yaml` and `tests/test_utils/policy-v0.json`.
 - Updated documentation:

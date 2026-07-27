@@ -1,9 +1,8 @@
 # Add generic snapshot extension bytes in `full-monty` (Task 1.5.3)
 
-This ExecPlan (execution plan) is a living document. The sections
-`Constraints`, `Tolerances`, `Risks`, `Progress`, `Surprises & discoveries`,
-`Decision log`, and `Outcomes & retrospective` must be kept up to date as work
-proceeds.
+This ExecPlan (execution plan) is a living document. The sections `Constraints`,
+`Tolerances`, `Risks`, `Progress`, `Surprises & discoveries`, `Decision log`,
+and `Outcomes & retrospective` must be kept up to date as work proceeds.
 
 Status: COMPLETE
 
@@ -169,8 +168,8 @@ bytes beyond basic serialization.
 1. Stage A: confirm prerequisites and shape the API.
    Review Task 1.5.2 completion state in `docs/roadmap.md`. Read the
    Architecture Decision Record (ADR) and design doc sections to clarify the
-   expected seam, then inspect `Snapshot`, `FutureSnapshot`, `ReplSnapshot`,
-   and `ReplFutureSnapshot` definitions to decide on field names and method
+   expected seam, then inspect `Snapshot`, `FutureSnapshot`, `ReplSnapshot`, and
+   `ReplFutureSnapshot` definitions to decide on field names and method
    signatures. Capture the decision in `docs/zamburak-design-document.md`
    before coding.
 
@@ -194,8 +193,8 @@ bytes beyond basic serialization.
    snapshot type, and initialize `extension_bytes` as `None` in snapshot
    constructors. Do not reintroduce `skip_serializing_if`; it was intentionally
    removed per the Decision log. Ensure `dump()`/`load()` behaviour remains
-   unchanged aside from carrying extension bytes, and keep existing
-   `run.rs`/`repl.rs` doc comments unchanged.
+   unchanged aside from carrying extension bytes, and keep existing `run.rs`/
+   `repl.rs` doc comments unchanged.
 
 4. Stage D: documentation, roadmap update, and validation.
    Update `docs/zamburak-design-document.md` with a dated implementation

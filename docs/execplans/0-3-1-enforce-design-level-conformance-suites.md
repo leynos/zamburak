@@ -215,8 +215,8 @@ mandated test filters appear, and executing mandated suites.
 
 ## Plan of work
 
-Stage A: introduce localization contract types and tests. This stage creates
-the `Localizer` trait, `NoOpLocalizer`, `LocalizedDiagnostic`, and
+Stage A: introduce localization contract types and tests. This stage creates the
+`Localizer` trait, `NoOpLocalizer`, `LocalizedDiagnostic`, and
 `LocalizationArgs` type alias in `crates/zamburak-core/src/i18n/`, wires them
 into the crate, and adds a BDD feature file with step definitions in
 `tests/compatibility/localization_contract/`. The API shape follows the design
@@ -263,8 +263,8 @@ Run all commands from repository root (`/home/user/project`).
 Stage A: localization contract.
 
 1. Create `crates/zamburak-core/src/i18n/mod.rs` with module-level doc comment
-   and re-exports of `LocalizationArgs`, `LocalizedDiagnostic`, `Localizer`,
-   and `NoOpLocalizer`.
+   and re-exports of `LocalizationArgs`, `LocalizedDiagnostic`, `Localizer`, and
+   `NoOpLocalizer`.
 
 2. Create `crates/zamburak-core/src/i18n/localizer.rs` containing:
 
@@ -415,8 +415,9 @@ Required gates:
 
 Evidence to capture during implementation:
 
-- test list output from `cargo test --workspace --all-targets --all-features
-  -- --list` showing `llm_sink_enforcement::` and `localization_contract::`.
+- test list output from
+  `cargo test --workspace --all-targets --all-features -- --list` showing
+  `llm_sink_enforcement::` and `localization_contract::`.
 - gate logs in `/tmp/*-zamburak-<branch>.out`.
 - `make phase-gate` output showing all four Phase 2 suites passing.
 

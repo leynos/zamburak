@@ -174,8 +174,8 @@ worst-case labels).
 ### Transitive dependency summary
 
 `compute_summary(&graph, &id, &budgets)` performs a bounded breadth-first
-search (BFS) walk through parent edges, joining all reachable node labels into
-a `DependencySummary`. The summary captures integrity (greatest lower bound),
+search (BFS) walk through parent edges, joining all reachable node labels into a
+`DependencySummary`. The summary captures integrity (greatest lower bound),
 confidentiality (union), authority (intersection), origin count, and a
 truncation flag.
 
@@ -191,9 +191,9 @@ making an effectful call).
 ### Control context
 
 `ExecutionContextSummary` tracks the program-counter integrity and
-confidentiality labels accumulated from control-flow conditions. In strict
-mode, `as_summary()` converts this into a `DependencySummary` that is joined
-into every effectful call's dependency summary.
+confidentiality labels accumulated from control-flow conditions. In strict mode,
+`as_summary()` converts this into a `DependencySummary` that is joined into
+every effectful call's dependency summary.
 
 ## Governed execution with `zamburak-monty`
 
@@ -706,8 +706,8 @@ Resolution order is:
 
 ### Rendering localized diagnostics
 
-Zamburak diagnostics expose a `render_localized` method that accepts an
-injected `&dyn Localizer` plus caller fallback copy:
+Zamburak diagnostics expose a `render_localized` method that accepts an injected
+`&dyn Localizer` plus caller fallback copy:
 
 ```rust
 let message = diagnostic.render_localized(&localizer, "fallback text");

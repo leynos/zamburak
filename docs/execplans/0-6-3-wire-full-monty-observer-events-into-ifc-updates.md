@@ -1,9 +1,8 @@
 # Wire `full-monty` observer events into IFC updates (Task 1.6.3)
 
-This ExecPlan (execution plan) is a living document. The sections
-`Constraints`, `Tolerances`, `Risks`, `Progress`, `Surprises & Discoveries`,
-`Decision Log`, and `Outcomes & Retrospective` must be kept up to date as work
-proceeds.
+This ExecPlan (execution plan) is a living document. The sections `Constraints`,
+`Tolerances`, `Risks`, `Progress`, `Surprises & Discoveries`, `Decision Log`,
+and `Outcomes & Retrospective` must be kept up to date as work proceeds.
 
 Status: COMPLETE
 
@@ -42,9 +41,10 @@ without adding Zamburak semantics to the vendored interpreter.
   section "Track B staged pull requests",
   [docs/zamburak-design-document.md](/docs/zamburak-design-document.md)
   sections "Component responsibilities" and "Strict-mode effect semantics", and
-  [docs/verification-targets.md](/docs/verification-targets.md) rows "IFC
-  propagation" and "Control context".
-- Dependency precondition: Tasks 1.6.2, 1.5.2, and 1.5.3 must remain completed in
+  [docs/verification-targets.md](/docs/verification-targets.md)
+  rows "IFC propagation" and "Control context".
+- Dependency precondition: Tasks 1.6.2, 1.5.2, and 1.5.3 must remain completed
+  in
   [docs/roadmap.md](/docs/roadmap.md) before implementation starts.
 - In scope: event-to-IFC graph updates, external-call summary construction from
   observer state, strict-mode control dependency tracking, and additive
@@ -57,9 +57,9 @@ without adding Zamburak semantics to the vendored interpreter.
   taint, or Zamburak naming into Track A APIs.
 - No single Rust source file may exceed 400 lines. If IFC wiring makes
   [crates/zamburak-monty/src/observer.rs](/crates/zamburak-monty/src/observer.rs)
-   or
+  or
   [crates/zamburak-monty/src/run/flow.rs](/crates/zamburak-monty/src/run/flow.rs)
-   too large, extract internal submodules rather than growing them in place.
+  too large, extract internal submodules rather than growing them in place.
 - Public APIs must keep module-level `//!` docs and `///` item docs. New public
   IFC-facing types must explain their role with examples where appropriate.
 - Validation must include unit tests and behavioural tests using
@@ -219,11 +219,11 @@ The current relevant code and documentation are:
 - [crates/zamburak-monty/src/run.rs](/crates/zamburak-monty/src/run.rs)
   and
   [crates/zamburak-monty/src/run/flow.rs](/crates/zamburak-monty/src/run/flow.rs)
-   mediate external calls but do not derive summaries from observer state.
+  mediate external calls but do not derive summaries from observer state.
 - [tests/integration/governed_run_bdd.rs](/tests/integration/governed_run_bdd.rs)
   and
   [tests/integration/features/governed_run.feature](/tests/integration/features/governed_run.feature)
-   already exercise the governed path and can be extended for IFC-aware
+  already exercise the governed path and can be extended for IFC-aware
   scenarios.
 - [docs/zamburak-design-document.md](/docs/zamburak-design-document.md)
   states that strict mode must include control-context summary in every effect
@@ -421,7 +421,7 @@ only update state; `run/flow.rs` should read that state later.
 
 Extend
 [crates/zamburak-monty/src/external_call.rs](/crates/zamburak-monty/src/external_call.rs)
- with a nested public IFC payload, for example:
+with a nested public IFC payload, for example:
 
 ```rust
 pub struct CallIfcContext {

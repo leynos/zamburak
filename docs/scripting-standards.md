@@ -620,9 +620,9 @@ scripts to maintain a consistent developer experience across the repository.
 
 ## Spelling policy
 
-`make markdownlint` enforces en-GB-oxendict spelling through the pinned
-`typos` release. The tracked `typos.toml` is deterministic output assembled
-from the shared estate dictionary and the narrow repository policy in
+`make markdownlint` enforces en-GB-oxendict spelling through the pinned `typos`
+release. The tracked `typos.toml` is deterministic output assembled from the
+shared estate dictionary and the narrow repository policy in
 `typos.local.toml`; never edit generated entries by hand.
 
 `make spelling-config-write` invokes the exact, commit-pinned
@@ -632,7 +632,7 @@ when its authority is newer and render the configuration. Use
 only refreshes, parses, merges and renders spelling policy. Harvesting, Typos
 execution, phrase enforcement and Mermaid validation remain consumer-owned.
 
-The consumer phrase checker rejects punctuation-sensitive shared corrections
-to forms such as `handwritten` in tracked UTF-8 text. Repository exceptions
-belong in the local overlay as anchored exact or full-line patterns rather than
-bare accepted words.
+The consumer phrase checker rejects punctuation-sensitive shared corrections to
+forms such as `handwritten` in tracked UTF-8 text. Repository exceptions belong
+in the local overlay as anchored exact or full-line patterns rather than bare
+accepted words.

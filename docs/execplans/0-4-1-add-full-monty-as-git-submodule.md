@@ -120,8 +120,8 @@ hook-substrate internals.
   drafting used repository docs directly as source-of-truth.
 
 - Observation: introducing the `full-monty` submodule caused Markdown format
-  and lint sweeps to traverse vendored docs and fail repository gates.
-  Evidence: `make fmt` and `make markdownlint` emitted errors from
+  and lint sweeps to traverse vendored docs and fail repository gates. Evidence:
+  `make fmt` and `make markdownlint` emitted errors from
   `third_party/full-monty/*.md`. Impact: added `.fdignore` and a markdownlint
   ignore rule for `**/third_party/**` to keep quality gates scoped to this
   repository's authored documentation.

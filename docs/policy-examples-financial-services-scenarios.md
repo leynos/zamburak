@@ -188,8 +188,8 @@ are referenced by ID, and untrusted text is redacted.
 
 **Approval mode:** mechanistic denial. The agent cannot proceed by requesting
 human confirmation; the hard constraint is absolute. To recover, the planner
-must construct the notification body without incorporating data that carries
-the `AUTH_SECRET` label.
+must construct the notification body without incorporating data that carries the
+`AUTH_SECRET` label.
 
 ## Unhappy path C: unverified recipient bypasses allowlist
 

@@ -120,8 +120,8 @@ marked done.
 - [x] (2026-02-13) Fixed `Makefile` test target to include `--workspace` flag
   so all crate members are tested.
 - [x] (2026-02-13) Added 13 `rstest-bdd` behavioural lifecycle scenarios in
-  `tests/security/features/authority_lifecycle.feature` with step definitions
-  in `tests/security/authority_lifecycle_bdd.rs`.
+  `tests/security/features/authority_lifecycle.feature` with step definitions in
+  `tests/security/authority_lifecycle_bdd.rs`.
 - [x] (2026-02-13) Integrated lifecycle checks into `zamburak-policy` via
   `PolicyEngine::validate_authority_tokens` delegating to `zamburak-core`.
 - [x] (2026-02-13) Updated `docs/zamburak-design-document.md` with lifecycle
