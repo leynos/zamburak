@@ -5,7 +5,7 @@ use rstest::{fixture, rstest};
 use super::{
     LEGACY_POLICY_SCHEMA_VERSION, MigrationAuditRecord, MigrationError, PolicyDefinitionV0,
     SCHEMA_MIGRATION_V0_TO_V1, SCHEMA_VERSION_V1, audit_for_canonical_policy,
-    migrate_schema_v0_to_v1,
+    migrate_schema_v0_to_v1, to_lower_hex,
 };
 use crate::policy_def::{PolicyDefinition, SchemaVersion};
 
@@ -154,4 +154,27 @@ fn migration_error_keeps_serialization_source() {
         .expect_err("fixture should fail json parsing");
     let error = MigrationError::HashSerializationFailed(serialization_error);
     assert!(error.to_string().contains("migration hashing"));
+}
+
+#[test]
+fn lower_hex_preserves_leading_zeroes_and_byte_order() {
+    assert_eq!(to_lower_hex(&[0x00, 0x0f, 0xff, 0xa0]), "000fffa0");
+    assert_eq!(to_lower_hex(&[]), "");
+}
+
+#[test]
+fn every_byte_renders_as_two_lowercase_round_tripping_digits() {
+    for byte in u8::MIN..=u8::MAX {
+        let rendered = to_lower_hex(&[byte]);
+        assert_eq!(rendered.len(), 2, "byte {byte:#04x} must render two digits");
+        assert!(
+            rendered
+                .bytes()
+                .all(|digit| digit.is_ascii_digit() || (b'a'..=b'f').contains(&digit)),
+            "byte {byte:#04x} rendered invalid output {rendered:?}",
+        );
+        let parsed =
+            u8::from_str_radix(&rendered, 16).expect("two hexadecimal digits must parse as a byte");
+        assert_eq!(parsed, byte, "round-trip mismatch for byte {byte:#04x}");
+    }
 }
