@@ -56,6 +56,14 @@ fn migrates_schema_v0_to_v1_with_auditable_step_record(legacy_policy_v0: PolicyD
         step.output_hash,
         migration_outcome.migration_audit.target_document_hash
     );
+    assert_eq!(
+        migration_outcome.migration_audit.source_document_hash,
+        "6aa8ff0ec17b0ba364ca6b160a90f8f33609198f2abc6fc0b3d7733fb4057727"
+    );
+    assert_eq!(
+        migration_outcome.migration_audit.target_document_hash,
+        "e7838e7ec5eacb6347bcc58dc06fb3273eacf12ad16877b5a5bb31196624c43e"
+    );
 }
 
 #[test]
