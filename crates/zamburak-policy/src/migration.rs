@@ -255,6 +255,10 @@ where
 ///
 /// Every byte renders as exactly two digits, including leading zeroes, so the
 /// output is always twice the input length.
+///
+/// # Examples
+///
+/// `to_lower_hex(&[0x00, 0xaf])` returns `"00af"`.
 #[must_use]
 fn to_lower_hex(bytes: &[u8]) -> String {
     const HEX_DIGITS: &[u8; 16] = b"0123456789abcdef";
