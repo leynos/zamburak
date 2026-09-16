@@ -44,8 +44,7 @@ without adding Zamburak semantics to the vendored interpreter.
   [docs/verification-targets.md](/docs/verification-targets.md)
   rows "IFC propagation" and "Control context".
 - Dependency precondition: Tasks 1.6.2, 1.5.2, and 1.5.3 must remain completed
-  in
-  [docs/roadmap.md](/docs/roadmap.md) before implementation starts.
+  in [docs/roadmap.md](/docs/roadmap.md) before implementation starts.
 - In scope: event-to-IFC graph updates, external-call summary construction from
   observer state, strict-mode control dependency tracking, and additive
   Zamburak-owned APIs needed to expose those summaries to governed mediation.

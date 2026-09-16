@@ -367,51 +367,51 @@ Expected evidence before implementation:
 
 1. Implement observer substrate and event wiring, then rerun focused tests.
 
-```sh
-set -o pipefail
-cargo test --manifest-path third_party/full-monty/Cargo.toml -p monty \
-  --test runtime_observer_events --test runtime_observer_events_bdd \
-  --test runtime_ids --test runtime_ids_bdd --test repl \
-  | tee /tmp/full-monty-runtime-observer-green.out
-set -o pipefail
-cargo test --test compatibility full_monty_observer \
-  | tee /tmp/zamburak-compat-observer-green.out
-set -o pipefail
-cargo test --test security full_monty_observer_security \
-  | tee /tmp/zamburak-security-observer-green.out
-```
+   ```sh
+   set -o pipefail
+   cargo test --manifest-path third_party/full-monty/Cargo.toml -p monty \
+     --test runtime_observer_events --test runtime_observer_events_bdd \
+     --test runtime_ids --test runtime_ids_bdd --test repl \
+     | tee /tmp/full-monty-runtime-observer-green.out
+   set -o pipefail
+   cargo test --test compatibility full_monty_observer \
+     | tee /tmp/zamburak-compat-observer-green.out
+   set -o pipefail
+   cargo test --test security full_monty_observer_security \
+     | tee /tmp/zamburak-security-observer-green.out
+   ```
 
-1. Run submodule Rust lint in nested-checkout-safe mode.
+2. Run submodule Rust lint in nested-checkout-safe mode.
 
-```sh
-set -o pipefail
-make -C third_party/full-monty lint-rs-local \
-  | tee /tmp/full-monty-lint-rs-local-observer.out
-```
+   ```sh
+   set -o pipefail
+   make -C third_party/full-monty lint-rs-local \
+     | tee /tmp/full-monty-lint-rs-local-observer.out
+   ```
 
-1. Run required superproject gates.
+3. Run required superproject gates.
 
-```sh
-set -o pipefail
-make check-fmt | tee /tmp/check-fmt-zamburak-observer-events.out
-set -o pipefail
-make lint | tee /tmp/lint-zamburak-observer-events.out
-set -o pipefail
-make test | tee /tmp/test-zamburak-observer-events.out
-```
+   ```sh
+   set -o pipefail
+   make check-fmt | tee /tmp/check-fmt-zamburak-observer-events.out
+   set -o pipefail
+   make lint | tee /tmp/lint-zamburak-observer-events.out
+   set -o pipefail
+   make test | tee /tmp/test-zamburak-observer-events.out
+   ```
 
-1. If docs changed, run documentation gates.
+4. If docs changed, run documentation gates.
 
-```sh
-set -o pipefail
-make markdownlint | tee /tmp/markdownlint-zamburak-observer-events.out
-set -o pipefail
-make nixie | tee /tmp/nixie-zamburak-observer-events.out
-set -o pipefail
-make fmt | tee /tmp/fmt-zamburak-observer-events.out
-```
+   ```sh
+   set -o pipefail
+   make markdownlint | tee /tmp/markdownlint-zamburak-observer-events.out
+   set -o pipefail
+   make nixie | tee /tmp/nixie-zamburak-observer-events.out
+   set -o pipefail
+   make fmt | tee /tmp/fmt-zamburak-observer-events.out
+   ```
 
-1. Mark roadmap completion only after all gates pass.
+5. Mark roadmap completion only after all gates pass.
 
 ```plaintext
 Edit docs/roadmap.md: change Task 1.5.2 checkbox from [ ] to [x].
