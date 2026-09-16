@@ -341,27 +341,27 @@ script baseline checks passed
 
 1. Run documentation gates for updated docs.
 
-```sh
-set -o pipefail
-make markdownlint | tee /tmp/markdownlint-zamburak-$(git branch --show-current).out
-set -o pipefail
-make nixie | tee /tmp/nixie-zamburak-$(git branch --show-current).out
-set -o pipefail
-make fmt | tee /tmp/fmt-zamburak-$(git branch --show-current).out
-```
+   ```sh
+   set -o pipefail
+   make markdownlint | tee /tmp/markdownlint-zamburak-$(git branch --show-current).out
+   set -o pipefail
+   make nixie | tee /tmp/nixie-zamburak-$(git branch --show-current).out
+   set -o pipefail
+   make fmt | tee /tmp/fmt-zamburak-$(git branch --show-current).out
+   ```
 
-1. Run required code gates.
+2. Run required code gates.
 
-```sh
-set -o pipefail
-make check-fmt | tee /tmp/check-fmt-zamburak-$(git branch --show-current).out
-set -o pipefail
-make lint | tee /tmp/lint-zamburak-$(git branch --show-current).out
-set -o pipefail
-make test | tee /tmp/test-zamburak-$(git branch --show-current).out
-```
+   ```sh
+   set -o pipefail
+   make check-fmt | tee /tmp/check-fmt-zamburak-$(git branch --show-current).out
+   set -o pipefail
+   make lint | tee /tmp/lint-zamburak-$(git branch --show-current).out
+   set -o pipefail
+   make test | tee /tmp/test-zamburak-$(git branch --show-current).out
+   ```
 
-1. Smoke-test the new maintainer entrypoint.
+3. Smoke-test the new maintainer entrypoint.
 
 ```sh
 set -o pipefail
