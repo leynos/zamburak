@@ -5,7 +5,7 @@ use rstest::{fixture, rstest};
 use super::{
     LEGACY_POLICY_SCHEMA_VERSION, MigrationAuditRecord, MigrationError, PolicyDefinitionV0,
     SCHEMA_MIGRATION_V0_TO_V1, SCHEMA_VERSION_V1, audit_for_canonical_policy,
-    migrate_schema_v0_to_v1,
+    migrate_schema_v0_to_v1, to_lower_hex,
 };
 use crate::policy_def::{PolicyDefinition, SchemaVersion};
 
@@ -55,6 +55,14 @@ fn migrates_schema_v0_to_v1_with_auditable_step_record(legacy_policy_v0: PolicyD
     assert_eq!(
         step.output_hash,
         migration_outcome.migration_audit.target_document_hash
+    );
+    assert_eq!(
+        migration_outcome.migration_audit.source_document_hash,
+        "6aa8ff0ec17b0ba364ca6b160a90f8f33609198f2abc6fc0b3d7733fb4057727"
+    );
+    assert_eq!(
+        migration_outcome.migration_audit.target_document_hash,
+        "e7838e7ec5eacb6347bcc58dc06fb3273eacf12ad16877b5a5bb31196624c43e"
     );
 }
 
@@ -154,4 +162,27 @@ fn migration_error_keeps_serialization_source() {
         .expect_err("fixture should fail json parsing");
     let error = MigrationError::HashSerializationFailed(serialization_error);
     assert!(error.to_string().contains("migration hashing"));
+}
+
+#[test]
+fn lower_hex_preserves_leading_zeroes_and_byte_order() {
+    assert_eq!(to_lower_hex(&[0x00, 0x0f, 0xff, 0xa0]), "000fffa0");
+    assert_eq!(to_lower_hex(&[]), "");
+}
+
+#[test]
+fn every_byte_renders_as_two_lowercase_round_tripping_digits() {
+    for byte in u8::MIN..=u8::MAX {
+        let rendered = to_lower_hex(&[byte]);
+        assert_eq!(rendered.len(), 2, "byte {byte:#04x} must render two digits");
+        assert!(
+            rendered
+                .bytes()
+                .all(|digit| digit.is_ascii_digit() || (b'a'..=b'f').contains(&digit)),
+            "byte {byte:#04x} rendered invalid output {rendered:?}",
+        );
+        let parsed =
+            u8::from_str_radix(&rendered, 16).expect("two hexadecimal digits must parse as a byte");
+        assert_eq!(parsed, byte, "round-trip mismatch for byte {byte:#04x}");
+    }
 }
