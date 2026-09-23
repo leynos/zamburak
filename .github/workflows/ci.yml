@@ -14,8 +14,6 @@ jobs:
       CARGO_TERM_COLOR: always
       BUILD_PROFILE: debug
       WHITAKER_INSTALLER_VERSION: '0.2.6'
-      CS_ACCESS_TOKEN: ${{ secrets.CS_ACCESS_TOKEN || '' }}
-      CODESCENE_CLI_SHA256: ${{ vars.CODESCENE_CLI_SHA256 || '' }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
@@ -114,17 +112,10 @@ jobs:
           format: lcov
           use-cargo-nextest: 'false'
           with-ratchet: 'true'
-      - name: Check coverage against CodeScene gates
-        env:
-          CS_ACCESS_TOKEN: ${{ secrets.CS_ACCESS_TOKEN }}
-        if: github.event_name == 'pull_request' && env.CS_ACCESS_TOKEN != ''
-        uses: leynos/shared-actions/.github/actions/upload-codescene-coverage@82feb2b7aac45b7efff40c9c4bb632551b14521c
-        with:
-          format: lcov
-          mode: check
-          project-url: https://api.codescene.io/v2/projects/76771
-          access-token: ${{ env.CS_ACCESS_TOKEN }}
-          installer-checksum: ${{ vars.CODESCENE_CLI_SHA256 }}
+          # Pull requests ratchet against the baseline coverage-main.yml
+          # writes on main and never contact CodeScene; that workflow is the
+          # one publisher. tests/workflow_contracts holds the shape.
+          publish-artefact: 'false'
       - name: Set up Rust for Merman
         uses: dtolnay/rust-toolchain@02cb101ec7c40f2c49e1d9714d64511d8e1b74de # master
         with:

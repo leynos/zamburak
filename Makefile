@@ -90,7 +90,7 @@ script-typecheck: ## Run script type checks with ty
 script-test: ## Run script baseline test suite
 	uv run $(SCRIPT_UV_DEPS) pytest scripts/tests
 
-test-workflow-contracts: ## Validate the mutation-testing caller contract
+test-workflow-contracts: ## Validate the workflow contracts, including the CV-005 CodeScene shape
 	uv run --with 'pytest>=8' --with 'pyyaml>=6' pytest tests/workflow_contracts -q
 
 monty-sync: ## Sync full-monty fork branch with upstream and run verification gates

@@ -213,14 +213,15 @@ _Table 10: Policy directory artefacts and purposes._
 
 ### `tests/`
 
-| Path                   | Purpose                                                     |
-| ---------------------- | ----------------------------------------------------------- |
-| `tests/compatibility/` | Behavioural comparisons against upstream Monty              |
-| `tests/security/`      | Prompt-injection, exfiltration, and bypass regression tests |
-| `tests/test_utils/`    | Shared test utilities, fixtures, and policy data            |
-| `tests/integration/`   | End-to-end crate integration and governed-execution tests   |
-| `tests/property/`      | (planned) Property tests for monotonicity and closure       |
-| `tests/benchmarks/`    | Performance and overhead measurement tests                  |
+| Path                        | Purpose                                                     |
+| --------------------------- | ----------------------------------------------------------- |
+| `tests/compatibility/`      | Behavioural comparisons against upstream Monty              |
+| `tests/security/`           | Prompt-injection, exfiltration, and bypass regression tests |
+| `tests/test_utils/`         | Shared test utilities, fixtures, and policy data            |
+| `tests/integration/`        | End-to-end crate integration and governed-execution tests   |
+| `tests/property/`           | (planned) Property tests for monotonicity and closure       |
+| `tests/benchmarks/`         | Performance and overhead measurement tests                  |
+| `tests/workflow_contracts/` | Contract tests over the GitHub Actions workflows            |
 
 _Table 11: Test suite directories and purposes._
 
