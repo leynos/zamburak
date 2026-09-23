@@ -256,6 +256,7 @@ _Table 12: Fuzzing artefacts and purposes._
 | `docs/adr-001-monty-ifc-vm-hooks.md`                                | ADR for `full-monty` hooks and two-track constraints          |
 | `docs/monty-fork-policy.md`                                         | Allowed `full-monty` fork delta classes and review checks     |
 | `docs/adr-002-localization-and-internationalization-with-fluent.md` | ADR for Fluent localization                                   |
+| `docs/adr-003-main-owns-codescene-coverage-publication.md`          | ADR for CodeScene coverage publication on `main`              |
 | `docs/complexity-antipatterns-and-refactoring-strategies.md`        | Complexity antipatterns guide                                 |
 | `docs/reliable-testing-in-rust-via-dependency-injection.md`         | Dependency-injection testing patterns                         |
 | `docs/rstest-bdd-users-guide.md`                                    | `rstest-bdd` user guide                                       |
