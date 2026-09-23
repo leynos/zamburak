@@ -56,14 +56,34 @@ fn migrates_schema_v0_to_v1_with_auditable_step_record(legacy_policy_v0: PolicyD
         step.output_hash,
         migration_outcome.migration_audit.target_document_hash
     );
-    assert_eq!(
-        migration_outcome.migration_audit.source_document_hash,
-        "6aa8ff0ec17b0ba364ca6b160a90f8f33609198f2abc6fc0b3d7733fb4057727"
-    );
-    assert_eq!(
-        migration_outcome.migration_audit.target_document_hash,
-        "e7838e7ec5eacb6347bcc58dc06fb3273eacf12ad16877b5a5bb31196624c43e"
-    );
+}
+
+#[rstest]
+fn migration_audit_hashes_are_fixed_width_lowercase_sha256(legacy_policy_v0: PolicyDefinitionV0) {
+    let migration_outcome =
+        migrate_schema_v0_to_v1(legacy_policy_v0).expect("schema v0 fixture should migrate");
+    let audit = migration_outcome.migration_audit;
+    let hashes = [
+        (
+            audit.source_document_hash,
+            "6aa8ff0ec17b0ba364ca6b160a90f8f33609198f2abc6fc0b3d7733fb4057727",
+        ),
+        (
+            audit.target_document_hash,
+            "e7838e7ec5eacb6347bcc58dc06fb3273eacf12ad16877b5a5bb31196624c43e",
+        ),
+    ];
+
+    // These constants were independently calculated from sorted, compact JSON.
+    for (hash, expected) in hashes {
+        assert_eq!(hash, expected);
+        assert_eq!(hash.len(), 64, "SHA-256 hash must contain 64 hex digits");
+        assert!(
+            hash.bytes()
+                .all(|digit| digit.is_ascii_digit() || (b'a'..=b'f').contains(&digit)),
+            "migration hash must use lowercase hexadecimal digits: {hash}"
+        );
+    }
 }
 
 #[test]
