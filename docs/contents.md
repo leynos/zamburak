@@ -12,6 +12,9 @@
 - [Full-monty fork policy](monty-fork-policy.md)
   - Guardrails for allowed fork change categories and fail-closed review
   enforcement for non-generic Track A semantics.
+- [Developers' guide](developers-guide.md) - Internally facing conventions for
+  the repository's tooling and CI, including the CodeScene coverage publisher
+  and its workflow contract.
 - [Documentation style guide](documentation-style-guide.md) - Authoring,
   formatting, grammar, and structure conventions for project documentation.
 - [Design-document farewell ExecPlan](execplans/design-document-logisphere-farewell.md)
