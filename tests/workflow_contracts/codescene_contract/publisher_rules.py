@@ -147,9 +147,7 @@ def permissions_violations(document: Document) -> list[str]:
     """
     declared = document.get("permissions")
     return (
-        []
-        if declared == {}
-        else [f"workflow permissions are {declared!r}, not {{}}"]
+        [] if declared == {} else [f"workflow permissions are {declared!r}, not {{}}"]
     )
 
 

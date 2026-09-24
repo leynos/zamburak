@@ -10,6 +10,7 @@ from __future__ import annotations
 import textwrap
 import typing as typ
 
+from .actions import load_action
 from .credential import check_step_violations, token_scope_violations
 from .lanes import (
     publisher_lane_violations,
@@ -85,7 +86,7 @@ PUBLISHER: typ.Final[str] = textwrap.dedent(f"""\
               path: coverage.xml
               mode: upload
               access-token: ${{{{ secrets.CS_ACCESS_TOKEN }}}}
-    """)
+    """)  # ruff: ignore[line-too-long] -- two lines must match the real workflow's.
 
 TREE: typ.Final[dict[str, str]] = {
     "ci.yml": PULL_REQUEST_LANE,
@@ -154,8 +155,36 @@ def mutate(name: str, old: str, new: str) -> dict[str, str]:
     return tree() | {name: text.replace(old, new, 1)}
 
 
+def parse_tree(texts: dict[str, str]) -> dict[str, Document]:
+    """Parse a tree of texts as `read_workflows` and `read_actions` would.
+
+    A name holding a `/` is a local action's path, such as
+    `.github/actions/build`, as `read_actions` keys it; any other name is a
+    workflow file.
+
+    Parameters
+    ----------
+    texts : dict[str, str]
+        Workflow file names and action paths mapped to their YAML texts.
+
+    Returns
+    -------
+    dict[str, Document]
+        Each text parsed, by the same name.
+
+    """
+    return {
+        name: (load_action if "/" in name else load_workflow)(text)
+        for name, text in texts.items()
+    }
+
+
 def violations(texts: dict[str, str]) -> list[str]:
     """Return every CV-005 finding over a tree of workflow texts.
+
+    A workflow that cannot be read, or a tree whose shape defeats a
+    reading, such as one with a second publisher, raises
+    `WorkflowReadingError` from the reading it defeats.
 
     Parameters
     ----------
@@ -167,16 +196,8 @@ def violations(texts: dict[str, str]) -> list[str]:
     list[str]
         Every CV-005 violation found across the tree.
 
-    Raises
-    ------
-    WorkflowReadingError
-        If a workflow cannot be read, or the tree's shape defeats a
-        reading, such as a second publisher.
-
     """
-    documents: dict[str, Document] = {
-        name: load_workflow(text) for name, text in texts.items()
-    }
+    documents = parse_tree(texts)
     closure = pull_request_closure(documents, REPOSITORY)
     name, publisher = find_publisher(documents)
     return [
