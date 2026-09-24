@@ -138,15 +138,20 @@ def mutate(name: str, old: str, new: str) -> dict[str, str]:
     Raises
     ------
     ValueError
-        If the text to replace is absent, since a mutation that changes
-        nothing would pass for a reason that proves nothing.
+        If the text to replace is absent or occurs more than once. A
+        mutation that changes nothing passes for a reason that proves
+        nothing, and one that changes two places can pass on the second.
 
     """
     text = TREE[name]
-    if old not in text:
-        message = f"{old!r} is not in {name}; the mutation would change nothing"
+    count = text.count(old)
+    if count != 1:
+        message = (
+            f"{old!r} occurs {count} times in {name}; a mutation must change "
+            "exactly one thing"
+        )
         raise ValueError(message)
-    return tree() | {name: text.replace(old, new)}
+    return tree() | {name: text.replace(old, new, 1)}
 
 
 def violations(texts: dict[str, str]) -> list[str]:

@@ -226,6 +226,23 @@ def test_the_upload_reads_what_the_publisher_writes(old: str, new: str) -> None:
     assert found, found
 
 
+@pytest.mark.parametrize("old", ["no such text", "coverage.xml"])
+def test_a_mutation_changes_exactly_one_place(old: str) -> None:
+    """A case changing two places could pass on the one it does not name."""
+    with pytest.raises(ValueError, match="exactly one thing"):
+        mutate("coverage-main.yml", old, "other.xml")
+
+
+def test_an_unnamed_report_is_refused() -> None:
+    """Two absent inputs compare equal, so both ends must name the file."""
+    text = PUBLISHER.replace("          path: coverage.xml\n", "").replace(
+        "          output-path: coverage.xml\n", ""
+    )
+    assert text.count("coverage.xml") == 0, text
+    found = wiring_violations(load_workflow(text))
+    assert found, found
+
+
 #: The publisher fixture's coverage step, for the cases that move it.
 GENERATOR = PUBLISHER[
     PUBLISHER.index("      - name: Generate coverage\n") : PUBLISHER.index(
