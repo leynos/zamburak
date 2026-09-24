@@ -3,6 +3,9 @@
 - [Architectural Decision Record (ADR) 002: Fluent localization architecture](adr-002-localization-and-internationalization-with-fluent.md)
   - Decision record for internationalization and localization in Zamburak as a
   library, using injection-first Fluent integration.
+- [Architectural Decision Record (ADR) 003: `main` owns CodeScene coverage publication](adr-003-main-owns-codescene-coverage-publication.md)
+  - Decision record moving CodeScene coverage publication from pull requests
+  to a single push-to-`main` publisher held by a workflow contract.
 - [Code complexity guide](complexity-antipatterns-and-refactoring-strategies.md)
   - Practical guidance for identifying complexity anti-patterns and applying
   safe refactoring strategies.
@@ -12,6 +15,9 @@
 - [Full-monty fork policy](monty-fork-policy.md)
   - Guardrails for allowed fork change categories and fail-closed review
   enforcement for non-generic Track A semantics.
+- [Developers' guide](developers-guide.md) - Internally facing conventions for
+  the repository's tooling and CI, including the CodeScene coverage publisher
+  and its workflow contract.
 - [Documentation style guide](documentation-style-guide.md) - Authoring,
   formatting, grammar, and structure conventions for project documentation.
 - [Design-document farewell ExecPlan](execplans/design-document-logisphere-farewell.md)

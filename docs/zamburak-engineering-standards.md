@@ -130,6 +130,13 @@ For phase-advancement pull requests, CI must also run:
 make phase-gate | tee /tmp/phase-gate-zamburak-$(git branch --show-current).out
 ```
 
+## CodeScene coverage publication
+
+Only `main` publishes coverage to CodeScene; pull requests ratchet locally and
+never contact the service. The [developers' guide](developers-guide.md) records
+the publisher's shape, its known exceptions, and the workflow contract that
+holds it.
+
 ## Review and change-management standards
 
 - Use atomic commits with descriptive rationale.
