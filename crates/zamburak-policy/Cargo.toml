@@ -8,9 +8,10 @@ newt-hype.workspace = true
 serde = { version = "1.0.218", features = ["derive"] }
 serde_json = "1.0.139"
 serde_yaml = "0.9.34"
-sha2 = "0.10.9"
+sha2 = "0.11.0"
 thiserror.workspace = true
 zamburak-core = { path = "../zamburak-core" }
 
 [dev-dependencies]
 rstest = "0.27.0"
+trybuild = "1.0.119"
