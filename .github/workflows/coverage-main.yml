@@ -50,6 +50,7 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
+          persist-credentials: false
           submodules: recursive
       - name: Setup Rust
         uses: leynos/shared-actions/.github/actions/setup-rust@4fb8eb7ad52454678a0662865d81d3cd17aa6e0e

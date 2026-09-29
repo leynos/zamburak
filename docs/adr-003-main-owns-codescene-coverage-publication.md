@@ -54,11 +54,11 @@ standards requires.
   `refs/heads/main`, and passes the secret straight to its `access-token`
   input. A concurrency group keyed on the ref never cancels a run in progress.
 
-`tests/workflow_contracts/codescene_repository_test.py` holds the split. It
-reads every workflow a pull request can reach as a closure through local
-reusable-workflow calls, and every workflow a push can start for a second
-baseline writer. The other `codescene_*_test.py` files drive each rule against
-breaching fixtures.
+`make test-workflow-contracts` holds the split, by running the shared
+`cv005-contracts` library from shared-actions. It reads every workflow a pull
+request can reach as a closure through local reusable-workflow calls, and every
+workflow a push can start for a second baseline writer. The library's own suite
+drives each rule against breaching fixtures.
 
 ## Consequences
 
