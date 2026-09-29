@@ -74,3 +74,12 @@ breaching fixtures.
 
 The [developers' guide](developers-guide.md) records the publisher's shape and
 its operational exceptions.
+
+## Addendum (2026-09-29): where the contract runs
+
+The contract this record names,
+`tests/workflow_contracts/codescene_repository_test.py`, has moved out of this
+repository. `make test-workflow-contracts` now runs the shared
+`cv005-contracts` library from `leynos/shared-actions`, pinned by full commit
+in the Makefile, with the repository's one parameter in `.github/cv005.toml`,
+and the `ci.yml` job runs that target. The decision above is unchanged.
