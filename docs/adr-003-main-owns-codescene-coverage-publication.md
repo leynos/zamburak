@@ -54,11 +54,11 @@ standards requires.
   `refs/heads/main`, and passes the secret straight to its `access-token`
   input. A concurrency group keyed on the ref never cancels a run in progress.
 
-`make test-workflow-contracts` holds the split, by running the shared
-`cv005-contracts` library from shared-actions. It reads every workflow a pull
-request can reach as a closure through local reusable-workflow calls, and every
-workflow a push can start for a second baseline writer. The library's own suite
-drives each rule against breaching fixtures.
+`tests/workflow_contracts/codescene_repository_test.py` holds the split. It
+reads every workflow a pull request can reach as a closure through local
+reusable-workflow calls, and every workflow a push can start for a second
+baseline writer. The other `codescene_*_test.py` files drive each rule against
+breaching fixtures.
 
 ## Consequences
 
@@ -74,3 +74,12 @@ drives each rule against breaching fixtures.
 
 The [developers' guide](developers-guide.md) records the publisher's shape and
 its operational exceptions.
+
+## Addendum (2026-09-29): where the contract runs
+
+The contract this record names,
+`tests/workflow_contracts/codescene_repository_test.py`, has moved out of this
+repository. `make test-workflow-contracts` now runs the shared
+`cv005-contracts` library from `leynos/shared-actions`, pinned by full commit
+in the Makefile, with the repository's one parameter in `.github/cv005.toml`,
+and the `ci.yml` job runs that target. The decision above is unchanged.
