@@ -33,15 +33,13 @@ CV005_CONTRACTS_REF ?= a38feb9be25755c30eca5bda96bd3786a5b89c6b
 CV005_CONTRACTS = $(UV_ENV) $(UV) tool run --python 3.13 \
 	--from 'git+https://github.com/leynos/shared-actions@$(CV005_CONTRACTS_REF)\#subdirectory=packages/cv005-contracts' \
 	cv005-contracts
-PATHSPEC_VERSION ?= 1.1.1
 TYPOS_CONFIG_BUILDER_VERSION ?= v0.1.3
 TYPOS_CONFIG_BUILDER = $(UV_ENV) $(UV) tool run --python 3.14 --from \
 	"git+https://github.com/leynos/typos-config-builder.git@$(TYPOS_CONFIG_BUILDER_VERSION)" \
 	typos-config-builder
 PHASE_GATE_TARGET_FILE ?= .github/phase-gate-target.txt
 SCRIPT_UV_DEPS ?= --with pytest --with pytest-bdd --with pytest-mock \
-	--with cmd-mox --with astroid --with cuprum==0.1.0 \
-	--with pathspec==$(PATHSPEC_VERSION)
+	--with cmd-mox --with astroid --with cuprum==0.1.0
 SCRIPT_TYPECHECK_FLAGS ?= --ignore unresolved-import
 
 build: target/debug/$(TARGET) ## Build debug binary
