@@ -2587,7 +2587,7 @@ dependencies = [
  "anyhow",
  "backon",
  "camino",
- "cap-std 3.4.6",
+ "cap-std 4.0.3",
  "monty",
  "newt-hype",
  "rstest 0.26.1",
