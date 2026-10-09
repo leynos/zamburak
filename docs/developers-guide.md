@@ -55,3 +55,19 @@ declaring both a quoted and an unquoted `on` key, is refused rather than
 silently resolved, and a reading failure exits 2 rather than passing. The
 remaining contracts in `tests/workflow_contracts` run under pytest in the same
 target.
+
+## Markdown formatting
+
+`make fmt` and `make check-fmt` run `mdtablefix` over the Markdown files Git
+tracks and the untracked files it does not ignore, with the repository's
+configured flags. They need mdtablefix 0.6.0 or later, the first release with
+`--check` and `--git`. CI installs 0.6.1 through the shared
+`install-mdtablefix` action; the pin is in `.github/workflows/ci.yml`. 0.6.1
+fixes the 0.6.0 bugs that changed Markdown content: `--wrap` breaking text with
+no whitespace, Setext headings turned into rules, and `--renumber` changing a
+list's start. Install the same version locally with
+`cargo binstall mdtablefix@0.6.1`.
+
+`--renumber` treats a fence at column 0 as the end of an ordered list, so
+indent the content of every list item under its marker (three columns for `1.`
+to `9.`, four for `10.` to `99.`) to keep a numbered procedure in one list.
