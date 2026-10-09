@@ -85,7 +85,7 @@ jobs:
       - name: Script tests
         run: make script-test
       - name: Install the Whitaker Dylint suite
-        uses: leynos/shared-actions/.github/actions/install-whitaker@6dea5677a84fec60ca51b07202570e3af12ffdb4
+        uses: leynos/shared-actions/.github/actions/install-whitaker@0606ca899ce2995a0c4bc78e660e80832e6e8855
       - name: Lint
         run: make lint
       - name: Workflow contract tests
