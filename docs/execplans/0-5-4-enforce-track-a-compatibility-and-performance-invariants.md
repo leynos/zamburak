@@ -502,40 +502,40 @@ Files expected to change:
 
 10. Run documentation gates.
 
-   ```plaintext
-   set -o pipefail
-   make fmt | tee /tmp/make-fmt-track-a.log
-   ```
+    ```plaintext
+    set -o pipefail
+    make fmt | tee /tmp/make-fmt-track-a.log
+    ```
 
-   ```plaintext
-   set -o pipefail
-   make markdownlint | tee /tmp/make-markdownlint-track-a.log
-   ```
+    ```plaintext
+    set -o pipefail
+    make markdownlint | tee /tmp/make-markdownlint-track-a.log
+    ```
 
-   ```plaintext
-   set -o pipefail
-   make nixie | tee /tmp/make-nixie-track-a.log
-   ```
+    ```plaintext
+    set -o pipefail
+    make nixie | tee /tmp/make-nixie-track-a.log
+    ```
 
 11. Run the required root gates.
 
-   ```plaintext
-   set -o pipefail
-   make check-fmt | tee /tmp/make-check-fmt-track-a.log
-   ```
+    ```plaintext
+    set -o pipefail
+    make check-fmt | tee /tmp/make-check-fmt-track-a.log
+    ```
 
-   ```plaintext
-   set -o pipefail
-   make lint | tee /tmp/make-lint-track-a.log
-   ```
+    ```plaintext
+    set -o pipefail
+    make lint | tee /tmp/make-lint-track-a.log
+    ```
 
-   ```plaintext
-   set -o pipefail
-   make test | tee /tmp/make-test-track-a.log
-   ```
+    ```plaintext
+    set -o pipefail
+    make test | tee /tmp/make-test-track-a.log
+    ```
 
-   Expected outcome: all required repository gates are green, the plan's
-   evidence logs exist under `/tmp/`, and Task 1.5.4 can be marked complete.
+    Expected outcome: all required repository gates are green, the plan's
+    evidence logs exist under `/tmp/`, and Task 1.5.4 can be marked complete.
 <!-- markdownlint-enable MD029 -->
 
 ## Acceptance criteria
