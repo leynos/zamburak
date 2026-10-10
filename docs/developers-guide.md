@@ -56,6 +56,24 @@ silently resolved, and a reading failure exits 2 rather than passing. The
 remaining contracts in `tests/workflow_contracts` run under pytest in the same
 target.
 
+## Spelling gate
+
+`make spelling` enforces en-GB-oxendict spelling by running the
+`typos-config-builder` gate, pinned by `TYPOS_CONFIG_BUILDER_VERSION` in the
+`Makefile` (currently `v0.1.3`). The gate regenerates `typos.toml` from the
+live shared dictionary and this repository's `typos.local.toml` overlay on
+every run, runs Typos over tracked Markdown, and enforces the shared phrase
+corrections that single-word checks cannot express. `typos.toml` is generated
+and never drift checked in continuous integration; commit the regenerated file
+when it changes, and keep repository-specific exceptions in `typos.local.toml`
+as narrow patterns. The builder requires Python 3.14 or newer, so the target
+passes `--python 3.14` and `uv` fetches that interpreter when the host lacks
+one. Raise the pin together with the regenerated `typos.toml`, never on its own.
+
+The script tooling no longer installs `pathspec`: the builder now owns the
+tracked-file scan, so `SCRIPT_UV_DEPS` in the `Makefile` lists only the
+packages the script tests import.
+
 ## Markdown formatting
 
 `make fmt` and `make check-fmt` run `mdtablefix` over the Markdown files Git
