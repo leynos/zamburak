@@ -19,7 +19,7 @@ jobs:
           fetch-depth: 0
           submodules: recursive
       - name: Setup Rust
-        uses: leynos/shared-actions/.github/actions/setup-rust@7d751eded578e48dacf43ab173d5820e6437c474
+        uses: leynos/shared-actions/.github/actions/setup-rust@cfcc379e29be516160f499864ae82720842359af
         with:
           expect-cache: any
       - name: Monty fork review policy
@@ -71,7 +71,7 @@ jobs:
       - name: Install mdtablefix
         # `make check-fmt` runs `mdtablefix --check --git`; 0.6.0 is the
         # first release with `--check` and `--git`.
-        uses: leynos/shared-actions/.github/actions/install-mdtablefix@7d751eded578e48dacf43ab173d5820e6437c474
+        uses: leynos/shared-actions/.github/actions/install-mdtablefix@cfcc379e29be516160f499864ae82720842359af
         with:
           version: "0.6.1"
       - name: Format
@@ -85,13 +85,13 @@ jobs:
       - name: Script tests
         run: make script-test
       - name: Install the Whitaker Dylint suite
-        uses: leynos/shared-actions/.github/actions/install-whitaker@0606ca899ce2995a0c4bc78e660e80832e6e8855
+        uses: leynos/shared-actions/.github/actions/install-whitaker@cfcc379e29be516160f499864ae82720842359af
       - name: Lint
         run: make lint
       - name: Workflow contract tests
         run: make test-workflow-contracts
       - name: Test and Measure Coverage
-        uses: leynos/shared-actions/.github/actions/generate-coverage@4fb8eb7ad52454678a0662865d81d3cd17aa6e0e
+        uses: leynos/shared-actions/.github/actions/generate-coverage@cfcc379e29be516160f499864ae82720842359af
         with:
           output-path: lcov.info
           format: lcov
@@ -124,7 +124,7 @@ jobs:
           fetch-depth: 0
           submodules: recursive
       - name: Setup Rust
-        uses: leynos/shared-actions/.github/actions/setup-rust@7d751eded578e48dacf43ab173d5820e6437c474
+        uses: leynos/shared-actions/.github/actions/setup-rust@cfcc379e29be516160f499864ae82720842359af
         with:
           expect-cache: any
       - name: Evaluate phase-gate suites
