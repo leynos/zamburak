@@ -311,9 +311,12 @@ dependencies = [
 
 [[package]]
 name = "convert_case"
-version = "0.4.0"
+version = "0.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6245d59a3e82a7fc217c5828a6692dbc6dfb63a0c8c90495621f7b9d79704a0e"
+checksum = "ec182b0ca2f35d8fc196cf3404988fd8b8c739a4d270ff118a398feb0cbec1ca"
+dependencies = [
+ "unicode-segmentation",
+]
 
 [[package]]
 name = "convert_case"
@@ -351,16 +354,6 @@ dependencies = [
 
 [[package]]
 name = "ctor"
-version = "0.2.9"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "32a2785755761f3ddc1492979ce1e48d2c00d09311c39e4466429188f3dd6501"
-dependencies = [
- "quote",
- "syn 2.0.115",
-]
-
-[[package]]
-name = "ctor"
 version = "1.0.13"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "914a755b7c2d4af2bdcff7ce1739e2db9a1b81a9b07123d8015786ae03c0980d"
@@ -377,19 +370,6 @@ checksum = "d08b3a0bcc0d079199cd476b2cae8435016ec11d1c0986c6901c5ac223041534"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.115",
-]
-
-[[package]]
-name = "derive_more"
-version = "0.99.20"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6edb4b64a43d977b8e99788fe3a04d483834fba1215a7e02caa415b626497f7f"
-dependencies = [
- "convert_case 0.4.0",
- "proc-macro2",
- "quote",
- "rustc_version",
  "syn 2.0.115",
 ]
 
@@ -1243,6 +1223,30 @@ dependencies = [
 ]
 
 [[package]]
+name = "proc-macro-error"
+version = "1.0.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "da25490ff9892aab3fcf7c36f08cfb902dd3e71ca0f9f9517bea02a73a5ce38c"
+dependencies = [
+ "proc-macro-error-attr",
+ "proc-macro2",
+ "quote",
+ "syn 1.0.109",
+ "version_check",
+]
+
+[[package]]
+name = "proc-macro-error-attr"
+version = "1.0.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a1be40180e52ecc98ad80b184934baf3d0d29f979574e439af5a55274b35f869"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "version_check",
+]
+
+[[package]]
 name = "proc-macro-error-attr3"
 version = "3.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1497,36 +1501,12 @@ dependencies = [
 
 [[package]]
 name = "rstest-bdd"
-version = "0.5.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "138d8e4f97e16906ebeb0bfb12d2c94f0b05913a96fc522111bec62ca8328522"
-dependencies = [
- "ctor 0.2.9",
- "derive_more 0.99.20",
- "fluent",
- "gherkin 0.14.0",
- "hashbrown 0.16.1",
- "i18n-embed",
- "inventory",
- "log",
- "regex",
- "rstest-bdd-patterns 0.5.0",
- "rstest-bdd-policy 0.5.0",
- "rust-embed",
- "serde",
- "serde_json",
- "thiserror 1.0.69",
- "unic-langid",
-]
-
-[[package]]
-name = "rstest-bdd"
 version = "0.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c87745ca9ec914452bb1aabc8f3bf259fbcef9a16e11c36fc331dadac06ad085"
 dependencies = [
- "ctor 1.0.13",
- "derive_more 2.1.1",
+ "ctor",
+ "derive_more",
  "fluent",
  "gherkin 0.16.0",
  "hashbrown 0.17.0",
@@ -1554,6 +1534,30 @@ dependencies = [
  "cargo_metadata",
  "thiserror 2.0.21",
  "tracing",
+]
+
+[[package]]
+name = "rstest-bdd-macros"
+version = "0.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "fe104196f61dc8911a8da1b10005e9401e7c2e14ad9302e2de6688311c0beec7"
+dependencies = [
+ "camino",
+ "cap-std 3.4.6",
+ "cfg-if",
+ "convert_case 0.6.0",
+ "gherkin 0.14.0",
+ "newt-hype",
+ "proc-macro-crate",
+ "proc-macro-error",
+ "proc-macro2",
+ "quote",
+ "regex",
+ "rstest-bdd-patterns 0.5.0",
+ "rstest-bdd-policy 0.5.0",
+ "syn 2.0.115",
+ "thiserror 1.0.69",
+ "walkdir",
 ]
 
 [[package]]
@@ -1979,6 +1983,16 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn 2.0.115",
+]
+
+[[package]]
+name = "syn"
+version = "1.0.109"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "72b64191b275b66ffe2469e8af2c1cfe3bafa67b529ead792a6d0160888b4237"
+dependencies = [
+ "proc-macro2",
+ "unicode-ident",
 ]
 
 [[package]]
@@ -2591,8 +2605,8 @@ dependencies = [
  "monty",
  "newt-hype",
  "rstest 0.26.1",
- "rstest-bdd 0.5.0",
- "rstest-bdd-macros",
+ "rstest-bdd",
+ "rstest-bdd-macros 0.5.0",
  "test-utils",
  "thiserror 2.0.21",
  "zamburak-core",
@@ -2607,8 +2621,8 @@ dependencies = [
  "newt-hype",
  "proptest",
  "rstest 0.27.0",
- "rstest-bdd 0.6.0",
- "rstest-bdd-macros",
+ "rstest-bdd",
+ "rstest-bdd-macros 0.6.0",
  "thiserror 2.0.21",
 ]
 
@@ -2618,8 +2632,8 @@ version = "0.1.0"
 dependencies = [
  "monty",
  "rstest 0.27.0",
- "rstest-bdd 0.6.0",
- "rstest-bdd-macros",
+ "rstest-bdd",
+ "rstest-bdd-macros 0.6.0",
  "thiserror 2.0.21",
  "tracing",
  "zamburak-core",
