@@ -14,3 +14,6 @@ zamburak-core = { path = "../zamburak-core" }
 
 [dev-dependencies]
 rstest = "0.27.0"
+
+[lints.rust]
+missing_docs = "deny"
