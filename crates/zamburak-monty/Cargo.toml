@@ -14,3 +14,6 @@ zamburak-policy = { path = "../zamburak-policy" }
 rstest = "0.27.0"
 rstest-bdd = "0.6.0"
 rstest-bdd-macros = { version = "0.6.0", features = ["compile-time-validation"] }
+
+[lints.rust]
+missing_docs = "deny"

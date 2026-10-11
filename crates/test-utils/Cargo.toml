@@ -9,3 +9,6 @@ path = "src/lib.rs"
 
 [dependencies]
 zamburak-monty = { path = "../zamburak-monty" }
+
+[lints.rust]
+missing_docs = "deny"
