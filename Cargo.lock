@@ -317,15 +317,6 @@ checksum = "6245d59a3e82a7fc217c5828a6692dbc6dfb63a0c8c90495621f7b9d79704a0e"
 
 [[package]]
 name = "convert_case"
-version = "0.6.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ec182b0ca2f35d8fc196cf3404988fd8b8c739a4d270ff118a398feb0cbec1ca"
-dependencies = [
- "unicode-segmentation",
-]
-
-[[package]]
-name = "convert_case"
 version = "0.12.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1af709f1f33454bf52eadfc8c78b3b9ef9cb26fb54d16dc9cd9a7299f899fd1b"
@@ -1239,30 +1230,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "proc-macro-error"
-version = "1.0.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "da25490ff9892aab3fcf7c36f08cfb902dd3e71ca0f9f9517bea02a73a5ce38c"
-dependencies = [
- "proc-macro-error-attr",
- "proc-macro2",
- "quote",
- "syn 1.0.109",
- "version_check",
-]
-
-[[package]]
-name = "proc-macro-error-attr"
-version = "1.0.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a1be40180e52ecc98ad80b184934baf3d0d29f979574e439af5a55274b35f869"
-dependencies = [
- "proc-macro2",
- "quote",
- "version_check",
-]
-
-[[package]]
 name = "proc-macro-error-attr3"
 version = "3.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1563,30 +1530,6 @@ dependencies = [
  "cargo_metadata",
  "thiserror 2.0.21",
  "tracing",
-]
-
-[[package]]
-name = "rstest-bdd-macros"
-version = "0.5.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fe104196f61dc8911a8da1b10005e9401e7c2e14ad9302e2de6688311c0beec7"
-dependencies = [
- "camino",
- "cap-std 3.4.6",
- "cfg-if",
- "convert_case 0.6.0",
- "gherkin 0.14.0",
- "newt-hype",
- "proc-macro-crate",
- "proc-macro-error",
- "proc-macro2",
- "quote",
- "regex",
- "rstest-bdd-patterns 0.5.0",
- "rstest-bdd-policy 0.5.0",
- "syn 2.0.115",
- "thiserror 1.0.69",
- "walkdir",
 ]
 
 [[package]]
@@ -1988,16 +1931,6 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn 2.0.115",
-]
-
-[[package]]
-name = "syn"
-version = "1.0.109"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "72b64191b275b66ffe2469e8af2c1cfe3bafa67b529ead792a6d0160888b4237"
-dependencies = [
- "proc-macro2",
- "unicode-ident",
 ]
 
 [[package]]
@@ -2611,7 +2544,7 @@ dependencies = [
  "newt-hype",
  "rstest",
  "rstest-bdd 0.5.0",
- "rstest-bdd-macros 0.5.0",
+ "rstest-bdd-macros",
  "test-utils",
  "thiserror 2.0.21",
  "zamburak-core",
@@ -2627,7 +2560,7 @@ dependencies = [
  "proptest",
  "rstest",
  "rstest-bdd 0.6.0",
- "rstest-bdd-macros 0.6.0",
+ "rstest-bdd-macros",
  "thiserror 2.0.21",
 ]
 
@@ -2638,7 +2571,7 @@ dependencies = [
  "monty",
  "rstest",
  "rstest-bdd 0.6.0",
- "rstest-bdd-macros 0.6.0",
+ "rstest-bdd-macros",
  "thiserror 2.0.21",
  "tracing",
  "zamburak-core",
