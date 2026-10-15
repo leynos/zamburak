@@ -238,6 +238,12 @@ fn map_tool_policy_v0_to_v1(tool_policy_v0: ToolPolicyV0) -> ToolPolicy {
     }
 }
 
+/// Hash canonicalized serialized policy JSON for migration audit metadata.
+///
+/// The returned digest uses lowercase hexadecimal with exactly two digits per
+/// byte, preserving the stable migration audit representation. For example,
+/// a policy serialized as `{"b":2,"a":1}` is hashed as canonical JSON
+/// `{"a":1,"b":2}`, and the result is a fixed-width lowercase digest.
 fn stable_policy_hash<T>(policy: &T) -> Result<String, MigrationError>
 where
     T: Serialize,
