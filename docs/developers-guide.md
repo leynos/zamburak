@@ -56,6 +56,13 @@ silently resolved, and a reading failure exits 2 rather than passing. The
 remaining contracts in `tests/workflow_contracts` run under pytest in the same
 target.
 
+## Migration API compile test
+
+`zamburak-policy` declares `trybuild` as a development dependency. The
+`tests/migration_ui.rs` integration test registers the downstream API compile
+fixture at `tests/ui/migration_api.rs`; `make test` runs this test with the
+workspace suite.
+
 ## Spelling gate
 
 `make spelling` enforces en-GB-oxendict spelling by running the

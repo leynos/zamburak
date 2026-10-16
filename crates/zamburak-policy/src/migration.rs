@@ -238,6 +238,12 @@ fn map_tool_policy_v0_to_v1(tool_policy_v0: ToolPolicyV0) -> ToolPolicy {
     }
 }
 
+/// Hash canonicalized serialized policy JSON for migration audit metadata.
+///
+/// The returned digest uses lowercase hexadecimal with exactly two digits per
+/// byte, preserving the stable migration audit representation. For example,
+/// a policy serialized as `{"b":2,"a":1}` is hashed as canonical JSON
+/// `{"a":1,"b":2}`, and the result is a fixed-width lowercase digest.
 fn stable_policy_hash<T>(policy: &T) -> Result<String, MigrationError>
 where
     T: Serialize,
@@ -248,7 +254,26 @@ where
     let canonical_json_bytes =
         serde_json::to_vec(&canonicalized_json).map_err(MigrationError::HashSerializationFailed)?;
     let digest = Sha256::digest(canonical_json_bytes);
-    Ok(format!("{digest:x}"))
+    Ok(to_lower_hex(&digest))
+}
+
+/// Encode `bytes` as a lowercase hexadecimal string.
+///
+/// Every byte renders as exactly two digits, including leading zeroes, so the
+/// output is always twice the input length.
+///
+/// # Examples
+///
+/// `to_lower_hex(&[0x00, 0xaf])` returns `"00af"`.
+#[must_use]
+fn to_lower_hex(bytes: &[u8]) -> String {
+    const HEX_DIGITS: &[u8; 16] = b"0123456789abcdef";
+    let mut hex = String::with_capacity(bytes.len() * 2);
+    for &byte in bytes {
+        hex.push(char::from(HEX_DIGITS[usize::from(byte >> 4)]));
+        hex.push(char::from(HEX_DIGITS[usize::from(byte & 0x0f)]));
+    }
+    hex
 }
 
 fn canonicalize_json_value(value: &Value) -> Value {

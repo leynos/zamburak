@@ -1036,6 +1036,11 @@ Migration audit metadata includes deterministic canonicalized SHA-256 hashes
 for source and target documents, plus per-step hash evidence and transform
 identifier (`policy_schema_v0_to_v1`).
 
+Implementation decision (2026-10-15): `sha2` 0.11 removed `LowerHex` formatting
+for digests. Migration digest text therefore preserves the existing stable
+representation: lowercase hexadecimal with exactly two digits per byte,
+including leading zeroes.
+
 Audit-bearing loader entrypoints are:
 
 - `PolicyDefinition::from_yaml_str_with_migration_audit`,
