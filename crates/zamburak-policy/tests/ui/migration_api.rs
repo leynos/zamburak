@@ -2,6 +2,7 @@
 
 use zamburak_policy::{MigrationAuditRecord, PolicyDefinition};
 
+/// Exercises the public migration loader and audit record as a downstream consumer.
 fn main() -> Result<(), zamburak_policy::PolicyLoadError> {
     let legacy_policy_yaml = r#"
 schema_version: 0

@@ -58,6 +58,7 @@ fn migrates_schema_v0_to_v1_with_auditable_step_record(legacy_policy_v0: PolicyD
     );
 }
 
+/// Protects the persisted migration audit hashes from formatting or algorithm drift.
 #[rstest]
 fn migration_audit_hashes_are_fixed_width_lowercase_sha256(legacy_policy_v0: PolicyDefinitionV0) {
     let migration_outcome =
@@ -184,12 +185,14 @@ fn migration_error_keeps_serialization_source() {
     assert!(error.to_string().contains("migration hashing"));
 }
 
+/// Guards the byte order and leading zeroes needed for stable digest formatting.
 #[test]
 fn lower_hex_preserves_leading_zeroes_and_byte_order() {
     assert_eq!(to_lower_hex(&[0x00, 0x0f, 0xff, 0xa0]), "000fffa0");
     assert_eq!(to_lower_hex(&[]), "");
 }
 
+/// Checks every byte value so hexadecimal output remains valid and reversible.
 #[test]
 fn every_byte_renders_as_two_lowercase_round_tripping_digits() {
     for byte in u8::MIN..=u8::MAX {
