@@ -38,7 +38,9 @@ TYPOS_CONFIG_BUILDER = $(UV_ENV) $(UV) tool run --python 3.14 --from \
 	"git+https://github.com/leynos/typos-config-builder.git@$(TYPOS_CONFIG_BUILDER_VERSION)" \
 	typos-config-builder
 PHASE_GATE_TARGET_FILE ?= .github/phase-gate-target.txt
-SCRIPT_UV_DEPS ?= --with pytest --with pytest-bdd --with pytest-mock \
+# pytest 9.2.0 removed FixtureManager._arg2fixturedefs, which pytest-bdd 9.0.0
+# still reads, so every scenario fails; cap pytest until pytest-bdd supports 9.2.
+SCRIPT_UV_DEPS ?= --with 'pytest<9.2' --with pytest-bdd --with pytest-mock \
 	--with cmd-mox --with astroid --with cuprum==0.1.0
 SCRIPT_TYPECHECK_FLAGS ?= --ignore unresolved-import
 
