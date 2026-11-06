@@ -8,6 +8,7 @@ from cuprum import Program, ProgramCatalogue, ProjectSettings, SafeCmd, sh
 
 
 def build_catalogue(*programs: Program) -> ProgramCatalogue:
+    """Return a one-project catalogue allowing exactly `programs` for the repo scripts."""
     return ProgramCatalogue(
         projects=(
             ProjectSettings(
@@ -25,4 +26,5 @@ def build_commands(
     catalogue: ProgramCatalogue,
     programs: Iterable[Program],
 ) -> dict[Program, SafeCmd]:
+    """Build a safe command for each program, keyed by program, from `catalogue`."""
     return {program: sh.make(program, catalogue=catalogue) for program in programs}

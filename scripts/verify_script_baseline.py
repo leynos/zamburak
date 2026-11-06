@@ -471,6 +471,7 @@ def render_issues(issues: list[BaselineIssue], scripts_root: Path) -> str:
     """
 
     def display_path(path: Path) -> Path:
+        """Show `path` relative to the scripts root when it lies under it."""
         try:
             return path.relative_to(scripts_root)
         except ValueError:

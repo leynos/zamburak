@@ -28,6 +28,7 @@ def test_main_reports_error_when_run_monty_sync_raises(
         config: monty_sync.SyncConfig,
         stdout,
     ) -> None:
+        """Fail like a sync that cannot complete, to exercise the CLI error path."""
         raise monty_sync.MontySyncError("simulated failure")
 
     monkeypatch.setattr(monty_sync, "run_monty_sync", _raise_sync_error)
@@ -50,6 +51,7 @@ def test_main_success_runs_monty_sync(
         config: monty_sync.SyncConfig,
         stdout,
     ) -> None:
+        """Record the arguments instead of syncing, to check the CLI wiring."""
         recorded["runner"] = runner
         recorded["config"] = config
         recorded["stdout"] = stdout
