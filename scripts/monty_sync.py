@@ -78,6 +78,7 @@ class SyncConfig:
 
     @property
     def submodule_root(self) -> Path:
+        """Absolute path of the Monty submodule checkout."""
         return self.repo_root / self.submodule_path
 
 
@@ -123,6 +124,7 @@ class CuprumRunner:
     """Execute command invocations via Cuprum safe command wrappers."""
 
     def run(self, *, program: str, args: tuple[str, ...], cwd: Path) -> CommandOutcome:
+        """Run `program` with `args` in `cwd` under the Cuprum allowlist and capture the outcome."""
         command = _resolve_command(program)
         context = ExecutionContext(cwd=cwd.as_posix())
         with scoped(allowlist=CATALOGUE.allowlist):

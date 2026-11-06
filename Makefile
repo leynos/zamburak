@@ -87,10 +87,15 @@ phase-gate: ## Evaluate phase-gate verification suites for configured target
 target/%/$(TARGET): ## Build binary in debug or release mode
 	$(if $(findstring release,$(@)),$(RELEASE_RUSTFLAGS),$(DEBUG_RUSTFLAGS)) $(CARGO) build $(BUILD_JOBS) $(if $(findstring release,$(@)),--release)
 
-lint: ## Run Clippy and the Whitaker Dylint suite with warnings denied
+# Docstring presence for the repository's Python (scripts, their tests and the workflow
+# contracts). Style stays with the scripts' own standards.
+INTERROGATE ?= uv run --with 'interrogate>=1.7,<2' interrogate --fail-under 100 scripts tests/workflow_contracts
+
+lint: ## Run Clippy, the Whitaker Dylint suite and the Python docstring check
 	$(GATE_RUSTFLAGS) RUSTDOCFLAGS="$(RUSTDOC_FLAGS)" $(CARGO) doc --workspace --no-deps
 	$(GATE_RUSTFLAGS) $(CARGO) clippy --workspace $(CLIPPY_FLAGS)
 	RUSTFLAGS="-D warnings" $(WHITAKER) --all -- $(CARGO_FLAGS)
+	$(INTERROGATE)
 
 typecheck: script-typecheck ## Run compile-time type checks
 	$(CARGO) check --workspace $(CARGO_FLAGS) $(BUILD_JOBS)

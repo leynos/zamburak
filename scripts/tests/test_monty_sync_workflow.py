@@ -39,6 +39,7 @@ class AnyOrderRunner:
     """Runner that validates invocations against an unordered stub collection."""
 
     def __init__(self, stubs: tuple[CommandStub, ...]) -> None:
+        """Hold the stubs still to be matched and start with no recorded calls."""
         self._remaining = list(stubs)
         self.calls: list[CommandInvocation] = []
 
@@ -49,6 +50,7 @@ class AnyOrderRunner:
         args: tuple[str, ...],
         cwd: Path,
     ) -> monty_sync.CommandOutcome:
+        """Record the call and answer it from the first matching remaining stub."""
         call = CommandInvocation(program=program, args=args, cwd=cwd)
         self.calls.append(call)
         for index, stub in enumerate(self._remaining):
