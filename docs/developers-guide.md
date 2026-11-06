@@ -113,7 +113,10 @@ when cross-compiling. CI installs `mold` through setup-rust's `install-mold`
 input before the steps that run these targets. A local Linux build needs `mold`
 on the `PATH` (for example `sudo apt-get install mold`, or your distribution's
 package); without it the linker flag stops a linked `cargo build`, and an empty
-`RUSTFLAGS` (or `CARGO_BUILD_TARGET` naming a non-Linux triple) skips it.
+`RUSTFLAGS` (or `CARGO_BUILD_TARGET` naming a non-Linux triple) skips it. The
+`mold` flag also needs a GCC driver of 12.1 or newer; with an older GCC,
+upgrade it or select clang as the linker driver with
+`CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_LINKER=clang`.
 
 `make lint` runs Whitaker with `RUSTFLAGS="-D warnings"` alone, because it runs
 under the toolchain its installer manages and takes none of the development
