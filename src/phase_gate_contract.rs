@@ -341,9 +341,9 @@ mod tests {
         let report = evaluate_phase_gate(PhaseGateTarget::Phase0, &[], &BTreeSet::new());
 
         assert_eq!(report.status, PhaseGateStatus::Passed);
-        assert!(report.required_suite_ids.is_empty());
-        assert!(report.missing_suite_ids.is_empty());
-        assert!(report.failing_suite_ids.is_empty());
+        assert_eq!(report.required_suite_ids.len(), 0);
+        assert_eq!(report.missing_suite_ids.len(), 0);
+        assert_eq!(report.failing_suite_ids.len(), 0);
     }
 
     #[test]
@@ -360,7 +360,7 @@ mod tests {
             report.missing_suite_ids,
             vec!["llm-sink-enforcement", "localization-contract"]
         );
-        assert!(report.failing_suite_ids.is_empty());
+        assert_eq!(report.failing_suite_ids.len(), 0);
     }
 
     #[test]
@@ -376,7 +376,7 @@ mod tests {
             evaluate_phase_gate(PhaseGateTarget::Phase1, &available_tests, &failing_suites);
 
         assert_eq!(report.status, PhaseGateStatus::FailingSuites);
-        assert!(report.missing_suite_ids.is_empty());
+        assert_eq!(report.missing_suite_ids.len(), 0);
         assert_eq!(report.failing_suite_ids, vec!["authority-lifecycle"]);
     }
 
