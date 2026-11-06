@@ -194,7 +194,7 @@ mod tests {
         "+trait PolicyHook {}\n",
     ))]
     fn no_violation_inputs_are_accepted(#[case] patch: &str) {
-        assert!(evaluate_patch_text(patch).is_empty());
+        assert_eq!(evaluate_patch_text(patch).len(), 0);
     }
 
     enum ViolationInput<'a> {

@@ -117,10 +117,6 @@ fn migration_audit_records_step_count(world: &LoaderWorld, steps: usize) {
     );
 }
 
-#[expect(
-    clippy::expect_used,
-    reason = "Requested by review feedback to use chained expect calls in this helper"
-)]
 fn successful_load_outcome(world: &LoaderWorld) -> &PolicyEngineLoadOutcome {
     let load_result = world
         .load_result

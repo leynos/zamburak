@@ -96,3 +96,50 @@ list's start. Install the same version locally with
 `--renumber` treats a fence at column 0 as the end of an ordered list, so
 indent the content of every list item under its marker (three columns for `1.`
 to `9.`, four for `10.` to `99.`) to keep a numbered procedure in one list.
+
+## Build standard
+
+`.cargo/config.toml` makes the parallel frontend (`-Zthreads=8`) the default
+for every build and adds the `mold` linker on Linux, so a bare `cargo build`
+takes both. Cargo applies a single `rustflags` source rather than merging them,
+and an assigned `RUSTFLAGS` replaces every source, so each source repeats the
+frontend flag and the Makefile restates both flags where it assigns `RUSTFLAGS`
+(`test`, `phase-gate`, the `lint` Clippy and rustdoc commands and the debug
+build), adding them to any `RUSTFLAGS` the caller exports (setup-rust exports
+one in CI). `make release` adds neither standard flag. The Makefile adds `mold`
+only when the host and the compilation target are Linux; a `--target` passed
+through `CARGO_FLAGS` is invisible to Make, so set `CARGO_BUILD_TARGET` as well
+when cross-compiling. CI installs `mold` through setup-rust's `install-mold`
+input before the steps that run these targets. A local Linux build needs `mold`
+on the `PATH` (for example `sudo apt-get install mold`, or your distribution's
+package); without it the linker flag stops a linked `cargo build`, and an empty
+`RUSTFLAGS` (or `CARGO_BUILD_TARGET` naming a non-Linux triple) skips it. The
+`mold` flag also needs a GCC driver of 12.1 or newer; with an older GCC,
+upgrade it or select clang as the linker driver with
+`CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_LINKER=clang`.
+
+`make lint` runs Whitaker with `RUSTFLAGS="-D warnings"` alone, because it runs
+under the toolchain its installer manages and takes none of the development
+standard.
+
+The vendored `third_party/full-monty` checkout sits below this directory, so
+Cargo reads `.cargo/config.toml` for commands run there too. It builds on the
+pinned nightly and has no `rust-toolchain.toml` of its own, so both flags apply
+to it as well.
+
+### Cranelift backend support
+
+Exception: Cranelift is not the development-profile backend. The estate adopts
+it only where the full suite passes under it, and that has not been measured
+here. Recorded state: the pin is `nightly-2026-11-05`; no measurement has been
+taken on it, and the review is deferred to 1 April 2027, when the whole suite
+is measured under both backends.
+
+### Development build footprint
+
+The development profile sets `incremental = false` and `debug = 0` in
+`Cargo.toml`, so a dev build keeps no incremental state or debug information.
+To debug, set `CARGO_PROFILE_DEV_DEBUG=true`; to rebuild incrementally, set
+`CARGO_INCREMENTAL=1`. `.cargo/config.toml` also sets
+`[unstable] embed-metadata = false`, the native Cargo key for nightlies from
+2026-07-31.
