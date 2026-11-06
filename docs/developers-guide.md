@@ -110,7 +110,10 @@ one in CI). `make release` adds neither standard flag. The Makefile adds `mold`
 only when the host and the compilation target are Linux; a `--target` passed
 through `CARGO_FLAGS` is invisible to Make, so set `CARGO_BUILD_TARGET` as well
 when cross-compiling. CI installs `mold` through setup-rust's `install-mold`
-input before the steps that run these targets.
+input before the steps that run these targets. A local Linux build needs `mold`
+on the `PATH` (for example `sudo apt-get install mold`, or your distribution's
+package); without it the linker flag stops a linked `cargo build`, and an empty
+`RUSTFLAGS` (or `CARGO_BUILD_TARGET` naming a non-Linux triple) skips it.
 
 `make lint` runs Whitaker with `RUSTFLAGS="-D warnings"` alone, because it runs
 under the toolchain its installer manages and takes none of the development
