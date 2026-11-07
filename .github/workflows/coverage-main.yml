@@ -56,6 +56,9 @@ jobs:
         uses: leynos/shared-actions/.github/actions/setup-rust@872f59f53717b5bebe8e24b2f4a7496b089a939a
         with:
           expect-cache: any
+          # .cargo/config.toml selects the mold linker on Linux, and the
+          # trybuild test builds a nested project that inherits it.
+          install-mold: 'true'
       - name: Setup uv
         run: |
           python3 -m pip install --user uv==0.10.2
