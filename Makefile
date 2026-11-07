@@ -79,6 +79,7 @@ clean: ## Remove build artefacts
 	rm -rf .uv-cache .uv-tools
 
 test: ## Run tests with warnings treated as errors
+	$(CARGO) fetch --locked --target "$${CARGO_BUILD_TARGET:-host-tuple}"
 	$(GATE_RUSTFLAGS) $(CARGO) test --workspace $(TEST_FLAGS) $(BUILD_JOBS)
 
 phase-gate: ## Evaluate phase-gate verification suites for configured target
