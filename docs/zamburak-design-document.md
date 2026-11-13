@@ -1051,8 +1051,8 @@ Audit-bearing loader entrypoints are:
 ## Localization and user-facing diagnostics
 
 Zamburak adopts the localization model defined in
-`adr-002-localization-and-internationalization-with-fluent.md`: injection-first
-localization with Fluent adapters, without ambient global state.
+`adrs/adr-0002-localization-and-internationalization-with-fluent.md`:
+injection-first localization with Fluent adapters, without ambient global state.
 
 ### Localization contract and ownership
 
@@ -1823,7 +1823,7 @@ for governed external-call boundaries. Key design choices:
 - Simon Willison on CaMeL:
   <https://simonwillison.net/2025/Apr/11/camel/>
 - Dromedary project: <https://github.com/microsoft/dromedary>
-- [ADR 002 localization architecture](adr-002-localization-and-internationalization-with-fluent.md)
+- [ADR 002 localization architecture](adrs/adr-0002-localization-and-internationalization-with-fluent.md)
 - Pydantic AI: <https://github.com/pydantic/pydantic-ai>
 - mmdr (mermaid-rs-renderer):
   <https://github.com/1jehuang/mermaid-rs-renderer>

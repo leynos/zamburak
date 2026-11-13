@@ -233,7 +233,7 @@ crates:
 
 The `full-monty` interpreter substrate is vendored at `third_party/full-monty/`
 as a Git submodule. Track A (observer substrate) and Track B (Zamburak
-governance) are defined in `docs/adr-001-monty-ifc-vm-hooks.md`.
+governance) are defined in `docs/adrs/adr-0001-monty-ifc-vm-hooks.md`.
 
 Normative type definitions are in `docs/zamburak-design-document.md` lines
 807-831 (`TaggedValue`, `DependencySummary`, `ExecutionContextSummary`).

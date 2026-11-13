@@ -1,7 +1,7 @@
 //! Contracts for enforcing `full-monty` fork genericity rules.
 //!
 //! This module encodes the non-generic semantic guardrails from
-//! `docs/adr-001-monty-ifc-vm-hooks.md` so CI can fail closed when a patch adds
+//! `docs/adrs/adr-0001-monty-ifc-vm-hooks.md` so CI can fail closed when a patch adds
 //! Zamburak semantics to Track A API surface.
 
 /// Allowed high-level change categories for the `full-monty` fork.

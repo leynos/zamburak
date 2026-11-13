@@ -371,9 +371,9 @@ E2. Table 13 (docs/) omits several files that exist on disk, including
 `docs/rstest-bdd-users-guide.md`, `docs/rust-doctest-dry-guide.md`,
 `docs/rust-testing-with-rstest-fixtures.md`,
 `docs/localizable-rust-libraries-with-fluent.md`,
-`docs/adr-002-localization-and-internationalization-with-fluent.md`, and the
-`docs/execplans/` directory. It also lists `docs/monty-fork-policy.md` which
-does not exist on disk.
+`docs/adrs/adr-0002-localization-and-internationalization-with-fluent.md`, and
+the `docs/execplans/` directory. It also lists `docs/monty-fork-policy.md`
+which does not exist on disk.
 
 E3. Table 14 lists `.env.example` and `third_party/full-monty/` which do not
 exist on disk. Since `docs/repository-layout.md` describes itself as a

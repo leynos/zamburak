@@ -22,8 +22,8 @@ missing extensions preserve baseline semantics.
 ## Constraints
 
 - Implement to requirement signposts:
-  `docs/adr-001-monty-ifc-vm-hooks.md` section "A3. Snapshot extension seam
-  (optional but preferred)", `docs/zamburak-design-document.md` sections
+  `docs/adrs/adr-0001-monty-ifc-vm-hooks.md` section "A3. Snapshot extension
+  seam (optional but preferred)", `docs/zamburak-design-document.md` sections
   "Two-track execution model" and "Snapshot and resume semantics", and
   `docs/verification-targets.md` row "Control context".
 - Dependency constraint: Task 1.5.2 is a hard precondition for 1.5.3. Confirm

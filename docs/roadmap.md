@@ -43,7 +43,7 @@ when the task is complete.
 | 1.2.3 | `scripts/`, `scripts/tests/`, `docs/scripting-standards.md`                                                                               | Script delivery follows defined runtime and testing standards.         |
 | 1.3.1 | `.github/workflows/`, `tests/compatibility/`, `tests/integration/`, `tests/security/`                                                     | Phase 2 start is blocked until design-contract suites pass.            |
 | 1.4.1 | `.gitmodules`, `third_party/full-monty/`, `docs/monty-fork-policy.md`                                                                     | `full-monty` submodule exists with explicit fork-policy constraints.   |
-| 1.4.2 | `Makefile`, `scripts/`, `docs/adr-001-monty-ifc-vm-hooks.md`                                                                              | `make monty-sync` provides repeatable fork sync plus verification.     |
+| 1.4.2 | `Makefile`, `scripts/`, `docs/adrs/adr-0001-monty-ifc-vm-hooks.md`                                                                        | `make monty-sync` provides repeatable fork sync plus verification.     |
 | 1.5.1 | `third_party/full-monty/`, `tests/compatibility/`                                                                                         | Stable runtime IDs survive suspend or resume and dump or load cycles.  |
 | 1.5.2 | `third_party/full-monty/`, `tests/compatibility/`, `tests/security/`                                                                      | Generic observer events exist with no-op semantic parity checks.       |
 | 1.5.3 | `third_party/full-monty/`, `tests/compatibility/`                                                                                         | Snapshot extension seam round-trips opaque embedder state safely.      |
@@ -54,7 +54,7 @@ when the task is complete.
 | 1.6.4 | `crates/zamburak-monty/src/external_call.rs`, `crates/zamburak-policy/src/engine.rs`, `tests/security/`                                   | Every external call is policy-gated before effect execution.           |
 | 1.6.5 | `tests/compatibility/`, `tests/security/`, `tests/integration/`                                                                           | Compatibility, security, and snapshot-governance suites are active.    |
 | 1.7.1 | `docs/monty-fork-policy.md`, `docs/zamburak-engineering-standards.md`                                                                     | Track A patch-budget and naming constraints are enforced in review.    |
-| 1.7.2 | `third_party/full-monty/`, `docs/adr-001-monty-ifc-vm-hooks.md`                                                                           | Track A commits are upstream-shaped and mapped to upstream PRs.        |
+| 1.7.2 | `third_party/full-monty/`, `docs/adrs/adr-0001-monty-ifc-vm-hooks.md`                                                                     | Track A commits are upstream-shaped and mapped to upstream PRs.        |
 | 1.7.3 | `Makefile`, `scripts/`, `docs/monty-fork-policy.md`                                                                                       | Range-diff drift checks are repeatable and escalation-triggered.       |
 | 2.1.1 | `crates/zamburak-core/src/trust.rs`, `crates/zamburak-core/src/capability.rs`, `crates/zamburak-policy/src/engine.rs`                     | Integrity, confidentiality, and authority remain separate types.       |
 | 2.1.2 | `crates/zamburak-sanitizers/src/`, `crates/zamburak-policy/src/engine.rs`, `tests/security/`                                              | Verification and endorsement semantics are deterministic and enforced. |
@@ -220,7 +220,7 @@ The roadmap is complete when:
 
 - [x] Task 1.4.1: Add `full-monty` as a Git submodule and define fork rules.
   - Requirement signposts:
-    - `docs/adr-001-monty-ifc-vm-hooks.md` sections "Decision" and
+    - `docs/adrs/adr-0001-monty-ifc-vm-hooks.md` sections "Decision" and
       "Process requirements to keep the fork PR-able",
     - `docs/zamburak-design-document.md` section
       "Two-track execution model",
@@ -233,7 +233,7 @@ The roadmap is complete when:
     policy rejects non-generic fork changes.
 - [x] Task 1.4.2: Add `make monty-sync` with fork sync and verification gates.
   - Requirement signposts:
-    - `docs/adr-001-monty-ifc-vm-hooks.md` section "Implementation plan",
+    - `docs/adrs/adr-0001-monty-ifc-vm-hooks.md` section "Implementation plan",
     - `docs/zamburak-engineering-standards.md` section
       "Command and gateway standards",
     - `docs/tech-baseline.md` section "Baseline usage contract".
@@ -248,7 +248,7 @@ The roadmap is complete when:
 
 - [x] Task 1.5.1: Implement stable runtime IDs in `full-monty`.
   - Requirement signposts:
-    - `docs/adr-001-monty-ifc-vm-hooks.md` section
+    - `docs/adrs/adr-0001-monty-ifc-vm-hooks.md` section
       "A1. Stable, host-only runtime IDs",
     - `docs/zamburak-design-document.md` section
       "Snapshot and resume semantics",
@@ -261,7 +261,7 @@ The roadmap is complete when:
     across suspend, resume, dump, and load.
 - [x] Task 1.5.2: Introduce generic runtime observer events in `full-monty`.
   - Requirement signposts:
-    - `docs/adr-001-monty-ifc-vm-hooks.md` section
+    - `docs/adrs/adr-0001-monty-ifc-vm-hooks.md` section
       "A2. Lightweight event emission hooks",
     - `docs/zamburak-design-document.md` section
       "Two-track execution model",
@@ -276,7 +276,7 @@ The roadmap is complete when:
 - [x] Task 1.5.3: Add generic snapshot extension bytes in `full-monty` when
       required.
   - Requirement signposts:
-    - `docs/adr-001-monty-ifc-vm-hooks.md` section
+    - `docs/adrs/adr-0001-monty-ifc-vm-hooks.md` section
       "A3. Snapshot extension seam (optional but preferred)",
     - `docs/zamburak-design-document.md` sections
       "Two-track execution model" and "Snapshot and resume semantics",
@@ -289,7 +289,7 @@ The roadmap is complete when:
     contracts remain generic.
 - [x] Task 1.5.4: Enforce Track A compatibility and performance invariants.
   - Requirement signposts:
-    - `docs/adr-001-monty-ifc-vm-hooks.md` section
+    - `docs/adrs/adr-0001-monty-ifc-vm-hooks.md` section
       "A4. Compatibility and upstreamability invariants",
     - `docs/zamburak-engineering-standards.md` section
       "Testing and verification evidence standards",
@@ -306,7 +306,7 @@ The roadmap is complete when:
 - [x] Task 1.6.1: Add `crates/zamburak-monty` adapter crate for governed
       execution.
   - Requirement signposts:
-    - `docs/adr-001-monty-ifc-vm-hooks.md` section "Track B staged pull
+    - `docs/adrs/adr-0001-monty-ifc-vm-hooks.md` section "Track B staged pull
       requests",
     - `docs/zamburak-design-document.md` sections "Architecture overview" and
       "Policy evaluation semantics",
@@ -319,7 +319,7 @@ The roadmap is complete when:
     deterministic external-call mediation hooks.
 - [x] Task 1.6.2: Add IFC core crate with `ValueId`-keyed dependency graph.
   - Requirement signposts:
-    - `docs/adr-001-monty-ifc-vm-hooks.md` section "B1. IFC substrate",
+    - `docs/adrs/adr-0001-monty-ifc-vm-hooks.md` section "B1. IFC substrate",
     - `docs/zamburak-design-document.md` sections
       "Dependency representation" and "Strict-mode effect semantics",
     - `docs/verification-targets.md` row "IFC propagation".
@@ -331,7 +331,7 @@ The roadmap is complete when:
     propagation invariants independently of interpreter internals.
 - [x] Task 1.6.3: Wire `full-monty` observer events into IFC updates.
   - Requirement signposts:
-    - `docs/adr-001-monty-ifc-vm-hooks.md` section
+    - `docs/adrs/adr-0001-monty-ifc-vm-hooks.md` section
       "Track B staged pull requests",
     - `docs/zamburak-design-document.md` sections
       "Component responsibilities" and "Strict-mode effect semantics",
@@ -345,7 +345,7 @@ The roadmap is complete when:
     complete for supported event classes.
 - [x] Task 1.6.4: Gate external calls through policy decisions at runtime.
   - Requirement signposts:
-    - `docs/adr-001-monty-ifc-vm-hooks.md` section
+    - `docs/adrs/adr-0001-monty-ifc-vm-hooks.md` section
       "B2. Boundary enforcement at external calls",
     - `docs/zamburak-design-document.md` section
       "Policy evaluation semantics",
@@ -359,7 +359,7 @@ The roadmap is complete when:
     before side-effect execution.
 - [ ] Task 1.6.5: Add compatibility, security, and snapshot-governance suites.
   - Requirement signposts:
-    - `docs/adr-001-monty-ifc-vm-hooks.md` sections
+    - `docs/adrs/adr-0001-monty-ifc-vm-hooks.md` sections
       "B3. Durable and versioned IFC state" and "B4. Auditable decisions",
     - `docs/zamburak-design-document.md` sections
       "Mechanistic correctness requirements" and "Security regression suite",
@@ -376,7 +376,7 @@ The roadmap is complete when:
 
 - [ ] Task 1.7.1: Enforce fork patch-budget and naming constraints in review.
   - Requirement signposts:
-    - `docs/adr-001-monty-ifc-vm-hooks.md` section "Patch budget",
+    - `docs/adrs/adr-0001-monty-ifc-vm-hooks.md` section "Patch budget",
     - `docs/zamburak-design-document.md` section
       "Two-track execution model",
     - `docs/zamburak-engineering-standards.md` section
@@ -389,7 +389,7 @@ The roadmap is complete when:
     classification and pass review checks.
 - [ ] Task 1.7.2: Require upstream-shaped commits for `full-monty` deltas.
   - Requirement signposts:
-    - `docs/adr-001-monty-ifc-vm-hooks.md` section "Upstream-shaped commits",
+    - `docs/adrs/adr-0001-monty-ifc-vm-hooks.md` section "Upstream-shaped commits",
     - `docs/zamburak-engineering-standards.md` section "Change quality and
       committing",
     - `docs/verification-targets.md` section
@@ -403,7 +403,7 @@ The roadmap is complete when:
 - [ ] Task 1.7.3: Add continuous `git range-diff` drift checks for fork delta
       growth.
   - Requirement signposts:
-    - `docs/adr-001-monty-ifc-vm-hooks.md` section
+    - `docs/adrs/adr-0001-monty-ifc-vm-hooks.md` section
       "Continuous range-diff control",
     - `docs/zamburak-engineering-standards.md` section
       "Review and change-management standards",
@@ -806,7 +806,7 @@ The roadmap is complete when:
     - `docs/zamburak-design-document.md` sections
       "Localization and user-facing diagnostics" and
       "Localization contract and ownership",
-    - `docs/adr-002-localization-and-internationalization-with-fluent.md`
+    - `docs/adrs/adr-0002-localization-and-internationalization-with-fluent.md`
       sections "Decision outcome" and "Proposed architecture",
     - `docs/repository-layout.md` sections `crates/zamburak-core` and
       `tests/integration/`.
@@ -822,7 +822,7 @@ The roadmap is complete when:
     - `docs/zamburak-design-document.md` sections
       "Fallback and Fluent layering semantics" and
       "Fluent adapter integration profile",
-    - `docs/adr-002-localization-and-internationalization-with-fluent.md`
+    - `docs/adrs/adr-0002-localization-and-internationalization-with-fluent.md`
       sections "Fallback order" and "Locale ownership and negotiation",
     - `docs/repository-layout.md` sections `crates/zamburak-core` and
       `crates/zamburak-tools`.
@@ -840,7 +840,7 @@ The roadmap is complete when:
   - Requirement signposts:
     - `docs/zamburak-design-document.md` section
       "Localized rendering semantics",
-    - `docs/adr-002-localization-and-internationalization-with-fluent.md`
+    - `docs/adrs/adr-0002-localization-and-internationalization-with-fluent.md`
       section "Message rendering contract",
     - `docs/repository-layout.md` sections `crates/zamburak-policy`,
       `crates/zamburak-agent`, and `tests/security/`.
@@ -857,7 +857,7 @@ The roadmap is complete when:
     - `docs/zamburak-design-document.md` sections
       "Fallback and Fluent layering semantics" and
       "Design-level acceptance criteria before phase 2 build-out",
-    - `docs/adr-002-localization-and-internationalization-with-fluent.md`
+    - `docs/adrs/adr-0002-localization-and-internationalization-with-fluent.md`
       sections "Implementation plan" and "Acceptance criteria",
     - `docs/repository-layout.md` sections `tests/integration/`,
       `tests/security/`, and `docs/`.

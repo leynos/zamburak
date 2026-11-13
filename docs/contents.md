@@ -1,15 +1,15 @@
 # [Contents index](contents.md) - Central index for all documentation files in `docs/`
 
-- [Architectural Decision Record (ADR) 002: Fluent localization architecture](adr-002-localization-and-internationalization-with-fluent.md)
+- [Architectural Decision Record (ADR) 002: Fluent localization architecture](adrs/adr-0002-localization-and-internationalization-with-fluent.md)
   - Decision record for internationalization and localization in Zamburak as a
   library, using injection-first Fluent integration.
-- [Architectural Decision Record (ADR) 003: `main` owns CodeScene coverage publication](adr-003-main-owns-codescene-coverage-publication.md)
+- [Architectural Decision Record (ADR) 003: `main` owns CodeScene coverage publication](adrs/adr-0003-main-owns-codescene-coverage-publication.md)
   - Decision record moving CodeScene coverage publication from pull requests
   to a single push-to-`main` publisher held by a workflow contract.
 - [Code complexity guide](complexity-antipatterns-and-refactoring-strategies.md)
   - Practical guidance for identifying complexity anti-patterns and applying
   safe refactoring strategies.
-- [ADR: Monty VM hooks for information flow control (IFC)](adr-001-monty-ifc-vm-hooks.md)
+- [ADR: Monty VM hooks for information flow control (IFC)](adrs/adr-0001-monty-ifc-vm-hooks.md)
   - Architectural decision record assessing Monty hook surfaces and choosing an
   upstream-first strategy for IFC integration.
 - [Full-monty fork policy](monty-fork-policy.md)

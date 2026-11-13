@@ -24,16 +24,16 @@ that:
 - all supported external-call paths (`FunctionCall` and `OsCall`) flow through
   one policy-gated decision point.
 
-This is Track B PR B4 from `docs/adr-001-monty-ifc-vm-hooks.md` section "Track
-B staged pull requests". It builds directly on Task 1.6.3, which already
+This is Track B PR B4 from `docs/adrs/adr-0001-monty-ifc-vm-hooks.md` section
+"Track B staged pull requests". It builds directly on Task 1.6.3, which already
 derives observer-backed information-flow control (IFC) summaries, and on Task
 1.1.2, which already provides migrated, auditable policy loading.
 
 ## Constraints
 
 - Implement per the requirement signposts in
-  `docs/adr-001-monty-ifc-vm-hooks.md` section "B2. Boundary enforcement at
-  external calls", `docs/zamburak-design-document.md` section "Policy
+  `docs/adrs/adr-0001-monty-ifc-vm-hooks.md` section "B2. Boundary enforcement
+  at external calls", `docs/zamburak-design-document.md` section "Policy
   evaluation semantics", and `docs/verification-targets.md` rows "Policy
   engine" and "LLM sink enforcement".
 - Dependency precondition: Tasks 1.6.3 and 1.1.2 must remain marked complete in

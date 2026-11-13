@@ -25,8 +25,8 @@ unit-level and behavioural tests proving:
 ## Constraints
 
 - Implement to requirement signposts:
-  `docs/adr-001-monty-ifc-vm-hooks.md` section "A1. Stable, host-only runtime
-  IDs", `docs/zamburak-design-document.md` section "Snapshot and resume
+  `docs/adrs/adr-0001-monty-ifc-vm-hooks.md` section "A1. Stable, host-only
+  runtime IDs", `docs/zamburak-design-document.md` section "Snapshot and resume
   semantics", and `docs/verification-targets.md` row "IFC (information-flow
   control) propagation".
 - Dependency constraint: Task 1.4.2 is a hard precondition for 1.5.1.
