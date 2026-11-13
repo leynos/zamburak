@@ -19,7 +19,7 @@ jobs:
           fetch-depth: 0
           submodules: recursive
       - name: Setup Rust
-        uses: leynos/shared-actions/.github/actions/setup-rust@0eabb6bc07148981de5da395e30cd78d83f5c7c2
+        uses: leynos/shared-actions/.github/actions/setup-rust@203eedc136c14c28041e92c06a929383807b3a3f
         with:
           expect-cache: any
           install-mold: 'true'
@@ -72,7 +72,7 @@ jobs:
       - name: Install mdtablefix
         # `make check-fmt` runs `mdtablefix --check --git`; 0.6.0 is the
         # first release with `--check` and `--git`.
-        uses: leynos/shared-actions/.github/actions/install-mdtablefix@0eabb6bc07148981de5da395e30cd78d83f5c7c2
+        uses: leynos/shared-actions/.github/actions/install-mdtablefix@203eedc136c14c28041e92c06a929383807b3a3f
         with:
           version: "0.6.1"
       - name: Format
@@ -86,13 +86,13 @@ jobs:
       - name: Script tests
         run: make script-test
       - name: Install the Whitaker Dylint suite
-        uses: leynos/shared-actions/.github/actions/install-whitaker@0eabb6bc07148981de5da395e30cd78d83f5c7c2
+        uses: leynos/shared-actions/.github/actions/install-whitaker@203eedc136c14c28041e92c06a929383807b3a3f
       - name: Lint
         run: make lint
       - name: Workflow contract tests
         run: make test-workflow-contracts
       - name: Test and Measure Coverage
-        uses: leynos/shared-actions/.github/actions/generate-coverage@0eabb6bc07148981de5da395e30cd78d83f5c7c2
+        uses: leynos/shared-actions/.github/actions/generate-coverage@203eedc136c14c28041e92c06a929383807b3a3f
         with:
           output-path: lcov.info
           format: lcov
@@ -125,7 +125,7 @@ jobs:
           fetch-depth: 0
           submodules: recursive
       - name: Setup Rust
-        uses: leynos/shared-actions/.github/actions/setup-rust@0eabb6bc07148981de5da395e30cd78d83f5c7c2
+        uses: leynos/shared-actions/.github/actions/setup-rust@203eedc136c14c28041e92c06a929383807b3a3f
         with:
           expect-cache: any
           install-mold: 'true'
