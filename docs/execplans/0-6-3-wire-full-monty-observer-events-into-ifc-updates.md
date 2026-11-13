@@ -29,15 +29,15 @@ library must be able to observe that:
   complete IFC state updates.
 
 This is Track B PR B3 in
-[docs/adr-001-monty-ifc-vm-hooks.md](/docs/adr-001-monty-ifc-vm-hooks.md). It
-builds directly on Task 1.6.2 (IFC core) and consumes Track A event and
+[docs/adrs/adr-0001-monty-ifc-vm-hooks.md](/docs/adrs/adr-0001-monty-ifc-vm-hooks.md).
+It builds directly on Task 1.6.2 (IFC core) and consumes Track A event and
 observer stream seams from Task 1.5.2 and snapshot seams from Task 1.5.3
 without adding Zamburak semantics to the vendored interpreter.
 
 ## Constraints
 
 - Implement to the requirement signposts in
-  [docs/adr-001-monty-ifc-vm-hooks.md](/docs/adr-001-monty-ifc-vm-hooks.md)
+  [docs/adrs/adr-0001-monty-ifc-vm-hooks.md](/docs/adrs/adr-0001-monty-ifc-vm-hooks.md)
   section "Track B staged pull requests",
   [docs/zamburak-design-document.md](/docs/zamburak-design-document.md)
   sections "Component responsibilities" and "Strict-mode effect semantics", and

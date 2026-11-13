@@ -23,18 +23,18 @@ After this change, a consumer of the Zamburak library can:
   each external-call boundary without implementing observer plumbing directly.
 
 This is the first Track B pull request (PR B1) as defined in
-`docs/adr-001-monty-ifc-vm-hooks.md` section "Track B staged pull requests". It
-bridges the generic Track A observer substrate into Zamburak governance
-semantics, keeping the full IFC propagation graph and dependency-summary
-machinery out of scope for this task.
+`docs/adrs/adr-0001-monty-ifc-vm-hooks.md` section "Track B staged pull
+requests". It bridges the generic Track A observer substrate into Zamburak
+governance semantics, keeping the full IFC propagation graph and
+dependency-summary machinery out of scope for this task.
 
 ## Constraints
 
 - Implement to requirement signposts:
-  `docs/adr-001-monty-ifc-vm-hooks.md` section "Track B staged pull requests",
-  `docs/zamburak-design-document.md` sections "Architecture overview" and
-  "Policy evaluation semantics", `docs/repository-layout.md` section
-  `crates/zamburak-monty`.
+  `docs/adrs/adr-0001-monty-ifc-vm-hooks.md` section "Track B staged pull
+  requests", `docs/zamburak-design-document.md` sections "Architecture
+  overview" and "Policy evaluation semantics", `docs/repository-layout.md`
+  section `crates/zamburak-monty`.
 - Dependency constraint: Tasks 1.5.2 (generic observer events) and 1.1.1
   (canonical policy schema v1) are hard preconditions. Confirm both are marked
   done before code changes.

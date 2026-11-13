@@ -24,7 +24,7 @@ observable via deterministic command output and green quality gates.
 ## Constraints
 
 - Implement to these normative signposts:
-  `docs/adr-001-monty-ifc-vm-hooks.md` section "Implementation plan",
+  `docs/adrs/adr-0001-monty-ifc-vm-hooks.md` section "Implementation plan",
   `docs/zamburak-engineering-standards.md` section "Command and gateway
   standards", and `docs/tech-baseline.md` section "Baseline usage contract".
 - Respect dependency ordering: Task `1.4.1` is complete and must remain green.
@@ -230,7 +230,7 @@ Planned primary touchpoints:
 - `docs/zamburak-design-document.md` for durable design decisions.
 - `docs/users-guide.md` if behaviour affects source consumers.
 - `docs/roadmap.md` to mark Task `1.4.2` done at completion.
-- Optional supporting docs (`docs/adr-001-monty-ifc-vm-hooks.md` or
+- Optional supporting docs (`docs/adrs/adr-0001-monty-ifc-vm-hooks.md` or
   `docs/monty-fork-policy.md`) only if command contract text needs updates for
   consistency.
 

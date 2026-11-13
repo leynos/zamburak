@@ -7,8 +7,8 @@ review standards live in the
 
 ## CodeScene coverage publication
 
-[ADR 003](adr-003-main-owns-codescene-coverage-publication.md) records the
-decision and the options it rejected.
+[ADR 003](adrs/adr-0003-main-owns-codescene-coverage-publication.md) records
+the decision and the options it rejected.
 
 Main owns CodeScene. `.github/workflows/coverage-main.yml` is the one
 publisher: on each push to `main` it measures coverage, writes the ratchet

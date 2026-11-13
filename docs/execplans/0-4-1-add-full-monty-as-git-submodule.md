@@ -27,7 +27,7 @@ hook-substrate internals.
 ## Constraints
 
 - Implement to these requirement signposts:
-  `docs/adr-001-monty-ifc-vm-hooks.md` sections "Decision" and "Process
+  `docs/adrs/adr-0001-monty-ifc-vm-hooks.md` sections "Decision" and "Process
   requirements to keep the fork PR-able", `docs/zamburak-design-document.md`
   section "Two-track execution model", and `docs/repository-layout.md` section
   "Root and operational files".

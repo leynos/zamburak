@@ -24,7 +24,7 @@ and one design note:
 
 - <https://github.com/leynos/rstest-bdd>
 - <https://github.com/leynos/ortho-config>
-- [Localizable Rust libraries with Fluent](localizable-rust-libraries-with-fluent.md)
+- [Localizable Rust libraries with Fluent](../localizable-rust-libraries-with-fluent.md)
 
 ## Review findings
 

@@ -222,7 +222,7 @@ into the crate, and adds a BDD feature file with step definitions in
 `tests/compatibility/localization_contract/`. The API shape follows the design
 document class diagram (lines 768–796 of `docs/zamburak-design-document.md`)
 and ADR-002 API sketch (lines 190–207 of
-`docs/adr-002-localization-and-internationalization-with-fluent.md`),
+`docs/adrs/adr-0002-localization-and-internationalization-with-fluent.md`),
 substituting `String` for `FluentValue`.
 
 Go/no-go for Stage A: `make test` passes with new localization contract

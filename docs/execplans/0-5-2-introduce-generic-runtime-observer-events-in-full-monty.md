@@ -29,9 +29,9 @@ repository BDD tests under `tests/compatibility/` and `tests/security/`.
 ## Constraints
 
 - Implement to requirement signposts:
-  `docs/adr-001-monty-ifc-vm-hooks.md` section "A2. Lightweight event emission
-  hooks", `docs/zamburak-design-document.md` section "Two-track execution
-  model", and `docs/verification-targets.md` row "IFC propagation".
+  `docs/adrs/adr-0001-monty-ifc-vm-hooks.md` section "A2. Lightweight event
+  emission hooks", `docs/zamburak-design-document.md` section "Two-track
+  execution model", and `docs/verification-targets.md` row "IFC propagation".
 - Dependency constraint: Task 1.5.1 is a hard precondition for 1.5.2.
   Confirm it is marked done before code changes.
 - In scope: canonical observer events `ValueCreated`, `OpResult`,

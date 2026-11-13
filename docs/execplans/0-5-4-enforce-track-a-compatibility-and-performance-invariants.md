@@ -37,7 +37,7 @@ that Track A additions do not change baseline runtime behaviour.
 ## Constraints
 
 - Implement to requirement signposts:
-  `docs/adr-001-monty-ifc-vm-hooks.md` section "A4. Compatibility and
+  `docs/adrs/adr-0001-monty-ifc-vm-hooks.md` section "A4. Compatibility and
   upstreamability invariants", `docs/zamburak-engineering-standards.md` section
   "Testing and verification evidence standards", and
   `docs/verification-targets.md` row "IFC propagation".

@@ -715,5 +715,5 @@ let message = diagnostic.render_localized(&localizer, "fallback text");
 
 Formatting failures and missing translations fall through the resolution chain
 and always produce deterministic output. See
-`adr-002-localization-and-internationalization-with-fluent.md` for the full
-design rationale.
+`adrs/adr-0002-localization-and-internationalization-with-fluent.md` for the
+full design rationale.
