@@ -243,14 +243,18 @@ project:
     cargo test --workspace --all-targets --all-features
     ```
 
-    running the full workspace test suite with all targets and features,
-    treating warnings as errors. It uses `cargo test` only: it does not run
-    `cargo-nextest` or a separate doctest stage.
-  - The Cargo steps in `make lint` and `make test` compose any inherited
-    `RUSTFLAGS` with the warning policy and the build standard flags:
-    `-Zthreads=8`, plus `-Clink-arg=-fuse-ld=mold` when the build host and the
-    target are both Linux. `make release` adds neither standard flag. The
-    Makefile's `?=` variables, such as `CARGO_FLAGS` and `TEST_FLAGS`
+    running every workspace target (libraries, binaries, tests, examples and
+    benches) with all features enabled, treating warnings as errors. The
+    `--all-targets` flag excludes doctests, and the target uses `cargo test`
+    only, without `cargo-nextest` or a separate doctest stage, so `make test`
+    does not run doctests.
+  - The `cargo doc`, `cargo clippy` and `cargo test` steps in `make lint` and
+    `make test` compose any inherited `RUSTFLAGS` with the warning policy and
+    the build standard flags: `-Zthreads=8`, plus
+    `-Clink-arg=-fuse-ld=mold` when the build host and the target are both
+    Linux. The `whitaker` step sets `RUSTFLAGS="-D warnings"` only, and
+    `cargo fetch` receives no gate flags. `make release` adds neither standard
+    flag. The Makefile's `?=` variables, such as `CARGO_FLAGS` and `TEST_FLAGS`
     (`--all-targets --all-features`), keep their defaults unless overridden.
   - Use `make fmt` (`cargo fmt --all`, then `mdtablefix` and
     `markdownlint-cli2 --fix` over the Markdown files) to apply formatting fixes
