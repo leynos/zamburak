@@ -66,34 +66,41 @@ where
         (parsers.parse_schema_version)(serialized_policy).map_err(parsers.map_parse_error)?;
 
     match version_probe.schema_version {
-        Some(schema_version) if schema_version == CANONICAL_POLICY_SCHEMA_VERSION => {
-            let policy_definition = (parsers.parse_canonical_policy)(serialized_policy)?;
-            canonical_load_outcome(policy_definition)
-        }
         Some(schema_version) if schema_version == LEGACY_POLICY_SCHEMA_VERSION => {
-            let legacy_policy = (parsers.parse_legacy_policy)(serialized_policy)
-                .map_err(parsers.map_parse_error)?;
-            let migration_outcome = migrate_schema_v0_to_v1(legacy_policy)
-                .map_err(PolicyLoadError::MigrationAuditFailed)?;
-            let policy_definition = migration_outcome
-                .policy_definition
-                .ensure_canonical_schema_version()?;
-            Ok(PolicyLoadOutcome {
-                load_outcome: LoadOutcome::new(
-                    policy_definition,
-                    migration_outcome.migration_audit,
-                ),
-            })
+            (parsers.parse_legacy_policy)(serialized_policy)
+                .map_err(parsers.map_parse_error)
+                .and_then(migrated_load_outcome)
         }
-        Some(schema_version) => Err(PolicyLoadError::UnsupportedSchemaVersion {
-            found: schema_version,
-            expected: CANONICAL_POLICY_SCHEMA_VERSION,
-        }),
-        None => {
-            let policy_definition = (parsers.parse_canonical_policy)(serialized_policy)?;
-            canonical_load_outcome(policy_definition)
+        Some(schema_version) if schema_version != CANONICAL_POLICY_SCHEMA_VERSION => {
+            Err(unsupported_schema_version(schema_version))
         }
+        // The declared canonical version, or no declared version at all.
+        _ => (parsers.parse_canonical_policy)(serialized_policy).and_then(canonical_load_outcome),
     }
+}
+
+/// Builds the load error for a schema version that is neither canonical nor
+/// legacy.
+const fn unsupported_schema_version(found: SchemaVersion) -> PolicyLoadError {
+    PolicyLoadError::UnsupportedSchemaVersion {
+        found,
+        expected: CANONICAL_POLICY_SCHEMA_VERSION,
+    }
+}
+
+/// Migrates a parsed legacy policy to the canonical schema, keeping the
+/// migration audit as evidence.
+fn migrated_load_outcome(
+    legacy_policy: PolicyDefinitionV0,
+) -> Result<PolicyLoadOutcome, PolicyLoadError> {
+    let migration_outcome =
+        migrate_schema_v0_to_v1(legacy_policy).map_err(PolicyLoadError::MigrationAuditFailed)?;
+    let policy_definition = migration_outcome
+        .policy_definition
+        .ensure_canonical_schema_version()?;
+    Ok(PolicyLoadOutcome {
+        load_outcome: LoadOutcome::new(policy_definition, migration_outcome.migration_audit),
+    })
 }
 
 fn canonical_load_outcome(

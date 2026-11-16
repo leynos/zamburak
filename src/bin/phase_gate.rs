@@ -261,11 +261,20 @@ fn emit_failure_report(report: &PhaseGateReport) {
         &report.failing_suite_ids,
     );
 
+    emit_release_blocking_causes(&mut stderr);
+    emit_escalation_steps(&mut stderr);
+}
+
+/// Lists the causes that make a failure release-blocking.
+fn emit_release_blocking_causes(stderr: &mut dyn Write) {
     discard_write_result(writeln!(stderr, "release-blocking when failures affect:"));
     for cause in RELEASE_BLOCKING_CAUSES {
         discard_write_result(writeln!(stderr, "- {cause}"));
     }
+}
 
+/// Lists the numbered escalation actions required after a failure.
+fn emit_escalation_steps(stderr: &mut dyn Write) {
     discard_write_result(writeln!(stderr, "required escalation actions:"));
     for (index, step) in ESCALATION_STEPS.iter().enumerate() {
         discard_write_result(writeln!(stderr, "{}. {step}", index + 1));
