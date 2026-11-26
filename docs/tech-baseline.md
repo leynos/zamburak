@@ -53,9 +53,10 @@ CodeScene analysis ceiling. These thresholds apply workspace-wide.
 
 _Table 1a: Clippy threshold configuration (`clippy.toml`)._
 
-Cognitive complexity is not gated by Clippy. Whitaker's experimental
-`macro_aware_cognitive_complexity` gates it at `max_complexity = 9`, the same
-CodeScene ceiling, through `dylint.toml`.
+Whitaker's experimental `macro_aware_cognitive_complexity` also gates cognitive
+complexity at `max_complexity = 9`, the same CodeScene ceiling, through
+`dylint.toml`. Clippy's threshold stays until Whitaker lints the whole
+workspace (DF12-120).
 
 ## Required engineering tools and rationale
 
