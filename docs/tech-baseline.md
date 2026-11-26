@@ -44,15 +44,18 @@ _Table 1: Canonical technology and tooling baseline._
 The `clippy.toml` file sets stricter-than-default thresholds aligned with the
 CodeScene analysis ceiling. These thresholds apply workspace-wide.
 
-| Threshold                        | Value  | Default | Rationale                       |
-| -------------------------------- | ------ | ------- | ------------------------------- |
-| `cognitive-complexity-threshold` | 9      | 25      | Aligned with CodeScene ceiling  |
-| `too-many-arguments-threshold`   | 4      | 7       | Aligned with CodeScene ceiling  |
-| `too-many-lines-threshold`       | 70     | 100     | Aligned with CodeScene ceiling  |
-| `excessive-nesting-threshold`    | 4      | off     | Aligned with CodeScene ceiling  |
-| `allow-expect-in-tests`          | `true` | `false` | Permits `expect()` in test code |
+| Threshold                      | Value  | Default | Rationale                       |
+| ------------------------------ | ------ | ------- | ------------------------------- |
+| `too-many-arguments-threshold` | 4      | 7       | Aligned with CodeScene ceiling  |
+| `too-many-lines-threshold`     | 70     | 100     | Aligned with CodeScene ceiling  |
+| `excessive-nesting-threshold`  | 4      | off     | Aligned with CodeScene ceiling  |
+| `allow-expect-in-tests`        | `true` | `false` | Permits `expect()` in test code |
 
 _Table 1a: Clippy threshold configuration (`clippy.toml`)._
+
+Cognitive complexity is not gated by Clippy. Whitaker's experimental
+`macro_aware_cognitive_complexity` gates it at `max_complexity = 9`, the same
+CodeScene ceiling, through `dylint.toml`.
 
 ## Required engineering tools and rationale
 

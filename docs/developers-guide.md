@@ -135,6 +135,20 @@ upgrade it or select clang as the linker driver with
 under the toolchain its installer manages and takes none of the development
 standard.
 
+Clippy does not gate cognitive complexity, because its `cognitive_complexity`
+lint scores code after macro expansion and counts branching a macro generated.
+Whitaker's experimental `macro_aware_cognitive_complexity` gates it at
+`max_complexity = 9`, CodeScene's ceiling; `dylint.toml` opts in through the
+`experimental` key in its `[whitaker]` table. The old Clippy gate reached only
+the root package (the member crates do not inherit its `[lints.clippy]`), while
+`make lint`'s Whitaker run also covers the root's path dependencies
+(`zamburak-core`, `zamburak-policy`, `zamburak-monty` and `test-utils`); a
+Whitaker run over the whole workspace is tracked as DF12-120. An older local
+`whitaker_suite` may not include this lint, in which case `make lint` passes
+without checking complexity: rerun `whitaker-installer` when upgrading from an
+older suite. Fix a finding by extracting named helpers, never by raising the
+threshold.
+
 The vendored `third_party/full-monty` checkout sits below this directory, so
 Cargo reads `.cargo/config.toml` for commands run there too. It builds on the
 pinned nightly and has no `rust-toolchain.toml` of its own, so both flags apply
