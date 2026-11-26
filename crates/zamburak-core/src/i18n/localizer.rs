@@ -110,6 +110,8 @@ pub trait LocalizedDiagnostic {
 
 #[cfg(test)]
 mod tests {
+    //! Unit tests for the no-op localizer.
+
     use super::{LocalizedDiagnostic, Localizer, NoOpLocalizer};
 
     #[test]
