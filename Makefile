@@ -95,7 +95,7 @@ INTERROGATE ?= uv run --with 'interrogate>=1.7,<2' interrogate --fail-under 100 
 lint: ## Run Clippy, the Whitaker Dylint suite and the Python docstring check
 	$(GATE_RUSTFLAGS) RUSTDOCFLAGS="$(RUSTDOC_FLAGS)" $(CARGO) doc --workspace --no-deps
 	$(GATE_RUSTFLAGS) $(CARGO) clippy --workspace $(CLIPPY_FLAGS)
-	RUSTFLAGS="-D warnings" $(WHITAKER) --all -- $(CARGO_FLAGS)
+	RUSTFLAGS="-D warnings" $(WHITAKER) --all -- --workspace $(CARGO_FLAGS)
 	$(INTERROGATE)
 
 typecheck: script-typecheck ## Run compile-time type checks

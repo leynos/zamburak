@@ -227,7 +227,7 @@ project:
     ```sh
     RUSTDOCFLAGS="-D warnings" cargo doc --workspace --no-deps
     cargo clippy --workspace --all-targets --all-features -- -D warnings
-    RUSTFLAGS="-D warnings" whitaker --all -- --all-targets --all-features
+    RUSTFLAGS="-D warnings" whitaker --all -- --workspace --all-targets --all-features
     uv run --with 'interrogate>=1.7,<2' interrogate --fail-under 100 scripts tests/workflow_contracts
     ```
 
