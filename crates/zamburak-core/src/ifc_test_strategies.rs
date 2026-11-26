@@ -101,9 +101,11 @@ pub fn arb_summary() -> impl Strategy<Value = crate::summary::DependencySummary>
 mod tests {
     //! Guards the capability alphabet used by the strategies.
 
+    use rstest::rstest;
+
     use super::{CAP_NAMES, cap_from_index};
 
-    #[test]
+    #[rstest]
     fn cap_names_all_parse() {
         for i in 0..CAP_NAMES.len() {
             assert!(
@@ -113,8 +115,12 @@ mod tests {
         }
     }
 
-    #[test]
+    #[rstest]
     fn cap_from_index_rejects_out_of_bounds() {
-        assert!(cap_from_index(CAP_NAMES.len()).is_err());
+        assert!(
+            cap_from_index(CAP_NAMES.len()).is_err(),
+            "index {} equal to CAP_NAMES.len() must be rejected",
+            CAP_NAMES.len(),
+        );
     }
 }

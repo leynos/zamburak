@@ -141,13 +141,13 @@ Whitaker's experimental `macro_aware_cognitive_complexity` gates it at
 `max_complexity = 9`, CodeScene's ceiling; `dylint.toml` opts in through the
 `experimental` key in its `[whitaker]` table. The old Clippy gate reached only
 the root package (the member crates do not inherit its `[lints.clippy]`), while
-`make lint`'s Whitaker run also covers the root's path dependencies
-(`zamburak-core`, `zamburak-policy`, `zamburak-monty` and `test-utils`); a
-Whitaker run over the whole workspace is tracked as DF12-120. An older local
-`whitaker_suite` may not include this lint, in which case `make lint` passes
-without checking complexity: rerun `whitaker-installer` when upgrading from an
-older suite. Fix a finding by extracting named helpers, never by raising the
-threshold.
+`make lint`'s Whitaker run passes `--workspace`, so it covers every workspace
+member, including their tests, binaries and examples (DF12-120). Without
+`--workspace`, Cargo selects only the root package and its path dependencies'
+library targets. An older local `whitaker_suite` may not include this lint, in
+which case `make lint` passes without checking complexity: rerun
+`whitaker-installer` when upgrading from an older suite. Fix a finding by
+extracting named helpers, never by raising the threshold.
 
 The vendored `third_party/full-monty` checkout sits below this directory, so
 Cargo reads `.cargo/config.toml` for commands run there too. It builds on the
