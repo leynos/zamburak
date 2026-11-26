@@ -135,18 +135,19 @@ upgrade it or select clang as the linker driver with
 under the toolchain its installer manages and takes none of the development
 standard.
 
-Two lints gate cognitive complexity at 9, CodeScene's ceiling. Whitaker's
-experimental `macro_aware_cognitive_complexity` is the intended gate, because
-it skips branching a macro generated; `dylint.toml` opts in through the
-`experimental` key in its `[whitaker]` table. Clippy's `cognitive_complexity`
-(the workspace `deny` and `cognitive-complexity-threshold` in `clippy.toml`)
-stays until Whitaker lints the whole workspace (DF12-120): `make lint` runs
-Whitaker on the root package and its path dependencies only, while Clippy
-checks every member. Remove the Clippy gate in the PR that adds `--workspace`
-to the Whitaker recipe. An older local `whitaker_suite` may not include the
-Whitaker lint, in which case `make lint` passes without that check: rerun
-`whitaker-installer` when upgrading from an older suite. Fix a finding by
-extracting named helpers, never by raising the threshold.
+Clippy does not gate cognitive complexity, because its `cognitive_complexity`
+lint scores code after macro expansion and counts branching a macro generated.
+Whitaker's experimental `macro_aware_cognitive_complexity` gates it at
+`max_complexity = 9`, CodeScene's ceiling; `dylint.toml` opts in through the
+`experimental` key in its `[whitaker]` table. The old Clippy gate reached only
+the root package (the member crates do not inherit its `[lints.clippy]`), while
+`make lint`'s Whitaker run also covers the root's path dependencies
+(`zamburak-core`, `zamburak-policy`, `zamburak-monty` and `test-utils`); a
+Whitaker run over the whole workspace is tracked as DF12-120. An older local
+`whitaker_suite` may not include this lint, in which case `make lint` passes
+without checking complexity: rerun `whitaker-installer` when upgrading from an
+older suite. Fix a finding by extracting named helpers, never by raising the
+threshold.
 
 The vendored `third_party/full-monty` checkout sits below this directory, so
 Cargo reads `.cargo/config.toml` for commands run there too. It builds on the
